@@ -6,7 +6,16 @@ export default tseslint.config(
   {
     // viewer/main.js is browser code, not part of the TS project. Lint
     // would otherwise complain about it not being in tsconfig.
-    ignores: ['node_modules/**', 'dist/**', 'out/**', 'coverage/**', '.husky/**', 'viewer/main.js'],
+    // viewer/dist/ is the static build output (gitignored).
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'out/**',
+      'coverage/**',
+      '.husky/**',
+      'viewer/main.js',
+      'viewer/dist/**',
+    ],
   },
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

@@ -11,3 +11,4 @@ coverage/
 *.tsbuildinfo
 .husky/_/
 out/
+viewer/dist/

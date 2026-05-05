@@ -261,13 +261,44 @@ function describeEvent(e) {
 
 // ---------------------------------------------------------------------------
 // Replay loading + UI wiring.
+//
+// Two modes:
+//   - "manifest" mode (production / Netlify): we fetch a static
+//     `replays/manifest.json` describing the available runs, and load each
+//     replay as a static asset. No server needed.
+//   - "api" mode (local dev): the `pnpm viewer` Node server serves
+//     /api/runs, /api/replays, /api/replay endpoints that read from out/.
+//
+// We try manifest mode first; if `replays/manifest.json` 404s, we fall
+// back to the dev API. That keeps a single `main.js` working in both.
 // ---------------------------------------------------------------------------
 
 let CURRENT_EVENTS = [];
 let MAX_TICK = 0;
 let PLAY_TIMER = null;
 
+let MANIFEST = null; // populated when manifest.json loads
+
 async function loadRuns() {
+  // Try static manifest first.
+  try {
+    const res = await fetch('./replays/manifest.json');
+    if (res.ok) {
+      MANIFEST = await res.json();
+      const sel = document.getElementById('run-select');
+      sel.innerHTML = '';
+      for (const r of MANIFEST.runs) {
+        const opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = r.label ?? r.name;
+        sel.appendChild(opt);
+      }
+      return MANIFEST.runs.map((r) => r.name);
+    }
+  } catch {
+    // Network error or 404 → fall back to API.
+  }
+  // Dev API.
   const res = await fetch('/api/runs');
   const runs = await res.json();
   const sel = document.getElementById('run-select');
@@ -282,8 +313,14 @@ async function loadRuns() {
 }
 
 async function loadReplaysForRun(run) {
-  const res = await fetch(`/api/replays?run=${encodeURIComponent(run)}`);
-  const replays = await res.json();
+  let replays;
+  if (MANIFEST) {
+    const found = MANIFEST.runs.find((r) => r.name === run);
+    replays = found ? found.replays : [];
+  } else {
+    const res = await fetch(`/api/replays?run=${encodeURIComponent(run)}`);
+    replays = await res.json();
+  }
   const sel = document.getElementById('replay-select');
   sel.innerHTML = '';
   for (const r of replays) {
@@ -296,9 +333,10 @@ async function loadReplaysForRun(run) {
 }
 
 async function loadReplay(run, name) {
-  const res = await fetch(
-    `/api/replay?run=${encodeURIComponent(run)}&file=${encodeURIComponent(name)}`,
-  );
+  const url = MANIFEST
+    ? `./replays/${encodeURIComponent(run)}/${encodeURIComponent(name)}`
+    : `/api/replay?run=${encodeURIComponent(run)}&file=${encodeURIComponent(name)}`;
+  const res = await fetch(url);
   const text = await res.text();
   CURRENT_EVENTS = text
     .trim()
@@ -311,7 +349,7 @@ async function loadReplay(run, name) {
   scrubber.value = 0;
   setTick(0);
   document.getElementById('status').textContent =
-    `${CURRENT_EVENTS.length} events, ${MAX_TICK} ticks`;
+    `${CURRENT_EVENTS.length} events, ${MAX_TICK} ticks${MANIFEST ? ' · static' : ' · dev'}`;
 }
 
 function setTick(tick) {
