@@ -20,6 +20,7 @@
     "reconcile": "tsx harness/reconciler.ts",
     "harness:run": "tsx harness/run-batch.ts",
     "tune": "tsx harness/tune.ts",
+    "diversity": "tsx harness/diversity.ts",
     "critic:metrics": "tsx critics/metrics.ts",
     "critic:spec": "tsx critics/spec-compliance.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test && pnpm reconcile",
