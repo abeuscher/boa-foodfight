@@ -3249,7 +3249,7 @@
         "y": 9
       },
       "owner": "spider",
-      "defensiveBonus": 4,
+      "defensiveBonus": 2,
       "healingRate": 3,
       "tags": ["web"]
     }

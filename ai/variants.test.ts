@@ -73,41 +73,24 @@ describe('turtle variant', () => {
 });
 
 describe('flank variant', () => {
-  it('all field parties target the next floor POST while floor not yet secured', () => {
+  it('ceiling-capable parties walk to opposite floor corners (genuine flank)', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = flankPlayer.decide(state, data, createRng(1));
-    const soap = state.posts.get('soap-dish' as PostId);
-    let fieldTargetingSoap = 0;
-    for (const party of next.parties.values()) {
-      if (party.faction !== 'ant') continue;
-      if (party.id === ('queen-guard' as PartyId)) continue;
-      const order = party.orders[0] as MoveOrder | undefined;
-      if (order?.target.x === soap?.location.x && order?.target.y === soap?.location.y) {
-        fieldTargetingSoap += 1;
-      }
-    }
-    // Pathfinders + vanguard-bravo + vanguard-alpha all push for the
-    // current floor target during phase 1 (more bodies = faster
-    // capture, faster counter-push trigger).
-    expect(fieldTargetingSoap).toBeGreaterThanOrEqual(3);
+    const pathfinders = next.parties.get('pathfinders' as PartyId);
+    const vanguardBravo = next.parties.get('vanguard-bravo' as PartyId);
+    const pfOrder = pathfinders?.orders[0] as MoveOrder | undefined;
+    const vbOrder = vanguardBravo?.orders[0] as MoveOrder | undefined;
+    expect(pfOrder?.target).toEqual({ plane: 'floor', x: 0, y: 9 });
+    expect(vbOrder?.target).toEqual({ plane: 'floor', x: 9, y: 0 });
   });
 
-  it('once the floor is secured, both ceiling-capable parties push to spider-web', () => {
-    const { state: base, data } = loadScenario(DATA_DIR, 1);
-    // Mutate state: mark soap-dish, towel-rack, wall-crack as ant-owned.
-    const posts = new Map(base.posts);
-    for (const id of ['soap-dish', 'towel-rack', 'wall-crack']) {
-      const p = posts.get(id as PostId);
-      if (p) posts.set(id as PostId, { ...p, owner: 'ant' });
-    }
-    const state = { ...base, posts };
+  it('vanguard-alpha still stages floor POSTs while pathfinders flanks', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
     const next = flankPlayer.decide(state, data, createRng(1));
-    const web = state.posts.get('spider-web' as PostId);
-    for (const partyId of ['pathfinders', 'vanguard-bravo'] as PartyId[]) {
-      const party = next.parties.get(partyId);
-      expect(party?.orders).toHaveLength(1);
-      const order = party?.orders[0] as MoveOrder;
-      expect(order.target).toEqual(web?.location);
-    }
+    const vanguardAlpha = next.parties.get('vanguard-alpha' as PartyId);
+    const order = vanguardAlpha?.orders[0] as MoveOrder | undefined;
+    const soap = state.posts.get('soap-dish' as PostId);
+    expect(order?.target.x).toBe(soap?.location.x);
+    expect(order?.target.y).toBe(soap?.location.y);
   });
 });
