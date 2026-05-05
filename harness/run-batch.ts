@@ -20,27 +20,9 @@ import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
 import { runScenario } from '../engine/turn.ts';
-import type { Faction, PostId } from '../engine/types.ts';
+import type { PostId } from '../engine/types.ts';
 
-interface PerSeed {
-  readonly seed: number;
-  readonly winner: Faction | null;
-  readonly turns: number;
-  readonly antPostsAtEnd: number;
-  readonly events: number;
-}
-
-interface Summary {
-  readonly totalSeeds: number;
-  readonly antWins: number;
-  readonly spiderWins: number;
-  readonly timeouts: number;
-  readonly antWinRate: number;
-  readonly avgTurnsToVictory: number | null;
-  readonly avgTurnsAtTimeout: number | null;
-  readonly avgEventsPerRun: number;
-  readonly perSeed: readonly PerSeed[];
-}
+import type { PerSeed, Summary } from './types.ts';
 
 const parseSeeds = (arg: string): readonly number[] => {
   if (arg.includes('..')) {

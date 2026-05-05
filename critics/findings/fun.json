@@ -1,0 +1,128 @@
+{
+  "source": "out/baseline-100",
+  "sampled_seeds": [1, 11, 23, 37, 42, 56, 64, 73, 85, 99],
+  "per_replay_scores": [
+    {
+      "seed": 1,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Soap-dish cap T2, towel-rack T4, wall-crack T5, pathfinders solo plane-switch T6, wiped 0-6 by silk-line T8, then 92 turns of nothing but queen-ultimate charge=100 spam; no scenario-end event."
+    },
+    {
+      "seed": 11,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Identical macro-trajectory to seed 1 down to the tick number; only damage rolls inside the single battle differ. silk-line takes zero casualties."
+    },
+    {
+      "seed": 23,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same captures at T2/T4/T5, same losing battle at T8 (3 rounds this time vs 2), pathfinders leader-died at tick 87, then dead air."
+    },
+    {
+      "seed": 37,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Carbon copy of the canonical run; the only 'turning point' available to a reader is the T8 wipe, which is foregone given the matchup."
+    },
+    {
+      "seed": 42,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same trajectory; vanguard-alpha and vanguard-bravo stack on identical wall-crack tile at T5 and never act again."
+    },
+    {
+      "seed": 56,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Identical macro-events; no jelly-applied, no ability-used, no fog-revealed, no order-issued event types ever fire in the run."
+    },
+    {
+      "seed": 64,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same script. Spider web-watch and silk-line shuffle one tile on T0 and then sit static for 100 turns."
+    },
+    {
+      "seed": 73,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same script. queen-ultimate-charged hits 100 at T19 and is then logged 81 more times unchanged — pure log noise."
+    },
+    {
+      "seed": 85,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same script. Two-round battle this time (faster wipe), still 0 spider casualties; vanguards remain idle on wall-crack."
+    },
+    {
+      "seed": 99,
+      "decisions_articulable": 1,
+      "tactical_variety": 0,
+      "flavor_presence": 0,
+      "outcome_credibility": 0,
+      "notes": "Same script, same tick-stamps for every macro event, same final state of 4 ant POSTs and a parked Queen ultimate."
+    }
+  ],
+  "batch_scores": {
+    "watchability": 0,
+    "route_diversity": 0
+  },
+  "findings": [
+    {
+      "rule": "route-diversity",
+      "severity": "high",
+      "observation": "All 10 sampled replays are isomorphic at the macro level: post-captured for soap-dish at tick 35, towel-rack at tick 58, wall-crack at tick 66, single battle-resolved at tick 80 (pathfinders loses 6-0 to silk-line, retreat to ceiling 8,9), leader-died at tick 87. The summary.json shows all 100 seeds end at exactly 271 events with antPostsAtEnd=4, confirming the sampled pattern is universal. The spec demands 'at least three meaningfully different strategic approaches' produce wins; the batch produces zero wins and one strategic approach.",
+      "suggested_action": "Tune enemy pattern (lever 1): pull at least one silk-line/web-watch defender off the ceiling on a patrol or counter-push so the pathfinders' lone plane-switch attack is not against a fully-stacked web garrison. Independently, vary spider initial positions per seed (lever 2) so the T8 ceiling battle composition is not deterministic across seeds."
+    },
+    {
+      "rule": "outcome-credibility",
+      "severity": "high",
+      "observation": "Every sampled run ends in a 100-turn timeout with the ants holding 4 of 5 POSTs but emitting no scenario-end event and no further moves after turn 8. From turn 9 onward the only logged event is queen-ultimate-charged at charge=100, repeated ~92 times per replay. To a reader this looks broken, not balanced — the ants 'won the map' but cannot collect, and the queen's allegedly scenario-clearing ultimate sits at full charge unused for 80+ turns because it cannot reach the ceiling and there is no AI hook to fire it.",
+      "suggested_action": "Two complementary fixes from levers 1+4. (a) Spider AI: once the ants control 3+ POSTs, switch silk-line to a counter-push toward wall-crack so the floor parties get a re-engagement instead of going dormant. (b) Scenario goal: add a supplementary win condition — e.g., 'wipe the spider queen's elite guard anywhere' or 'hold 4 of 5 POSTs for N consecutive turns' — so the current mid-game stalemate state resolves into a credible ant victory instead of a 92-turn dead-air timeout."
+    },
+    {
+      "rule": "tactical-variety",
+      "severity": "high",
+      "observation": "Across 10 sampled replays no jelly-applied, ability-used, queen-ultimate-fired, fog-revealed, or order-issued event ever fires. The spec calls out Royal Jelly logistics, the Queen ultimate, formation bonuses, and POST defensive bonuses as the strategic texture of Level 1, but none of these systems is observably exercised. The only thing varying between seeds is the per-unit damage rolls inside a single losing battle.",
+      "suggested_action": "Adjust initial circumstances (lever 2) so jelly-bearing parties and the ant-mage are not all packed into one party (pathfinders). Distributing plane-switch capability across at least two field parties would let multiple parties reach the ceiling, giving subsequent runs a real second-act battle instead of a single foregone wipe. This is a circumstances change, not an AI change."
+    },
+    {
+      "rule": "decisions-articulable",
+      "severity": "medium",
+      "observation": "The first 8 turns are readable ('ants push the floor diagonal, capture soap-dish, take the wall-crack transition, send pathfinders up') but after turn 8 the transcript becomes inarticulate: vanguard-alpha and vanguard-bravo are last seen stacked on wall-crack at tick 65 and never emit another event. A reader cannot say what they are 'doing' for 95 turns because there are no orders, no movement, no holds — just absence.",
+      "suggested_action": "Initial circumstances (lever 2): give the vanguard parties a unit with plane-switch (or place a wall-ceiling transition POST per battlefield lever 3) so their decision after wall-crack is articulable as 'push to ceiling' rather than 'stand still indefinitely'. Even a failed second push would be more readable than silence."
+    },
+    {
+      "rule": "flavor-presence",
+      "severity": "medium",
+      "observation": "Replay events are pure mechanical churn — partyId/unitId strings like 'u0023-ant-mage' and 'silk-line' carry the only flavor. The spec demands knowingly-stupid tone (Sgt. Antonio briefings, P.O.S.T. acronyms, ridiculous unit names), but the JSONL stream surfaces none of it. There is no scenario-start narration field, no per-event flavor string, and no battle-resolved commentary. A reader skimming the transcript gets nothing of the bathroom-bug-army premise.",
+      "suggested_action": "Out of the four tuning levers this is closest to 'initial circumstances' — augment scenario data with a dialogue/briefing payload emitted as a scenario-start or per-turn flavor event (Sgt. Antonio barks on POST capture, on first contact, on Queen ultimate ready). This is data-only and does not touch the locked player AI."
+    },
+    {
+      "rule": "watchability",
+      "severity": "high",
+      "observation": "Reading 10 of these in a row is numbing because (a) the macro events occur at the same tick numbers every time, (b) only one battle ever happens, and (c) ~34% of every replay is the literal repeated line `queen-ultimate-charged ... charge:100`. Even a failure mode can be watchable if it varies; this one does not.",
+      "suggested_action": "Highest-leverage single change for watchability: stop emitting queen-ultimate-charged once charge has hit the cap (engine concern, not a design lever) AND fire the ultimate when ready under spider proximity to the storm-drain — but since the engine is not in scope here, the design-side fix is via lever 1 (enemy pattern): make spiders periodically push toward soap-dish/storm-drain after T10 so the back half of the replay contains real events (battles, defenses, possibly the Queen ultimate firing in defense) instead of charge-spam."
+    }
+  ]
+}
