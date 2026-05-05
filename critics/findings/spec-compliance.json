@@ -1,5 +1,5 @@
 {
-  "source": "out/baseline-100-v7",
+  "source": "out/tune/eval-005",
   "findings": [
     {
       "rule": "scenario-bookends",
@@ -61,9 +61,8 @@
     },
     {
       "rule": "scenario-decisive",
-      "severity": "high",
-      "observation": "at least one run reaches scenario-end (a decisive outcome) — NEVER observed across 100 replays",
-      "suggested_action": "either the rule is unimplemented, the rule is implemented but unreachable in current play, or the AIs never trigger the conditions that would fire it"
+      "severity": "low",
+      "observation": "at least one run reaches scenario-end (a decisive outcome) — exercised in 77/100 replays"
     }
   ]
 }

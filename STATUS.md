@@ -1,120 +1,123 @@
-# Status — Phase 4c.4 (capture bug fix + roster reshuffle; tuning open)
+# Status — Phase 4c.5 (auto-tuner landed the win-rate band)
 
 ## Latest measurement
 
 - **Date:** 2026-05-05
 - **Seeds:** 1..100
 - **Max turns:** 100
-- **Ant win rate:** 0% (target: 65–80%) — engine bug fixed but stats untuned
-- **Replays:** `out/baseline-100-v13/`
+- **Ant win rate:** **77.0%** ✓ (target: 65–80%)
+- **Outcomes:** ant=77, spider=0, timeout=23
+- **Avg turns to victory:** 10.4
+- **Replays:** `out/tune/eval-005/`
+- **Tuner report:** `out/tune/report.json`
 
-## Real engine bug uncovered (the headline finding)
+## What landed in 4c.5
 
-`engine/posts.ts::resolveCaptures` was counting wiped parties as
-occupants. When pathfinders won a battle at the spider-web tile and
-killed every web-guard unit, the wiped web-guard _party_ (now
-holding 0 living units) still sat at (9,9). The capture rule saw
-`factions = {ant, spider}` → contested → no capture. The win
-condition then never triggered.
+**`harness/tune.ts`** — the auto-tuner the user asked for. Per the
+"reverse-engineer from desired win percentage" framing.
 
-**Demonstrated by a "test the test"**: setting all spider HP to 1
-should produce 100% ant wins. With the bug, it gave 0%. With the
-fix (skip parties whose units are all dead), it gave **100% wins
-in 9 turns avg**.
+Approach: 1D bisection on a single difficulty knob α ∈ [0, 1] that
+linearly interpolates **all** spider stat axes simultaneously between
+hand-chosen `lo` (ant-favoring) and `hi` (spec-original) bounds. This
+captures cross-axis interaction (queen armor + HP + atk jointly
+determine survivability) that pure coordinate descent missed —
+single-axis bisection bottomed out at 0% wins for every axis even at
+its lo bound, because each axis alone doesn't cross the threshold.
 
-This bug masked all prior tuning iterations. Several rounds of
-"why doesn't the win rate move" were actually "the engine ate the
-capture."
+Six axes interpolated:
 
-Fix landed in `engine/posts.ts`:
+| Axis                | lo (easy) | hi (original) | tuned (α=0.125) |
+| ------------------- | --------- | ------------- | --------------- |
+| spider-queen.armor  | 2         | 6             | **3**           |
+| spider-elite.armor  | 1         | 3             | **1**           |
+| spider-queen.hp     | 30        | 80            | **36**          |
+| spider-elite.hp     | 12        | 22            | **13**          |
+| spider-queen.attack | 6         | 15            | **7**           |
+| spider-elite.attack | 4         | 7             | **4**           |
 
-```ts
-const alive = party.units.some((u) => u.currentHp > 0);
-if (!alive) continue;
-```
+The bisection trajectory was instructive — there's a sharp **cliff**
+between α=0.25 and α=0.125:
 
-## Other changes in this iteration
+| α                | Win rate  |
+| ---------------- | --------- |
+| 0.000 (easiest)  | 100%      |
+| 0.125            | **77%** ✓ |
+| 0.250            | 0%        |
+| 0.500            | 0%        |
+| 1.000 (original) | 0%        |
 
-**`data/level-1/roster-ants.json` — reshuffle (count-preserving):**
+So even α=0.25 was too hard. The win-rate function is highly
+non-linear in spider parameters (consistent with the combat math's
+floor-at-1 damage and one-shot-when-atk>HP step edges). 5 harness
+evals to converge.
 
-- pathfinders: dropped 2 workers, added 2 archers → now 1 mage +
-  2 scouts + 3 archers (3 volleys instead of 1 in the web fight)
-- vanguard-bravo: dropped 1 worker, added 1 mage → 3 footmen +
-  1 potato-bug + 1 archer + 1 mage. Now also has plane-switch, so
-  it can follow pathfinders to the ceiling.
-- Total ant unit count unchanged (28).
+## Critic findings against the tuned configuration
 
-**`engine/battle.test.ts`** — the round-count test was using
-`ant-queen` + footman vs 2 elites. With the elite stat changes I
-explored mid-tune, that battle finished in 2 rounds (elites too
-weak). Restructured to use `ant-queen × 2` vs `spider-queen × 2` so
-the test is robust to elite/footman tuning.
+| Critic          | High  | Change since untuned (v13)                                                             |
+| --------------- | ----- | -------------------------------------------------------------------------------------- |
+| metrics         | **0** | down from 3 — win rate, decisive-outcomes, progress-stalemate all resolved             |
+| spec-compliance | **3** | down from 4 — `scenario-decisive` is now exercised (77 of 100 runs reach scenario-end) |
 
-## Why win rate is still 0% with original spider stats
+Remaining 3 spec-compliance HIGH findings, none of which are tuning
+issues — they're feature gaps:
 
-The web-guard composition (1 spider-queen + 4 spider-elites = 5
-units, 168 HP) is too tough for any current ant assault even with
-two parties hitting it sequentially. The math on this is mechanical
-(see Phase 4c.3 STATUS) and **doesn't change with the capture-bug
-fix** — the bug was about win detection, not damage.
+- `queen-ultimate-fires` — Queen ult coded but never has targets in
+  range (no spider on the floor in the new tuned dynamic).
+- `jelly-applied` — AI doesn't issue ability orders for jelly.
+- `fog-revealed` — fog module not implemented.
 
-To actually land in the 65–80% band requires spider stat tuning.
-Manual experiments in this session showed:
+## Engine + tuning state
 
-| Spider config                                             | Ant wins / 100        |
-| --------------------------------------------------------- | --------------------- |
-| Original (queen 80/15/6, elite 22/7/3, web-guard 5 units) | 0%                    |
-| Web-guard 4 units (drop 1 elite)                          | 0%                    |
-| + Queen HP 60, armor 5                                    | 0%                    |
-| + Queen HP 40, armor 4                                    | 0%                    |
-| + Queen ATK 8, HP 50, armor 5; elite ATK 4                | 0%                    |
-| + Queen 30/3/6; elite 14/2/4                              | **100%, 9 turns avg** |
-| All spider HP=1, armor=0 (test the test)                  | 100%, 9 turns avg     |
+The engine is now spec-complete enough that data tuning alone
+delivers the win-rate target. The tuner is reproducible: `pnpm tune`
+will reproduce the alpha-search and apply the same final stats given
+the same harness behavior.
 
-The 65–80% band lies somewhere between the last two (queen
-30/3/6 + elite 14/2/4) and the second-to-last (queen 50/8/5 +
-elite ATK 4). Coordinate descent or bisection on a single axis
-would land it in 3–5 evals.
-
-## Algorithmic tuning (the user's framing)
-
-Reverse-engineering parameters from a target win rate is a
-black-box optimization problem. The harness IS the objective
-function (`f(params) → ant_win_rate over 100 seeds`, ~700 ms per
-eval). Approaches in increasing power:
-
-1. **Bisect on one axis.** Cheap when a single knob is monotone.
-2. **Coordinate descent.** A few axes, weak interactions.
-3. **Random search** in a bounded box.
-4. **Bayesian optimization** (overkill at this eval cost).
-5. **Cliff-aware tuner** — read `engine/combat.ts`, derive HP/ATK
-   breakpoints analytically (e.g., spider-elite ATK > footman HP +
-   armor → one-shot regime), search only between cliffs.
-
-For this codebase the cliff-aware tuner is the right approach.
-Maybe 5 harness evals to land 65–80%. Phase 4c was always meant to
-be a real tuner agent — that's the unattended-execution target.
-
-## What's locked / not
+What's locked:
 
 - `ai/baseline.ts` — locked.
 - 5 spec-locked POST ids and ownerships — locked.
-- Engine semantics — locked except for spec-faithful gaps that
-  surface mid-tune (climbing bypass, opening abilities,
-  capture-on-wipe — all now implemented).
-- Ant roster: reshuffled (count-preserving), now considered the
-  current baseline.
-- Spider stats / composition: open tuning levers.
+- Engine semantics — spec-faithful additions only (climbing bypass,
+  opening abilities, capture-on-wipe — all from earlier phases).
+- Ant roster: reshuffled (count-preserving in 4c.4).
+
+What was tuned and is now committed:
+
+- Spider stats (queen + elite HP/ATK/armor).
+
+## Phase 4 success criteria — checking against the plan
+
+The original plan defined success as:
+
+1. ✅ `pnpm harness run --seeds 1..100` runs unattended end-to-end
+2. ✅ Metrics critic reports win rate ∈ [65%, 80%] for the baseline AI
+3. Fun Critic: not rerun this iteration; would benefit from a refresh
+4. ⚠️ Spec compliance: 3 player-locked rules still don't fire
+   (queen ult, jelly, fog) — these are feature gaps documented above
+5. ❌ Canvas viewer can replay any of the 100 runs (Phase 5, deferred)
+
+**Route diversity** (the spec's "≥3 strategies achieve ≥40% win
+rate") is not yet measured — we only have one player AI
+(`baselinePlayer`). The variant AIs (`rush`, `turtle`, `staging`)
+were deferred from Phase 3.
 
 ## Phase 4 next steps
 
-1. **Write the cliff-aware tuner.** Reads combat math, derives
-   HP/ATK thresholds, bisects within breakpoint intervals,
-   re-measures, iterates capped at 10 rounds. Outputs the final
-   tuned `data/level-1/units.json` + `roster-spiders.json` plus a
-   tuning report.
-2. **Apply your three changes from this turn permanently.** They
-   moved the structural needle (battles per run 1 → 4, ability
-   uses 0 → 400 across runs) but couldn't flip win rate at
-   original spider stats. The reshuffle is committed; the
-   spider-stat tuning is the open work.
+1. Build variant AIs (`rush`, `turtle`, `staging`) and re-run the
+   harness with each to measure route diversity.
+2. Implement the 3 missing strategic systems (Queen ult firing
+   conditions, jelly-apply ability orders, fog of war) so the spec-
+   compliance critic clears.
+3. Phase 5: Canvas viewer over the replay log.
+4. Re-run the Fun Critic against `out/tune/eval-005/` for a
+   post-tune watchability assessment.
+
+## How to reproduce
+
+```
+pnpm tune                           # land in 65-80% band
+pnpm tune --target-min 0.7 --target-max 0.75  # tighter band
+pnpm tune --dry-run                 # measure but don't write
+pnpm critic:metrics --in out/tune/eval-005
+pnpm critic:spec --in out/tune/eval-005
+```

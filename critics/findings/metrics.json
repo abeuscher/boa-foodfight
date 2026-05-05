@@ -1,28 +1,16 @@
 {
-  "source": "out/baseline-100-v7",
+  "source": "out/tune/eval-005",
   "findings": [
     {
-      "rule": "win-rate-target",
-      "severity": "high",
-      "observation": "ant win rate 0.0% is below the 65% floor",
-      "suggested_action": "tune in this preferred order: enemy pattern (less defensive spider AI), initial circumstances (weaker web-guard composition or starting POST ownership), battlefield (terrain or POST placement), scenario goal (alternate win conditions)"
-    },
-    {
       "rule": "decisive-outcomes",
-      "severity": "high",
-      "observation": "100% of runs timed out (100/100)",
+      "severity": "medium",
+      "observation": "23% of runs timed out (23/100)",
       "suggested_action": "most timeouts mean neither side can finish. Increase max-turns first to confirm; if timeouts persist, the issue is structural (e.g., one side cannot reach the other side's win condition)"
-    },
-    {
-      "rule": "progress-stalemate",
-      "severity": "high",
-      "observation": "every run ended with ants holding 4/5 POSTs — the final POST is unreachable or undefeatable",
-      "suggested_action": "inspect which POST is never captured. If it is spider-web, the issue is the final assault: weaken the spider stronghold, or add a route ants can use to bring more force to bear"
     },
     {
       "rule": "measurement",
       "severity": "low",
-      "observation": "100 seeds: ant=0 spider=0 timeout=100; win rate 0.0%; no decisive outcomes"
+      "observation": "100 seeds: ant=77 spider=0 timeout=23; win rate 77.0%; avg turns to victory 10.4"
     }
   ]
 }
