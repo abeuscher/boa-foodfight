@@ -1,0 +1,68 @@
+{
+  "source": "out/tune/eval-005",
+  "findings": [
+    {
+      "rule": "scenario-bookends",
+      "severity": "low",
+      "observation": "every run emits scenario-start (and the engine emits scenario-end on victory) — exercised in 100/100 replays"
+    },
+    {
+      "rule": "turn-loop",
+      "severity": "low",
+      "observation": "every run emits at least one turn-start — exercised in 100/100 replays"
+    },
+    {
+      "rule": "movement-fires",
+      "severity": "low",
+      "observation": "parties actually move (party-moved events emitted) — exercised in 100/100 replays"
+    },
+    {
+      "rule": "battles-resolve",
+      "severity": "low",
+      "observation": "opposing-faction collisions trigger battles — exercised in 100/100 replays"
+    },
+    {
+      "rule": "posts-capturable",
+      "severity": "low",
+      "observation": "POSTs change ownership during the run — exercised in 100/100 replays"
+    },
+    {
+      "rule": "leader-death-tracked",
+      "severity": "low",
+      "observation": "leader-died fires when a battle kills a party leader — exercised in 100/100 replays"
+    },
+    {
+      "rule": "queen-ultimate-charges",
+      "severity": "low",
+      "observation": "queen ultimate charge accrues over the scenario — exercised in 100/100 replays"
+    },
+    {
+      "rule": "queen-ultimate-fires",
+      "severity": "high",
+      "observation": "queen ultimate is fired at least once across the batch — NEVER observed across 100 replays",
+      "suggested_action": "either the rule is unimplemented, the rule is implemented but unreachable in current play, or the AIs never trigger the conditions that would fire it"
+    },
+    {
+      "rule": "jelly-applied",
+      "severity": "high",
+      "observation": "royal jelly is consumed at least once across the batch — NEVER observed across 100 replays",
+      "suggested_action": "either the rule is unimplemented, the rule is implemented but unreachable in current play, or the AIs never trigger the conditions that would fire it"
+    },
+    {
+      "rule": "pheroblast-used",
+      "severity": "low",
+      "observation": "PheroBlast (or any ability) is used at least once across the batch — exercised in 100/100 replays"
+    },
+    {
+      "rule": "fog-revealed",
+      "severity": "high",
+      "observation": "fog of war reveals tiles as parties move — NEVER observed across 100 replays",
+      "suggested_action": "either the rule is unimplemented, the rule is implemented but unreachable in current play, or the AIs never trigger the conditions that would fire it"
+    },
+    {
+      "rule": "scenario-decisive",
+      "severity": "low",
+      "observation": "at least one run reaches scenario-end (a decisive outcome) — exercised in 77/100 replays"
+    }
+  ]
+}

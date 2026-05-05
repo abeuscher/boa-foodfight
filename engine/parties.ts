@@ -1,0 +1,96 @@
+/**
+ * Party computations: slot accounting, liveness, HP totals, movement
+ * allowance, queen presence.
+ *
+ * Read-only utilities. Per CONTRACTS.md, this module imports only from
+ * `engine/types`. (No `engine/coord` needed here.)
+ */
+
+import type { MovementMode, Party, Unit, UnitTemplate, UnitTemplateId } from './types.ts';
+
+/**
+ * Per-mode tile-per-turn base allowance for Level 1. The party's effective
+ * speed is the slowest member's mode value. Terrain modifiers are applied
+ * by the movement module per-step, not here.
+ *
+ * These values match the table in `engine/movement.ts`; tests will catch
+ * drift if they ever desynchronize.
+ */
+const MOVEMENT_BY_MODE: Readonly<Record<MovementMode, number>> = {
+  ground: 3,
+  climbing: 3,
+  flying: 4,
+  restricted: 2,
+};
+
+/**
+ * Sum of `slotCost` for every unit in the party (alive or dead). Dead units
+ * still occupy slots until end-of-scenario cleanup; slot capacity is a
+ * roster-construction constraint, not a runtime one.
+ */
+export const slotsUsed = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  let total = 0;
+  for (const unit of party.units) {
+    const tmpl = templates.get(unit.templateId);
+    if (!tmpl) continue;
+    total += tmpl.slotCost;
+  }
+  return total;
+};
+
+/** True iff the unit has currentHp > 0. */
+export const isAlive = (unit: Unit): boolean => unit.currentHp > 0;
+
+/** Living members of the party, in roster order. Empty if all dead. */
+export const livingUnits = (party: Party): readonly Unit[] => party.units.filter(isAlive);
+
+/** Total remaining HP across living units. Dead units contribute 0. */
+export const totalHp = (party: Party): number => {
+  let total = 0;
+  for (const unit of party.units) {
+    if (unit.currentHp > 0) total += unit.currentHp;
+  }
+  return total;
+};
+
+/**
+ * Base movement allowance for the party this turn, in tiles. Determined by
+ * the slowest *living* member's `MovementMode`. If the party has no living
+ * units (or no resolvable templates), returns 0.
+ *
+ * Spec quote: "determined by its slowest member modified by terrain type".
+ * Per-step terrain modifiers are applied by the movement module. We use
+ * living units only because a wholly-dead party can't move; using all
+ * units would let a destroyed-but-not-cleaned-up party return a misleading
+ * non-zero allowance.
+ */
+export const baseMovementAllowance = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  let slowest = Number.POSITIVE_INFINITY;
+  for (const unit of party.units) {
+    if (unit.currentHp <= 0) continue;
+    const tmpl = templates.get(unit.templateId);
+    if (!tmpl) continue;
+    const speed = MOVEMENT_BY_MODE[tmpl.movement];
+    if (speed < slowest) slowest = speed;
+  }
+  return Number.isFinite(slowest) ? slowest : 0;
+};
+
+/** True iff any unit in the party (alive or dead) is tagged 'queen'. */
+export const containsQueen = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  for (const unit of party.units) {
+    const tmpl = templates.get(unit.templateId);
+    if (!tmpl) continue;
+    if (tmpl.tags.includes('queen')) return true;
+  }
+  return false;
+};

@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "faction": "spider",
+  "parties": [
+    {
+      "id": "web-guard",
+      "leaderClass": "spider-queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "spider-queen",
+          "count": 1
+        },
+        {
+          "templateId": "spider-elite",
+          "count": 4
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 9,
+        "y": 9
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "web-watch",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 1,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-soldier",
+          "count": 4
+        },
+        {
+          "templateId": "spider-scout",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 8,
+        "y": 9
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "silk-line",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 2
+        },
+        {
+          "templateId": "spider-scout",
+          "count": 1
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 9,
+        "y": 8
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "advance-scout",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-scout",
+          "count": 3
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 1
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 7,
+        "y": 8
+      },
+      "posture": "fight"
+    }
+  ]
+}

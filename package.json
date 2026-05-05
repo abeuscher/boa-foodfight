@@ -1,0 +1,59 @@
+{
+  "name": "boa-foodfight",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Food Fight: Battle of the Ants — turn-based strategy game",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "duplication": "jscpd .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "reconcile": "tsx harness/reconciler.ts",
+    "harness:run": "tsx harness/run-batch.ts",
+    "tune": "tsx harness/tune.ts",
+    "critic:metrics": "tsx critics/metrics.ts",
+    "critic:spec": "tsx critics/spec-compliance.ts",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test && pnpm reconcile",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "husky": "^9.1.7",
+    "jscpd": "^4.0.5",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.15.0",
+    "vitest": "^2.1.5",
+    "zod": "^3.23.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

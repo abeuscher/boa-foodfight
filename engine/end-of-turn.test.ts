@@ -1,0 +1,303 @@
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import { endOfTurn } from './end-of-turn.ts';
+import { loadScenario } from './state.ts';
+import type {
+  GameState,
+  Party,
+  PartyId,
+  Post,
+  PostId,
+  ReplayEvent,
+  Unit,
+  UnitTemplateId,
+} from './types.ts';
+
+const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
+
+const makeTickClock = (): (() => number) => {
+  let t = 0;
+  return () => ++t;
+};
+
+/** Locate the ant queen-tagged party. */
+const findQueenParty = (state: GameState): Party => {
+  for (const p of state.parties.values()) {
+    const hasQueen = p.units.some((u) => {
+      const tmpl = state.unitTemplates.get(u.templateId);
+      return tmpl?.faction === 'ant' && tmpl.tags.includes('queen');
+    });
+    if (hasQueen) return p;
+  }
+  throw new Error('queen party not found');
+};
+
+const findQueenUnit = (state: GameState): Unit => {
+  const party = findQueenParty(state);
+  const unit = party.units.find((u) => {
+    const tmpl = state.unitTemplates.get(u.templateId);
+    return tmpl?.faction === 'ant' && tmpl.tags.includes('queen');
+  });
+  if (!unit) throw new Error('queen unit not found');
+  return unit;
+};
+
+const updateParty = (state: GameState, partyId: PartyId, patch: Partial<Party>): GameState => {
+  const parties = new Map(state.parties);
+  const party = parties.get(partyId);
+  if (!party) throw new Error(`no party ${String(partyId)}`);
+  parties.set(partyId, { ...party, ...patch });
+  return { ...state, parties };
+};
+
+const replaceUnitInParty = (state: GameState, partyId: PartyId, replacement: Unit): GameState => {
+  const parties = new Map(state.parties);
+  const party = parties.get(partyId);
+  if (!party) throw new Error(`no party ${String(partyId)}`);
+  const units = party.units.map((u) => (u.id === replacement.id ? replacement : u));
+  parties.set(partyId, { ...party, units });
+  return { ...state, parties };
+};
+
+const setPost = (state: GameState, postId: PostId, patch: Partial<Post>): GameState => {
+  const posts = new Map(state.posts);
+  const post = posts.get(postId);
+  if (!post) throw new Error(`no post ${String(postId)}`);
+  posts.set(postId, { ...post, ...patch });
+  return { ...state, posts };
+};
+
+const isTurnStartFor = (e: ReplayEvent, turn: number): boolean =>
+  e.kind === 'turn-start' && e.turn === turn;
+
+describe('endOfTurn', () => {
+  it('advances turn by 1 and emits a turn-start for the new turn (smoke)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.turn).toBe(state.turn + 1);
+    const turnStart = out.events.find((e) => isTurnStartFor(e, out.state.turn));
+    expect(turnStart).toBeDefined();
+  });
+
+  it('heals a wounded unit on a friendly POST by exactly post.healingRate', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // queen-guard sits on the storm-drain (ant-owned, healingRate=3 in level-1 data).
+    const queenParty = findQueenParty(state);
+    const stormDrain = state.posts.get('storm-drain' as PostId);
+    expect(stormDrain).toBeDefined();
+    expect(stormDrain?.owner).toBe('ant');
+
+    // Wound a non-queen unit so we can observe the heal cleanly.
+    const target = queenParty.units.find((u) => {
+      const tmpl = state.unitTemplates.get(u.templateId);
+      return tmpl?.tags.includes('queen') !== true;
+    });
+    expect(target).toBeDefined();
+    if (!target) return;
+    const tmpl = state.unitTemplates.get(target.templateId);
+    expect(tmpl).toBeDefined();
+    if (!tmpl) return;
+    const max = tmpl.baseStats.hp;
+    const wounded: Unit = { ...target, currentHp: 1 };
+    const s = replaceUnitInParty(state, queenParty.id, wounded);
+
+    const heal = stormDrain?.healingRate ?? 0;
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(queenParty.id);
+    const healed = after?.units.find((u) => u.id === target.id);
+    expect(healed?.currentHp).toBe(Math.min(max, 1 + heal));
+    // And does not exceed max if already near it.
+    const nearMax: Unit = { ...target, currentHp: max - 1 };
+    const s2 = replaceUnitInParty(state, queenParty.id, nearMax);
+    const out2 = endOfTurn(s2, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const healed2 = out2.state.parties.get(queenParty.id)?.units.find((u) => u.id === target.id);
+    expect(healed2?.currentHp).toBe(max);
+  });
+
+  it('does not heal units that are not on a friendly POST', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // vanguard-alpha starts at (floor, 1, 0), no POST there.
+    const partyId = 'vanguard-alpha' as PartyId;
+    const party = state.parties.get(partyId);
+    expect(party).toBeDefined();
+    if (!party) return;
+    // There is no POST at the vanguard-alpha starting location; sanity check.
+    const onPost = [...state.posts.values()].some(
+      (p) =>
+        p.location.plane === party.location.plane &&
+        p.location.x === party.location.x &&
+        p.location.y === party.location.y,
+    );
+    expect(onPost).toBe(false);
+
+    const someUnit = party.units[0];
+    expect(someUnit).toBeDefined();
+    if (!someUnit) return;
+    const wounded: Unit = { ...someUnit, currentHp: 1 };
+    const s = replaceUnitInParty(state, partyId, wounded);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId)?.units.find((u) => u.id === someUnit.id);
+    expect(after?.currentHp).toBe(1);
+  });
+
+  it('queenUltimateCharge increases by chargePerTurn and is capped at chargeMax', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.queenUltimateCharge).toBe(data.queen.ultimate.chargePerTurn);
+
+    // Pin charge near the cap and verify it does not exceed chargeMax.
+    const near: GameState = {
+      ...state,
+      queenUltimateCharge: data.queen.ultimate.chargeMax - 1,
+    };
+    const out2 = endOfTurn(near, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out2.state.queenUltimateCharge).toBe(data.queen.ultimate.chargeMax);
+
+    // Charge event reflects the new value.
+    const chargeEvt = out2.events.find((e) => e.kind === 'queen-ultimate-charged');
+    expect(chargeEvt).toBeDefined();
+    if (chargeEvt?.kind === 'queen-ultimate-charged') {
+      expect(chargeEvt.charge).toBe(data.queen.ultimate.chargeMax);
+    }
+  });
+
+  it('produces one configured unit at the production cadence', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const cadence = data.queen.production.turnsPerUnit;
+    const producedId = data.queen.production.producedTemplateId;
+
+    // Make room in the queen party so production is permitted by capacity.
+    const queenParty = findQueenParty(state);
+    const queenOnly = queenParty.units.filter((u) => {
+      const tmpl = state.unitTemplates.get(u.templateId);
+      return tmpl?.tags.includes('queen') === true;
+    });
+    const queenLeader = queenOnly[0];
+    expect(queenLeader).toBeDefined();
+    if (!queenLeader) return;
+    const trimmedState = updateParty(state, queenParty.id, {
+      units: queenOnly,
+      leaderId: queenLeader.id,
+    });
+
+    // Walk endOfTurn cadence-1 times, then the next call should produce.
+    let cur = trimmedState;
+    for (let i = 0; i < cadence - 1; i++) {
+      const out = endOfTurn(cur, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+      cur = out.state;
+    }
+    const before = findQueenParty(cur);
+    const beforeCount = before.units.filter((u) => String(u.templateId) === producedId).length;
+
+    const out = endOfTurn(cur, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.turn).toBe(cadence);
+    const after = findQueenParty(out.state);
+    const afterCount = after.units.filter((u) => String(u.templateId) === producedId).length;
+    expect(afterCount).toBe(beforeCount + 1);
+  });
+
+  it('skips production when the Queen party is already at slot capacity', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const cadence = data.queen.production.turnsPerUnit;
+
+    // The queen-guard starts at exactly 12 used slots, so production this round
+    // would push us past the 12-slot cap if attempted.
+    let cur: GameState = { ...state, turn: cadence - 1 };
+    const before = findQueenParty(cur);
+    const beforeUnitCount = before.units.length;
+
+    const out = endOfTurn(cur, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.turn).toBe(cadence);
+    const after = findQueenParty(out.state);
+    expect(after.units.length).toBe(beforeUnitCount);
+    cur = out.state;
+  });
+
+  it('fires victory when the spider-web POST is owned by ant', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setPost(state, 'spider-web' as PostId, { owner: 'ant' });
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('ant');
+    const end = out.events.find((e) => e.kind === 'scenario-end');
+    expect(end).toBeDefined();
+    if (end?.kind === 'scenario-end') expect(end.winner).toBe('ant');
+  });
+
+  it('fires loss when the queen-tagged unit is dead', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const queenParty = findQueenParty(state);
+    const queenUnit = findQueenUnit(state);
+    const dead: Unit = { ...queenUnit, currentHp: 0 };
+    const s = replaceUnitInParty(state, queenParty.id, dead);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('spider');
+    const end = out.events.find((e) => e.kind === 'scenario-end');
+    expect(end).toBeDefined();
+    if (end?.kind === 'scenario-end') expect(end.winner).toBe('spider');
+  });
+
+  it('does not modify the Queen unit currentHp/level/xp during normal turn', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const before = findQueenUnit(state);
+    const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = findQueenUnit(out.state);
+    expect(after.currentHp).toBe(before.currentHp);
+    expect(after.level).toBe(before.level);
+    expect(after.xp).toBe(before.xp);
+  });
+
+  it('accrues jelly doses up to capacityPerParty at the Queen party', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const queenParty = findQueenParty(state);
+    // Drain doses to a known floor to track production cleanly.
+    const s0 = updateParty(state, queenParty.id, { jellyDoses: 0 });
+    let cur = s0;
+    for (let i = 0; i < data.jelly.capacityPerParty + 2; i++) {
+      const out = endOfTurn(cur, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+      cur = out.state;
+    }
+    const final = findQueenParty(cur);
+    expect(final.jellyDoses).toBe(data.jelly.capacityPerParty);
+  });
+
+  it('emits exactly one queen-ultimate-charged event per call', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const charges = out.events.filter((e) => e.kind === 'queen-ultimate-charged');
+    expect(charges).toHaveLength(1);
+  });
+
+  it('produced unit ids follow the deterministic u-prod-{turn}-{templateId} format', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const cadence = data.queen.production.turnsPerUnit;
+    const producedId = data.queen.production.producedTemplateId;
+
+    // Make room in the queen party by dropping all non-queen units, so production
+    // is permitted by capacity.
+    const queenParty = findQueenParty(state);
+    const onlyQueen = queenParty.units.filter((u) => {
+      const tmpl = state.unitTemplates.get(u.templateId);
+      return tmpl?.tags.includes('queen') === true;
+    });
+    const queenLeader = onlyQueen[0];
+    expect(queenLeader).toBeDefined();
+    if (!queenLeader) return;
+    const trimmed: Party = {
+      ...queenParty,
+      units: onlyQueen,
+      leaderId: queenLeader.id,
+    };
+    const parties = new Map(state.parties);
+    parties.set(queenParty.id, trimmed);
+    const s: GameState = { ...state, parties, turn: cadence - 1 };
+
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = findQueenParty(out.state);
+    const expectedId = `u-prod-${String(cadence)}-${producedId}`;
+    const found = after.units.find((u) => String(u.id) === expectedId);
+    expect(found).toBeDefined();
+    expect(found?.templateId).toBe(producedId as UnitTemplateId);
+  });
+});

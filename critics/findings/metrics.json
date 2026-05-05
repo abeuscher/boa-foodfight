@@ -1,0 +1,16 @@
+{
+  "source": "out/tune/eval-005",
+  "findings": [
+    {
+      "rule": "decisive-outcomes",
+      "severity": "medium",
+      "observation": "23% of runs timed out (23/100)",
+      "suggested_action": "most timeouts mean neither side can finish. Increase max-turns first to confirm; if timeouts persist, the issue is structural (e.g., one side cannot reach the other side's win condition)"
+    },
+    {
+      "rule": "measurement",
+      "severity": "low",
+      "observation": "100 seeds: ant=77 spider=0 timeout=23; win rate 77.0%; avg turns to victory 10.4"
+    }
+  ]
+}
