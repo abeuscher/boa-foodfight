@@ -36,6 +36,7 @@
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
 import { baseMovementAllowance } from './parties.ts';
 import type {
+  AbilityId,
   GameState,
   Order,
   Party,
@@ -45,7 +46,23 @@ import type {
   Rng,
   Tile,
   TileCoord,
+  UnitTemplate,
+  UnitTemplateId,
 } from './types.ts';
+
+const PLANE_SWITCH: AbilityId = 'plane-switch' as AbilityId;
+
+const partyHasPlaneSwitch = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (tmpl?.abilities.includes(PLANE_SWITCH)) return true;
+  }
+  return false;
+};
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -158,8 +175,19 @@ const tryPlaneTransition = (
   party: Party,
   target: TileCoord,
   posts: ReadonlyMap<unknown, Post>,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
 ): TileCoord | undefined => {
   if (party.location.plane === target.plane) return undefined;
+
+  // Plane-switch passive: a party with any unit owning the plane-switch
+  // ability can step between planes at the same (x,y) without needing a
+  // paired POST. This is the ant-mage's intended bridge to the ceiling.
+  // (The spec's per-scenario use limit is deferred until ability charge
+  // tracking lands; for now it's effectively at-will.)
+  if (partyHasPlaneSwitch(party, templates)) {
+    return { plane: target.plane, x: party.location.x, y: party.location.y };
+  }
+
   const here = postAt(party.location, posts);
   if (!here?.pairedWith) return undefined;
   const partner = posts.get(here.pairedWith);
@@ -203,7 +231,7 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
 
     if (location.plane !== target.plane) {
       // Cross-plane: only via paired friendly POSTs.
-      next = tryPlaneTransition({ ...partyIn, location }, target, state.posts);
+      next = tryPlaneTransition({ ...partyIn, location }, target, state.posts, state.unitTemplates);
       if (!next) break; // Order stalls; will retry next turn.
     } else {
       next = pickGreedyStep(location, target, state.tiles, tiebreak);
@@ -254,6 +282,11 @@ const detectCollisions = (
         if (!pa || !pb) continue;
         if (pa.faction === pb.faction) continue;
         if (pa.faction === 'neutral' || pb.faction === 'neutral') continue;
+        // Skip wiped parties: a party with no living units shouldn't
+        // trigger phantom battles.
+        const aAlive = pa.units.some((u) => u.currentHp > 0);
+        const bAlive = pb.units.some((u) => u.currentHp > 0);
+        if (!aAlive || !bAlive) continue;
         pairs.push([a, b]);
       }
     }

@@ -130,8 +130,16 @@ export const runTurn = (
   working = moveOutcome.state;
   events.push(...moveOutcome.events);
 
-  // 2. Battles for collisions.
+  // 2. Battles for collisions. Re-check liveness against the working state
+  // (not the snapshot from movement) because an earlier battle in the loop
+  // may have wiped one of the parties already.
   for (const pair of moveOutcome.collisions) {
+    const a = working.parties.get(pair[0]);
+    const b = working.parties.get(pair[1]);
+    if (!a || !b) continue;
+    const aAlive = a.units.some((u) => u.currentHp > 0);
+    const bAlive = b.units.some((u) => u.currentHp > 0);
+    if (!aAlive || !bAlive) continue;
     const input = buildBattleInput(working, scenario, pair);
     if (!input) continue;
     const battleRng = rng.fork(`battle-${String(pair[0])}-${String(pair[1])}`);

@@ -81,6 +81,17 @@ const ordersForParty = (state: GameState, party: Party): readonly Order[] => {
   return [moveOrder(target)];
 };
 
+/**
+ * Field parties charge as soon as the AI starts; the rosters seed them as
+ * `run` or `defend` to encode their initial disposition, but once we're
+ * issuing offensive orders we want full damage. The Queen's home guard
+ * keeps its `defend` posture (the spec wants brutal home-base defense).
+ */
+const desiredPosture = (party: Party): Party['posture'] => {
+  if (party.id === QUEEN_PARTY) return 'defend';
+  return 'fight';
+};
+
 export const baselinePlayer: AIPolicy = {
   name: 'baseline-staging',
   faction: FACTION,
@@ -89,8 +100,11 @@ export const baselinePlayer: AIPolicy = {
     for (const [id, party] of state.parties) {
       if (party.faction !== FACTION) continue;
       const orders = ordersForParty(state, party);
-      if (orders === party.orders) continue;
-      nextParties.set(id, { ...party, orders });
+      const posture = desiredPosture(party);
+      const ordersChanged = orders !== party.orders;
+      const postureChanged = posture !== party.posture;
+      if (!ordersChanged && !postureChanged) continue;
+      nextParties.set(id, { ...party, orders, posture });
     }
     return { ...state, parties: nextParties };
   },
