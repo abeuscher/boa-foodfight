@@ -191,6 +191,9 @@ export interface GameState {
   readonly unitTemplates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
   readonly fog: ReadonlyMap<string, FogTile>;
   readonly queenUltimateCharge: number;
+  /** How many times the Queen ultimate has fired this scenario. Capped by
+   * `queen.ultimate.usesPerScenario` in the data. */
+  readonly queenUltimatesUsed: number;
   readonly buttons: number;
   readonly winner: Faction | null;
 }

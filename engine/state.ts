@@ -227,6 +227,7 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
     unitTemplates,
     fog,
     queenUltimateCharge: 0,
+    queenUltimatesUsed: 0,
     buttons: 0,
     winner: null,
   };

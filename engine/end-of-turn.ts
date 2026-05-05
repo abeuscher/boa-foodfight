@@ -13,7 +13,7 @@
  * surface and is expected to come from the shared replay tick clock.
  */
 
-import { sameCoord } from './coord.ts';
+import { distance, sameCoord } from './coord.ts';
 import type { JellyFile, QueenFile } from './schemas/index.ts';
 import type {
   Faction,
@@ -23,6 +23,7 @@ import type {
   Post,
   PostId,
   ReplayEvent,
+  TileCoord,
   Unit,
   UnitId,
   UnitTemplate,
@@ -131,6 +132,78 @@ const applyUltimateCharge = (
   return { state: { ...state, queenUltimateCharge: charge }, charge };
 };
 
+interface UltimateFireResult {
+  readonly state: GameState;
+  readonly events: readonly ReplayEvent[];
+}
+
+/**
+ * Fire the Queen ultimate at `queenLoc`. Damages every enemy unit within
+ * `radius` (Chebyshev, same plane only — the spec describes the ultimate
+ * as a battlefield wipe, not a cross-plane teleport-attack). Returns the
+ * mutated state plus the queen-ultimate-fired event and any unit-died
+ * events for spider units killed by the blast.
+ */
+const fireUltimate = (
+  state: GameState,
+  queenLoc: TileCoord,
+  queen: QueenFile,
+  turn: number,
+  tick: () => number,
+): UltimateFireResult => {
+  const events: ReplayEvent[] = [];
+  const radius = queen.ultimate.radius;
+  const damage = queen.ultimate.damage;
+  const nextParties = new Map<PartyId, Party>();
+
+  for (const [id, party] of state.parties) {
+    const inBlast =
+      party.faction === 'spider' &&
+      party.location.plane === queenLoc.plane &&
+      distance(queenLoc, party.location) <= radius;
+    if (!inBlast) {
+      nextParties.set(id, party);
+      continue;
+    }
+    const newUnits = party.units.map((u) => {
+      if (u.currentHp <= 0) return u;
+      const newHp = Math.max(0, u.currentHp - damage);
+      return { ...u, currentHp: newHp };
+    });
+    for (const u of newUnits) {
+      const before = party.units.find((p) => p.id === u.id);
+      if (before && before.currentHp > 0 && u.currentHp <= 0) {
+        events.unshift({ kind: 'unit-died', turn, tick: tick(), unitId: u.id });
+      }
+    }
+    nextParties.set(id, { ...party, units: newUnits });
+  }
+
+  events.unshift({ kind: 'queen-ultimate-fired', turn, tick: tick() });
+  const nextState: GameState = {
+    ...state,
+    parties: nextParties,
+    queenUltimateCharge: 0,
+    queenUltimatesUsed: state.queenUltimatesUsed + 1,
+  };
+  return { state: nextState, events };
+};
+
+/**
+ * Returns true iff there is at least one living spider unit within
+ * `radius` (Chebyshev) of `center` on the same plane. Used to gate
+ * ultimate firing so the AoE doesn't vanish into thin air.
+ */
+const enemyInUltimateRange = (state: GameState, center: TileCoord, radius: number): boolean => {
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'spider') continue;
+    if (party.location.plane !== center.plane) continue;
+    if (distance(center, party.location) > radius) continue;
+    if (party.units.some((u) => u.currentHp > 0)) return true;
+  }
+  return false;
+};
+
 const applyJellyProduction = (state: GameState, jelly: JellyFile): GameState => {
   const queenParty = findQueenParty(state);
   if (!queenParty) return state;
@@ -189,15 +262,37 @@ export const endOfTurn = (
   // 1. Healing.
   let working = applyHealing(state);
 
-  // 2. Queen ultimate charge.
+  // 2. Queen ultimate charge. Only emit if the value actually changed —
+  //    once the cap is hit, repeated charge=cap events are pure noise.
+  const oldCharge = working.queenUltimateCharge;
   const chargeStep = applyUltimateCharge(working, input.queen);
   working = chargeStep.state;
-  events.push({
-    kind: 'queen-ultimate-charged',
-    turn: currentTurn,
-    tick: tick(),
-    charge: chargeStep.charge,
-  });
+  if (chargeStep.charge !== oldCharge) {
+    events.push({
+      kind: 'queen-ultimate-charged',
+      turn: currentTurn,
+      tick: tick(),
+      charge: chargeStep.charge,
+    });
+  }
+
+  // 2b. Fire the ultimate if it's ready, has uses remaining, and would
+  //     hit at least one living spider unit. The AoE clears most or all
+  //     attackers per the spec.
+  if (
+    working.queenUltimateCharge >= input.queen.ultimate.chargeMax &&
+    working.queenUltimatesUsed < input.queen.ultimate.usesPerScenario
+  ) {
+    const queenParty = findQueenParty(working);
+    if (
+      queenParty &&
+      enemyInUltimateRange(working, queenParty.location, input.queen.ultimate.radius)
+    ) {
+      const fireResult = fireUltimate(working, queenParty.location, input.queen, currentTurn, tick);
+      working = fireResult.state;
+      events.push(...fireResult.events);
+    }
+  }
 
   // 3. Royal Jelly production (silent).
   working = applyJellyProduction(working, input.jelly);
