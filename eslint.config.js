@@ -15,6 +15,9 @@ export default tseslint.config(
       '.husky/**',
       'viewer/main.js',
       'viewer/dist/**',
+      // Playwright spec uses @playwright/test; lint config can't easily handle both.
+      'viewer/viewer.spec.ts',
+      'viewer/playwright.config.ts',
     ],
   },
   ...tseslint.configs.recommendedTypeChecked,

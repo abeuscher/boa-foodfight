@@ -253,6 +253,106 @@ function renderLog(events, currentTick) {
   list.scrollTop = list.scrollHeight;
 }
 
+// ---------------------------------------------------------------------------
+// Click-to-inspect: map a canvas click to (plane, x, y), show details for
+// any parties + post at that tile.
+// ---------------------------------------------------------------------------
+
+let SELECTED_TILE = null;
+
+function tileAtClick(canvas, evt) {
+  const rect = canvas.getBoundingClientRect();
+  const cx = ((evt.clientX - rect.left) * canvas.width) / rect.width;
+  const cy = ((evt.clientY - rect.top) * canvas.height) / rect.height;
+  for (const plane of PLANES) {
+    const { ox, oy } = planeOrigin(plane);
+    if (cx < ox || cx >= ox + GRID * CELL) continue;
+    if (cy < oy || cy >= oy + GRID * CELL) continue;
+    const x = Math.floor((cx - ox) / CELL);
+    const y = Math.floor((cy - oy) / CELL);
+    return { plane, x, y };
+  }
+  return null;
+}
+
+function partiesAtTile(state, tile) {
+  const out = [];
+  for (const [id, p] of state.parties) {
+    if (p.plane === tile.plane && p.x === tile.x && p.y === tile.y) {
+      out.push({ id, ...p });
+    }
+  }
+  return out;
+}
+
+function postAtTile(state, tile) {
+  for (const [id, def] of Object.entries(SPEC_POSTS)) {
+    if (def.plane !== tile.plane || def.x !== tile.x || def.y !== tile.y) continue;
+    const live = state.posts.get(id);
+    return { id, ...def, owner: live?.owner ?? def.owner };
+  }
+  return null;
+}
+
+function eventsForParty(events, partyId, currentTick, limit = 8) {
+  const out = [];
+  for (const e of events) {
+    if (e.tick > currentTick) break;
+    let touches = false;
+    if ('partyId' in e && e.partyId === partyId) touches = true;
+    if (e.kind === 'battle-resolved') {
+      if (e.result.attackerPartyId === partyId || e.result.defenderPartyId === partyId)
+        touches = true;
+    }
+    if (touches) out.push(e);
+  }
+  return out.slice(-limit);
+}
+
+function renderInspect(state, events, tick) {
+  const panel = document.getElementById('inspect-content');
+  if (!SELECTED_TILE) {
+    panel.className = 'empty';
+    panel.textContent = 'no tile selected';
+    return;
+  }
+  const { plane, x, y } = SELECTED_TILE;
+  const parties = partiesAtTile(state, SELECTED_TILE);
+  const post = postAtTile(state, SELECTED_TILE);
+  panel.className = '';
+
+  let html = `<div><span class="label">tile</span> <span class="value">${plane} (${x}, ${y})</span></div>`;
+  if (post) {
+    html += `\n<div><span class="label">post</span> <span class="value">${post.id}</span> owner=<span class="${post.owner}">${post.owner}</span></div>`;
+  }
+  if (parties.length === 0 && !post) {
+    html += '\n<div class="label">(no parties or post here)</div>';
+  }
+  for (const p of parties) {
+    html += `\n<hr style="border-color:#444;margin:8px 0">`;
+    html += `\n<div><span class="label">party</span> <span class="value">${p.id}</span> <span class="${p.faction}">${p.faction}</span></div>`;
+    const recent = eventsForParty(events, p.id, tick);
+    if (recent.length > 0) {
+      html += `\n<div class="label" style="margin-top:6px">recent events:</div>`;
+      for (const e of recent) {
+        html += `\n<div style="padding-left:8px">t${e.tick} ${e.kind}${describeEvent(e) ? ' — ' + escapeHtml(describeEvent(e)) : ''}</div>`;
+      }
+    }
+    // Raw JSON (truncated for readability).
+    const rawJson = JSON.stringify(
+      { id: p.id, faction: p.faction, location: { plane: p.plane, x: p.x, y: p.y } },
+      null,
+      2,
+    );
+    html += `\n<details style="margin-top:6px"><summary class="label">raw json</summary><pre style="margin:4px 0">${escapeHtml(rawJson)}</pre></details>`;
+  }
+  panel.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function describeEvent(e) {
   switch (e.kind) {
     case 'party-moved':
@@ -377,6 +477,7 @@ function setTick(tick) {
   const state = reduceWithInitial(CURRENT_EVENTS, t);
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
+  renderInspect(state, CURRENT_EVENTS, t);
   document.getElementById('tick-label').textContent =
     `tick ${t} / ${MAX_TICK} — turn ${state.turn}${state.winner ? ` — ${state.winner.toUpperCase()} WINS` : ''}`;
 }
@@ -409,6 +510,12 @@ async function init() {
     .getElementById('scrubber')
     .addEventListener('input', (e) => setTick(Number(e.target.value)));
   document.getElementById('play-btn').addEventListener('click', togglePlay);
+  const board = document.getElementById('board');
+  board.addEventListener('click', (e) => {
+    const tile = tileAtClick(board, e);
+    SELECTED_TILE = tile;
+    setTick(Number(document.getElementById('scrubber').value));
+  });
   document.getElementById('speed').addEventListener('input', (e) => {
     document.getElementById('speed-val').textContent = `${e.target.value}×`;
   });
