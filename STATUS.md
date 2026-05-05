@@ -1,131 +1,120 @@
-# Status — Phase 4c.3 (in-battle ability resolver: volley + mend)
-
-This file is updated by the orchestrator after each Phase-4 measurement
-pass. It records the current win rate, the consolidated critic findings,
-and a one-paragraph diagnosis of what's blocking the target.
+# Status — Phase 4c.4 (capture bug fix + roster reshuffle; tuning open)
 
 ## Latest measurement
 
 - **Date:** 2026-05-05
 - **Seeds:** 1..100
 - **Max turns:** 100
-- **Ant win rate:** 0% (target: 65–80%) — still
-- **Outcomes:** ant=0, spider=0, timeout=100
-- **Avg events/run:** 225 (up from 220)
-- **Replays:** `out/baseline-100-v7/`
+- **Ant win rate:** 0% (target: 65–80%) — engine bug fixed but stats untuned
+- **Replays:** `out/baseline-100-v13/`
 
-## What landed in 4c.3
+## Real engine bug uncovered (the headline finding)
 
-`engine/battle-abilities.ts` — pre-battle ability resolver, called by
-`engine/battle.ts` at the start of every battle. Currently handles:
+`engine/posts.ts::resolveCaptures` was counting wiped parties as
+occupants. When pathfinders won a battle at the spider-web tile and
+killed every web-guard unit, the wiped web-guard _party_ (now
+holding 0 living units) still sat at (9,9). The capture rule saw
+`factions = {ant, spider}` → contested → no capture. The win
+condition then never triggered.
 
-- **`volley`** (special-attack, target=party). Each archer (or any unit
-  carrying volley) with charges remaining picks the lowest-HP living
-  enemy unit and deals `params.damage` (12) flat damage. Marked as used
-  on that unit; one shot per scenario per unit. Emits `ability-used` and
-  `unit-died` if the volley kills outright.
+**Demonstrated by a "test the test"**: setting all spider HP to 1
+should produce 100% ant wins. With the bug, it gave 0%. With the
+fix (skip parties whose units are all dead), it gave **100% wins
+in 9 turns avg**.
 
-- **`mend`** (buff, target=party). Each medic-bearing unit (ant-mage)
-  heals every living unit in its own party by `params.heal` (6),
-  capped at the template's baseStats.hp.
+This bug masked all prior tuning iterations. Several rounds of
+"why doesn't the win rate move" were actually "the engine ate the
+capture."
 
-Type contract change: `Unit.usedAbilities?: readonly AbilityId[]`
-tracks one-shot ability consumption.
+Fix landed in `engine/posts.ts`:
 
-`BattleInput.abilities: AbilitiesFile` is the new wiring — turn driver
-threads scenario abilities through every battle.
+```ts
+const alive = party.units.some((u) => u.currentHp > 0);
+if (!alive) continue;
+```
 
-7 new tests in `engine/battle-abilities.test.ts` cover targeting,
-charge tracking, deterministic order, mend-doesn't-heal-enemies, and
-volley-kills-outright.
+## Other changes in this iteration
 
-## What the measurement reveals
+**`data/level-1/roster-ants.json` — reshuffle (count-preserving):**
 
-The abilities **fire correctly** — 304 volleys + 100 mends across
-100 runs (~4 ability uses per run, matches the 304-battle count from
-4c.2). The spec-compliance critic's `pheroblast-used / ability-used:
-NEVER observed` finding is now resolved.
+- pathfinders: dropped 2 workers, added 2 archers → now 1 mage +
+  2 scouts + 3 archers (3 volleys instead of 1 in the web fight)
+- vanguard-bravo: dropped 1 worker, added 1 mage → 3 footmen +
+  1 potato-bug + 1 archer + 1 mage. Now also has plane-switch, so
+  it can follow pathfinders to the ceiling.
+- Total ant unit count unchanged (28).
 
-Wall-crack battles are now **decisive ant wins** with zero ant
-casualties. Volley pre-kills spider scouts/soldiers (10/12 HP) before
-combat starts — vanguard-alpha (with 2 archers) opens with two
-volleys that kill silk-line's scout and a soldier outright; combat
-then mops up. Same for web-watch. The vanguards are essentially
-untouchable on the wall plane now.
+**`engine/battle.test.ts`** — the round-count test was using
+`ant-queen` + footman vs 2 elites. With the elite stat changes I
+explored mid-tune, that battle finished in 2 rounds (elites too
+weak). Restructured to use `ant-queen × 2` vs `spider-queen × 2` so
+the test is robust to elite/footman tuning.
 
-But **pathfinders still loses to web-guard** every run. The math:
-pathfinders has only 1 archer → 1 volley → 12 damage to one of the
-4 spider elites (22 HP each). Net: 1 elite at 10 HP, 3 elites + spider
-queen still at full. Web-guard total HP: 168. Pathfinders total HP:
-44 (1 mage + 2 scouts + 2 workers + 1 archer). Outcome unchanged:
-pathfinders wiped on turn 8, web-guard intact.
+## Why win rate is still 0% with original spider stats
 
-## Updated diagnosis
+The web-guard composition (1 spider-queen + 4 spider-elites = 5
+units, 168 HP) is too tough for any current ant assault even with
+two parties hitting it sequentially. The math on this is mechanical
+(see Phase 4c.3 STATUS) and **doesn't change with the capture-bug
+fix** — the bug was about win detection, not damage.
 
-The engine + abilities are working. The locked player AI sends
-pathfinders alone to the web because it's the only ant party with
-plane-switch. That party simply doesn't have enough firepower to
-break web-guard's front-loaded composition (queen + 4 elites).
+To actually land in the 65–80% band requires spider stat tuning.
+Manual experiments in this session showed:
 
-To flip the win rate, a **single additional change** is needed —
-exactly one of these:
+| Spider config                                             | Ant wins / 100        |
+| --------------------------------------------------------- | --------------------- |
+| Original (queen 80/15/6, elite 22/7/3, web-guard 5 units) | 0%                    |
+| Web-guard 4 units (drop 1 elite)                          | 0%                    |
+| + Queen HP 60, armor 5                                    | 0%                    |
+| + Queen HP 40, armor 4                                    | 0%                    |
+| + Queen ATK 8, HP 50, armor 5; elite ATK 4                | 0%                    |
+| + Queen 30/3/6; elite 14/2/4                              | **100%, 9 turns avg** |
+| All spider HP=1, armor=0 (test the test)                  | 100%, 9 turns avg     |
 
-A. **Lever 1 — pull web-guard off the web.** When ants control 4
-POSTs, have web-guard pursue the nearest ant party. The spider
-queen would then be in the field, vulnerable to ant attacks +
-queen ultimate. Risky for spiders (queen exposed) but matches a
-"desperate counterattack" briefing.
+The 65–80% band lies somewhere between the last two (queen
+30/3/6 + elite 14/2/4) and the second-to-last (queen 50/8/5 +
+elite ATK 4). Coordinate descent or bisection on a single axis
+would land it in 3–5 evals.
 
-B. **Lever 2 — distribute plane-switch.** Add a second ant-mage to
-one of the vanguards. Two parties on the ceiling = enough force
-to break web-guard. Player roster IS technically locked but
-re-balancing party composition (which ant party gets which units)
-while keeping the unit counts identical isn't a roster change —
-it's an initial-circumstances change (lever 2). Spec-compliant.
+## Algorithmic tuning (the user's framing)
 
-C. **Lever 4 — supplementary win condition.** "Hold 4 of 5 POSTs
-for N consecutive turns" wins. Given ants reliably hold 4 by
-turn 5 and stay there to turn 100, this would single-handedly
-convert ~100% of timeouts to ant victories (probably need to
-choose a value of N like 10 turns to leave room for tactical
-recovery). Cheapest path to a measurable win rate — but feels
-like papering over the core fight.
+Reverse-engineering parameters from a target win rate is a
+black-box optimization problem. The harness IS the objective
+function (`f(params) → ant_win_rate over 100 seeds`, ~700 ms per
+eval). Approaches in increasing power:
 
-## Critic findings against `out/baseline-100-v7/`
+1. **Bisect on one axis.** Cheap when a single knob is monotone.
+2. **Coordinate descent.** A few axes, weak interactions.
+3. **Random search** in a bounded box.
+4. **Bayesian optimization** (overkill at this eval cost).
+5. **Cliff-aware tuner** — read `engine/combat.ts`, derive HP/ATK
+   breakpoints analytically (e.g., spider-elite ATK > footman HP +
+   armor → one-shot regime), search only between cliffs.
 
-| Critic          | High findings | Change since v6                                                         |
-| --------------- | ------------- | ----------------------------------------------------------------------- |
-| metrics         | 3             | unchanged (win-rate, decisive-outcomes, progress-stalemate)             |
-| spec-compliance | **3**         | **down from 5** — `pheroblast-used` (ability-used) is no longer flagged |
-| fun             | n/a           | not rerun this iteration; replay quality continued to improve           |
+For this codebase the cliff-aware tuner is the right approach.
+Maybe 5 harness evals to land 65–80%. Phase 4c was always meant to
+be a real tuner agent — that's the unattended-execution target.
 
-The spec-compliance critic now reports only 3 HIGH findings (was 5):
-queen-ultimate-fires, jelly-applied, fog-revealed. Of those, jelly-
-applied and queen-ult-fires both depend on AI activity that doesn't
-yet exist (jelly orders, spiders within ult range), and fog-revealed
-needs the fog module.
+## What's locked / not
 
-## What is locked, and won't change
-
-- `ai/baseline.ts` — the locked reference player AI.
-- The 5 spec-locked POST ids and their owners.
-- Player roster TOTALS (ant unit composition counts).
-- Engine semantics (movement, battle math, capture rules) **except**
-  for spec-faithful gaps — climbing bypass (4c.2), opening abilities
-  (4c.3) — neither of which existed before.
-
-Party COMPOSITION (which units go in which party) is NOT explicitly
-locked by the spec — the rosters were proposed by the Phase 1 design
-agent. Reshuffling units across parties is a lever-2 (initial
-circumstances) change.
+- `ai/baseline.ts` — locked.
+- 5 spec-locked POST ids and ownerships — locked.
+- Engine semantics — locked except for spec-faithful gaps that
+  surface mid-tune (climbing bypass, opening abilities,
+  capture-on-wipe — all now implemented).
+- Ant roster: reshuffled (count-preserving), now considered the
+  current baseline.
+- Spider stats / composition: open tuning levers.
 
 ## Phase 4 next steps
 
-Three single-lever changes, each likely sufficient to flip the win
-rate from 0%. Pick one:
-
-1. **Spider counter-push from web-guard** (data: ai/spider-l1.ts).
-2. **Reshuffle ant-mage** so vanguard-bravo also has plane-switch
-   (data: roster-ants.json).
-3. **Supplementary win condition** (engine: end-of-turn.ts +
-   GameState field).
+1. **Write the cliff-aware tuner.** Reads combat math, derives
+   HP/ATK thresholds, bisects within breakpoint intervals,
+   re-measures, iterates capped at 10 rounds. Outputs the final
+   tuned `data/level-1/units.json` + `roster-spiders.json` plus a
+   tuning report.
+2. **Apply your three changes from this turn permanently.** They
+   moved the structural needle (battles per run 1 → 4, ability
+   uses 0 → 400 across runs) but couldn't flip win rate at
+   original spider stats. The reshuffle is committed; the
+   spider-stat tuning is the open work.

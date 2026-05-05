@@ -152,12 +152,13 @@ describe('resolveBattle: smoke', () => {
   });
 
   it('round count is in [3,5] when neither side is wiped early', () => {
-    // Use beefy units so the battle is unlikely to terminate early.
+    // Queen-vs-queen so the battle doesn't terminate early regardless of
+    // elite/footman stat tuning (both queens have 30+ HP and high armor).
     const { state: base } = loadScenario(DATA_DIR, 1);
-    const ants: Unit[] = [mkUnit(base, 'ant-queen', 'tq-1'), mkUnit(base, 'ant-footman', 'tq-2')];
+    const ants: Unit[] = [mkUnit(base, 'ant-queen', 'tq-1'), mkUnit(base, 'ant-queen', 'tq-2')];
     const spiders: Unit[] = [
-      mkUnit(base, 'spider-elite', 'ts-1'),
-      mkUnit(base, 'spider-elite', 'ts-2'),
+      mkUnit(base, 'spider-queen', 'ts-1'),
+      mkUnit(base, 'spider-queen', 'ts-2'),
     ];
     const atk = baseAntParty('beefy-atk', ants, ants[0]!.id);
     const def = baseSpiderParty('beefy-def', spiders, spiders[0]!.id);

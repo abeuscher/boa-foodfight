@@ -107,7 +107,14 @@ export const resolveCaptures = (state: GameState, tick: () => number): SetPostOw
   for (const post of state.posts.values()) {
     const factions = new Set<Faction>();
     for (const party of working.parties.values()) {
-      if (sameCoord(party.location, post.location)) factions.add(party.faction);
+      if (!sameCoord(party.location, post.location)) continue;
+      // Skip wiped parties — a party with no living units shouldn't
+      // count as "occupying" the tile for capture purposes. Without this
+      // check, a defender wiped in battle still blocks the winner from
+      // capturing the POST they just took.
+      const alive = party.units.some((u) => u.currentHp > 0);
+      if (!alive) continue;
+      factions.add(party.faction);
     }
     factions.delete('neutral');
     if (factions.size !== 1) continue;
