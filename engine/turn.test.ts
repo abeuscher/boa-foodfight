@@ -2,11 +2,14 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { baselinePlayer } from '../ai/baseline.ts';
+import { spiderL1 } from '../ai/spider-l1.ts';
+
 import { createTickClock } from './replay.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
 import { runScenario, runTurn } from './turn.ts';
-import type { ReplayEvent } from './types.ts';
+import type { PostId, ReplayEvent } from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -99,5 +102,72 @@ describe('runScenario', () => {
       expect(e.tick).toBeGreaterThan(lastTick);
       lastTick = e.tick;
     }
+  });
+});
+
+describe('runScenario with AI policies (Phase 3 integration)', () => {
+  it('with both AIs wired, parties actually move', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const clock = createTickClock();
+    const outcome = runScenario(state, data, createRng(1), clock.next, {
+      maxTurns: 5,
+      policies: [baselinePlayer, spiderL1],
+    });
+    const moveEvents = outcome.events.filter((e) => e.kind === 'party-moved');
+    expect(moveEvents.length).toBeGreaterThan(0);
+  });
+
+  it('baseline AI captures soap-dish within a reasonable number of turns', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const clock = createTickClock();
+    const outcome = runScenario(state, data, createRng(1), clock.next, {
+      maxTurns: 30,
+      policies: [baselinePlayer, spiderL1],
+    });
+    const soapDish = outcome.finalState.posts.get('soap-dish' as PostId);
+    expect(soapDish?.owner).toBe('ant');
+  });
+
+  it('emits post-captured events as POSTs change hands', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const clock = createTickClock();
+    const outcome = runScenario(state, data, createRng(1), clock.next, {
+      maxTurns: 30,
+      policies: [baselinePlayer, spiderL1],
+    });
+    const captureEvents = outcome.events.filter((e) => e.kind === 'post-captured');
+    expect(captureEvents.length).toBeGreaterThan(0);
+  });
+
+  it('different seeds produce different event streams once AIs drive movement', () => {
+    const a = loadScenario(DATA_DIR, 1);
+    const b = loadScenario(DATA_DIR, 1);
+    const ca = createTickClock();
+    const cb = createTickClock();
+    const oa = runScenario(a.state, a.data, createRng(1), ca.next, {
+      maxTurns: 20,
+      policies: [baselinePlayer, spiderL1],
+    });
+    const ob = runScenario(b.state, b.data, createRng(2), cb.next, {
+      maxTurns: 20,
+      policies: [baselinePlayer, spiderL1],
+    });
+    expect(JSON.stringify(oa.events)).not.toBe(JSON.stringify(ob.events));
+  });
+
+  it('same seed reproduces the run byte-for-byte (the determinism guarantee)', () => {
+    const a = loadScenario(DATA_DIR, 1);
+    const b = loadScenario(DATA_DIR, 1);
+    const ca = createTickClock();
+    const cb = createTickClock();
+    const oa = runScenario(a.state, a.data, createRng(99), ca.next, {
+      maxTurns: 20,
+      policies: [baselinePlayer, spiderL1],
+    });
+    const ob = runScenario(b.state, b.data, createRng(99), cb.next, {
+      maxTurns: 20,
+      policies: [baselinePlayer, spiderL1],
+    });
+    expect(JSON.stringify(oa.events)).toBe(JSON.stringify(ob.events));
   });
 });

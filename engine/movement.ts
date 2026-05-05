@@ -146,8 +146,13 @@ const pickGreedyStep = (
 
 /**
  * If the party currently stands on a paired POST whose partner is on the
- * target's plane and is friendly, returns the partner's location. Otherwise
- * undefined.
+ * target's plane and is not enemy-held, returns the partner's location.
+ * Otherwise undefined. A neutral partner is traversable (the party will
+ * capture it on arrival via resolveCaptures); an enemy-held partner
+ * blocks passage. This is the spec's "moving party must control both
+ * endpoints" rule, relaxed so the first capture of a plane-paired POST
+ * can occur without the chicken-and-egg of needing both ends already
+ * friendly.
  */
 const tryPlaneTransition = (
   party: Party,
@@ -160,7 +165,7 @@ const tryPlaneTransition = (
   const partner = posts.get(here.pairedWith);
   if (!partner) return undefined;
   if (partner.location.plane !== target.plane) return undefined;
-  if (partner.owner !== party.faction) return undefined;
+  if (partner.owner !== party.faction && partner.owner !== 'neutral') return undefined;
   return partner.location;
 };
 

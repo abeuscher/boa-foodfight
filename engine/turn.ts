@@ -14,7 +14,7 @@ import { distance } from './coord.ts';
 import { endOfTurn } from './end-of-turn.ts';
 import { resolveMovement } from './movement.ts';
 import { containsQueen } from './parties.ts';
-import { postAt } from './posts.ts';
+import { postAt, resolveCaptures } from './posts.ts';
 import type { ScenarioData } from './state.ts';
 import type { GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
@@ -140,7 +140,12 @@ export const runTurn = (
     events.push(...outcome.events);
   }
 
-  // 3. End of turn (heal / charge / produce / win-check / turn++).
+  // 3. POST capture: friendly party sitting on a non-friendly POST takes it.
+  const captureOutcome = resolveCaptures(working, tick);
+  working = captureOutcome.state;
+  events.push(...captureOutcome.events);
+
+  // 4. End of turn (heal / charge / produce / win-check / turn++).
   const eotOutcome = endOfTurn(working, { queen: scenario.queen, jelly: scenario.jelly }, tick);
   working = eotOutcome.state;
   events.push(...eotOutcome.events);
@@ -148,9 +153,23 @@ export const runTurn = (
   return { state: working, events };
 };
 
+/**
+ * Per-turn decision function. Concrete `AIPolicy` implementations live in
+ * `ai/`; the turn driver only needs the function signature, so it doesn't
+ * import from `ai/` (preserving the engine→ai one-way dependency in
+ * CONTRACTS.md). The runScenario harness extracts `.decide` from each
+ * policy and passes it here.
+ */
+export interface PolicyHandle {
+  readonly name: string;
+  readonly decide: (state: GameState, scenario: ScenarioData, rng: Rng) => GameState;
+}
+
 export interface RunScenarioOptions {
   /** Hard cap on turns. Run stops when this is hit even if no winner. */
   readonly maxTurns: number;
+  /** Optional AI policies. Each runs once per turn before movement resolves. */
+  readonly policies?: readonly PolicyHandle[];
 }
 
 export interface ScenarioOutcome {
@@ -178,7 +197,15 @@ export const runScenario = (
 
   let working = initial;
   let turnsPlayed = 0;
+  const policies = options.policies ?? [];
   while (working.winner === null && turnsPlayed < options.maxTurns) {
+    for (const policy of policies) {
+      working = policy.decide(
+        working,
+        scenario,
+        rng.fork(`policy-${policy.name}-${String(turnsPlayed)}`),
+      );
+    }
     const outcome = runTurn(working, scenario, rng, tick);
     working = outcome.state;
     events.push(...outcome.events);

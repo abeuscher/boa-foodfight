@@ -91,3 +91,32 @@ export const controlsBothPair = (state: GameState, postId: PostId, faction: Fact
   if (!partner) return false;
   return partner.owner === faction;
 };
+
+/**
+ * Apply post-capture rules at the end of a turn's combat phase. A POST
+ * changes ownership when exactly one non-neutral faction's parties sit on
+ * its tile and the current owner differs. Spec: "POSTs are captured by
+ * defeating the garrisoning party in battle ... and then occupying the
+ * now-undefended POST with a friendly party." A contested tile (both
+ * factions present) keeps the existing owner.
+ */
+export const resolveCaptures = (state: GameState, tick: () => number): SetPostOwnerOutcome => {
+  let working = state;
+  const allEvents: ReplayEvent[] = [];
+
+  for (const post of state.posts.values()) {
+    const factions = new Set<Faction>();
+    for (const party of working.parties.values()) {
+      if (sameCoord(party.location, post.location)) factions.add(party.faction);
+    }
+    factions.delete('neutral');
+    if (factions.size !== 1) continue;
+    const [newOwner] = factions;
+    if (newOwner === undefined || post.owner === newOwner) continue;
+    const outcome = setPostOwner(working, post.id, newOwner, tick);
+    working = outcome.state;
+    allEvents.push(...outcome.events);
+  }
+
+  return { state: working, events: allEvents };
+};
