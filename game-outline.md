@@ -18,7 +18,7 @@ The game is deliberately silly while taking its mechanics seriously. Ants speak 
 
 The game world is represented as a stacked set of 2D grid planes. In Level 1, three planes are in use: Floor, Wall, and Ceiling. Future scenarios introduce additional planes (Underfloor, Inside-Wall, Outside-Surface) as the environment expands. Each plane is a tile grid (~10×10 in Level 1) with terrain types, obstacles, and POSTs.
 
-Planes are connected by *plane transitions*, which are paired POSTs — one on each plane — that together form a transit corridor. To move a unit between planes via a transition, the moving party must control both endpoints simultaneously. Some unit types (flying units, climbing units) can transition between specific plane pairs without using paired POSTs; other unit types (e.g., mice) are restricted to specific planes and require transitions to move at all.
+Planes are connected by _plane transitions_, which are paired POSTs — one on each plane — that together form a transit corridor. To move a unit between planes via a transition, the moving party must control both endpoints simultaneously. Some unit types (flying units, climbing units) can transition between specific plane pairs without using paired POSTs; other unit types (e.g., mice) are restricted to specific planes and require transitions to move at all.
 
 ### POSTs (Position Of Strategic interesT)
 
@@ -105,10 +105,10 @@ The player has limited visibility. Enemy parties' locations and approximate stre
 
 Most units have no out-of-battle actions. Selected units (mages, healers, scouts, special-class) have abilities that function as one-off or limited-use effects. Abilities fall into a taxonomy:
 
-- *Information abilities* (e.g., PheroBlast — clear fog around party)
-- *Movement abilities* (e.g., Boat-Form — worker ants chain into floating platform; Plane-Switch — bypass standard plane transition requirements)
-- *Buff/debuff abilities* (e.g., apply Royal Jelly)
-- *Special attacks* (e.g., the Queen's ultimate)
+- _Information abilities_ (e.g., PheroBlast — clear fog around party)
+- _Movement abilities_ (e.g., Boat-Form — worker ants chain into floating platform; Plane-Switch — bypass standard plane transition requirements)
+- _Buff/debuff abilities_ (e.g., apply Royal Jelly)
+- _Special attacks_ (e.g., the Queen's ultimate)
 
 Specific abilities and their numbers are TBD by design agents.
 
@@ -132,8 +132,8 @@ No morality system. No alignment shifts based on whom you killed. Straightforwar
 
 Class change is introduced in later scenarios (~Level 3+). Two principle modes:
 
-- *Biological evolution* (caterpillar → butterfly: weak ground unit becomes powerful flying unit at threshold)
-- *Equipment progression* (ant soldiers gain new weaponry and gear at level thresholds; class is functionally defined by equipment loadout)
+- _Biological evolution_ (caterpillar → butterfly: weak ground unit becomes powerful flying unit at threshold)
+- _Equipment progression_ (ant soldiers gain new weaponry and gear at level thresholds; class is functionally defined by equipment loadout)
 
 Specific class trees are TBD by design agents.
 
@@ -150,7 +150,7 @@ Approximate tier outline:
 - **Tier 1 (Scenarios 1-10):** The bathroom expanding to the full house. Party cap: 8. Currency: buttons. New units introduced one or two per scenario, accumulated.
 - **Tier 2 (Scenarios 11-20):** The yard and neighboring houses. Party cap: 16. Larger command base (e.g., living-room desk array). Currency: buttons + emergent real currency.
 - **Tier 3 (Scenarios 21-30):** The block. Party cap: 32. Full transition to real currency.
-- *Subsequent tiers* scale up through neighborhoods, districts, the city, etc., doubling party caps and introducing new command paradigms (subordinate captains for delegation, automated standing orders, etc.).
+- _Subsequent tiers_ scale up through neighborhoods, districts, the city, etc., doubling party caps and introducing new command paradigms (subordinate captains for delegation, automated standing orders, etc.).
 
 Difficulty scales with tier transitions, not within tiers. Within a tier, scenarios introduce variety; between tiers, the stakes raise.
 
@@ -171,7 +171,7 @@ The Spider Queen is in the web with her elite guard. Spider parties (TBD count) 
 
 ### Enemy behavior (Level 1, tutorial)
 
-The spiders' pattern is *explicitly described* to the player at scenario start ("Sergeant Antonio briefs you: spiders will hunker down at the web, send scouts toward the soap dish, and respond to threats on plane transitions"). Tutorial transparency. Later scenarios reduce explicit pattern disclosure, requiring the player to deduce.
+The spiders' pattern is _explicitly described_ to the player at scenario start ("Sergeant Antonio briefs you: spiders will hunker down at the web, send scouts toward the soap dish, and respond to threats on plane transitions"). Tutorial transparency. Later scenarios reduce explicit pattern disclosure, requiring the player to deduce.
 
 ### Narrative bridge to Level 2
 

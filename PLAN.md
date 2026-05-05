@@ -72,19 +72,19 @@ Pre-commit hook installed and runs.
 questions" list. Each writes a single typed JSON file (or a single pure-function
 TS module for math) and nothing else.
 
-| Agent | Output | Constraint |
-|---|---|---|
-| Stats designer | `data/level-1/units.json` | Ants: high Atk/Con, low HP |
-| Battle math designer | `engine/combat.ts` (pure fns) | 3–5 rounds, posture modifiers, agility ordering |
-| Coop-ant designer | `data/level-1/formations.json` | Queen-proximity + Royal Jelly bonuses; formation thresholds |
-| Queen ultimate designer | `data/level-1/queen.json` | Charge curve, AoE shape, scenario-clearing potency |
-| Royal Jelly tuner | `data/level-1/jelly.json` | Capacity per party, production rate, duration, magnitude |
-| Roster designer | `data/level-1/roster-ants.json`, `roster-spiders.json` | Slot costs match `units.json` |
-| Map/POST/terrain designer | `data/level-1/map.json` | 10×10×3, 5 named POSTs, terrain types + path bonuses |
-| Leader-class designer | `data/level-1/leaders.json` | Party-wide modifiers per leader class |
-| Abilities designer | `data/level-1/abilities.json` | PheroBlast, Plane-Switch, Boat-Form, etc. |
-| Shop designer | `data/level-1/shop.json` | Grasshopper shoebox; mouse mercenary |
-| Dialogue designer | `data/level-1/dialogue.json` | Sgt. Antonio briefing + barks |
+| Agent                     | Output                                                 | Constraint                                                  |
+| ------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| Stats designer            | `data/level-1/units.json`                              | Ants: high Atk/Con, low HP                                  |
+| Battle math designer      | `engine/combat.ts` (pure fns)                          | 3–5 rounds, posture modifiers, agility ordering             |
+| Coop-ant designer         | `data/level-1/formations.json`                         | Queen-proximity + Royal Jelly bonuses; formation thresholds |
+| Queen ultimate designer   | `data/level-1/queen.json`                              | Charge curve, AoE shape, scenario-clearing potency          |
+| Royal Jelly tuner         | `data/level-1/jelly.json`                              | Capacity per party, production rate, duration, magnitude    |
+| Roster designer           | `data/level-1/roster-ants.json`, `roster-spiders.json` | Slot costs match `units.json`                               |
+| Map/POST/terrain designer | `data/level-1/map.json`                                | 10×10×3, 5 named POSTs, terrain types + path bonuses        |
+| Leader-class designer     | `data/level-1/leaders.json`                            | Party-wide modifiers per leader class                       |
+| Abilities designer        | `data/level-1/abilities.json`                          | PheroBlast, Plane-Switch, Boat-Form, etc.                   |
+| Shop designer             | `data/level-1/shop.json`                               | Grasshopper shoebox; mouse mercenary                        |
+| Dialogue designer         | `data/level-1/dialogue.json`                           | Sgt. Antonio briefing + barks                               |
 
 Each agent receives `game-outline.md`, `CONTRACTS.md`, and the relevant Zod
 schema as input. No agent reads another design agent's output during this phase
@@ -128,7 +128,7 @@ run. Its rubric:
 - **Boundary respect.** Does this module reach into another module's internals
   instead of going through the contract?
 - **Schema drift.** For data files: does the content respect the schema's
-  *intent*, not just its types? (e.g., a `units.json` entry that validates but
+  _intent_, not just its types? (e.g., a `units.json` entry that validates but
   has 0 HP probably violates intent.)
 
 Reviewer output is **structured findings only**:
@@ -148,26 +148,27 @@ preferences not encoded in a rule. Balance is Phase 4's job.
 
 Each module agent reads `CONTRACTS.md` and the relevant schema, writes the
 module + tests, and nothing else. A paired test-author subagent writes property
-+ golden tests against the spec.
 
-- **World** — planes, tiles, plane transitions, paired-POST traversal rule.
-- **POSTs** — ownership transitions, defensive bonus, healing accelerator,
+- golden tests against the spec.
+
+* **World** — planes, tiles, plane transitions, paired-POST traversal rule.
+* **POSTs** — ownership transitions, defensive bonus, healing accelerator,
   pairing for plane transitions.
-- **Parties** — slot accounting, leader assignment, slowest-member movement
+* **Parties** — slot accounting, leader assignment, slowest-member movement
   allowance, terrain modifiers.
-- **Movement** — order persistence across turns; simultaneous resolution; path
+* **Movement** — order persistence across turns; simultaneous resolution; path
   bonuses for ground units; flying-unit straight-line movement; battle trigger
   on same-tile occupation.
-- **Battle** — auto-resolver consuming `engine/combat.ts`; pre-battle posture
+* **Battle** — auto-resolver consuming `engine/combat.ts`; pre-battle posture
   (Run / Fight / Defend); strategy modifiers; retreat semantics; leader-death
   retreat-to-base behavior; XP awards.
-- **Abilities** — PheroBlast, Plane-Switch, Boat-Form, Royal Jelly application,
+* **Abilities** — PheroBlast, Plane-Switch, Boat-Form, Royal Jelly application,
   Queen ultimate. Each ability is a pure function of state.
-- **Fog of war** — visibility radius; size-class enemy reveal (small/medium/
+* **Fog of war** — visibility radius; size-class enemy reveal (small/medium/
   large only); pheromone trails reveal terrain.
-- **Save/load** — `GameState` is the only persisted artifact; mid-scenario
+* **Save/load** — `GameState` is the only persisted artifact; mid-scenario
   save slots; auto-save on scenario boundary.
-- **Replay log** — every state mutation emits a `ReplayEvent` to a JSONL
+* **Replay log** — every state mutation emits a `ReplayEvent` to a JSONL
   stream. This is the single artifact AI training, tests, critics, and the
   Phase 5 viewer all consume.
 
@@ -252,7 +253,7 @@ battle popovers. No simulation; the engine is the simulation.
   - Reconciler loop: 3 rounds
   - PR consistency reviewer loop: 3 rounds
   - Phase 4 tuning loop: 10 rounds
-  On exhaustion: write report, stop, escalate.
+    On exhaustion: write report, stop, escalate.
 - **Meta-orchestrator agent.** Drives Phases 0 → 4 from a single prompt.
   Calls `/ultrareview` between phases for an outside read.
 - **Escalation policy.** Any cap exhaustion, any schema conflict that survives
