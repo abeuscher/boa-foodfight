@@ -1,3 +1,90 @@
+# Status — Phase 5c (6-plane geometry + obstacles + Fun Critic rerun)
+
+## Latest measurement (2026-05-05, post-geometry)
+
+- **Seeds:** 1..100, max-turns 100
+- **Variants:** baseline 64%, rush 66%, turtle 66%, flank 64% (4/4 ≥40% diversity floor)
+- **Avg turns to victory:** baseline 10.06, rush 7.0 (fastest), turtle 22.x, flank 10.06
+- **Replays:** `out/diversity/<variant>/`
+
+baseline and flank sit 1pp below the rubric's 65% floor. The integer
+stat-step search bottoms out at this cliff (α=0.374 → 86%, α=0.375 →
+64%). Acceptable for milestone, flagged as a finding.
+
+## What landed in 5c
+
+Five-item plan from the user:
+
+1. **6-plane bathroom geometry** (`46d9cc7`) — extended `Plane` from
+   `floor | wall | ceiling` to `floor | ceiling | north-wall |
+south-wall | east-wall | west-wall`. New `engine/edges.ts` with
+   box-unfold edge mappings: `edgeNeighbor`, `edgeAnchor`,
+   `isOnPlaneEdge`. Movement falls back to walking toward edge
+   anchors when cross-plane and no direct transit. wall-crack
+   re-pinned to north-wall. Tile count 300 → 600. Required spider AI
+   patrol fix: non-scout spider parties now hold position when no
+   threat, instead of converging on spider-web (otherwise the larger
+   geometry caused pile-up at the web tile).
+
+2. **Obstacles** (`9730b53`) — 42 impassable tiles + 1 hazard tile
+   distributed across the 6 planes to form bottlenecks.
+
+3. **Playwright viewer harness** (`0c13c44`, `viewer/viewer.spec.ts`)
+   — boots a static server pointing at `viewer/dist`, opens each
+   variant's first replay, scrubs to start/middle/end, screenshots
+   to `out/screenshots/<variant>/`. Run with `pnpm test:viewer` after
+   `pnpm build:viewer` and a one-time `pnpm exec playwright install
+chromium`.
+
+4. **Click-to-inspect** (`0c13c44`, `viewer/main.js`) — clicking any
+   tile in the viewer shows parties, post (if any), and the next 6
+   events touching the selected party. Crosshair cursor on canvas.
+
+5. **Fun Critic rubric expansion** (`0c13c44`,
+   `critics/fun-rubric.md`) — rubric now grades win-rate band,
+   strategy diversity (≥3 variants ≥40%), composition diversity
+   (different rosters viable), outcome credibility, tactical variety,
+   watchability. Troop mechanics (HP, attack, abilities, slot costs)
+   are explicitly fair-game tuning levers per the user's standing
+   instruction.
+
+## Fun Critic findings against post-geometry replays
+
+`critics/findings/fun.json`. Batch scores:
+`watchability=1/3` (up from 0), `route_diversity=2/3` (up from 0),
+`composition_diversity=0/3`.
+
+| Rule                  | Severity | Headline                                                                                                                                                                                                                                                          |
+| --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| composition-diversity | high     | Every web-guard fight is identical: queen armor 3 + every-ant atk 4-5 = floor-1 damage on every roll. Heavy-melee, archer-heavy, mage-heavy all do exactly the same thing. Only "more bodies" wins. Suggested: drop queen armor 3→2 or queen HP 36→28.            |
+| strategy-diversity    | high     | 4/4 variants pass the 40% floor but baseline ≡ flank tick-for-tick through T6 — flank is a renamed baseline. Turtle is baseline-with-13-idle-turns. Only rush is genuinely route-distinct. Suggested: re-seat flank starting positions on the opposite-side wall. |
+| win-rate-band         | medium   | baseline 64% / flank 64% — 1pp below floor. Suggested: +1 archer or footman to vanguard-bravo.                                                                                                                                                                    |
+| tactical-variety      | medium   | Volley/mend fire but always as a fixed prologue. Royal Jelly never fires. Queen ult never fires.                                                                                                                                                                  |
+| outcome-credibility   | medium   | Wins credible, losses inarticulate (home-base parties never redeploy after field force dies).                                                                                                                                                                     |
+| watchability          | medium   | rush + turtle silk-line counter is a real improvement; baseline ≈ flank duplication still hurts.                                                                                                                                                                  |
+| route-diversity       | low      | Up from 0/3; rush genuinely uses climb-bypass.                                                                                                                                                                                                                    |
+
+The critic is unambiguous on root cause: **composition diversity is
+the highest-leverage knob to fix next**, not win rate.
+
+## Phase 4 success criteria — checking against the plan
+
+1. ✅ `pnpm harness run --seeds 1..100` runs unattended
+2. ⚠️ Metrics critic: 64% on baseline/flank, 1pp below 65% floor
+3. ✅ Fun Critic rerun completed (`critics/findings/fun.json`)
+4. ⚠️ Spec compliance: queen-ult, jelly, fog still don't fire
+5. ✅ Canvas viewer + replay (Phase 5 + 5b + this 5c)
+
+## Phase 5c → next steps (per Fun Critic)
+
+1. Drop spider-queen armor 3→2 (composition diversity, highest leverage).
+2. Re-seat flank parties on south- or east-wall start (strategy diversity).
+3. Re-tune α with the new combat math; should also pull baseline/flank into [65,80].
+4. Implement queen-ult firing condition tied to `spider-queen u0029 dies`.
+5. Eventually: feature gaps (jelly-apply orders, fog of war).
+
+---
+
 # Status — Phase 4c.5 (auto-tuner landed the win-rate band)
 
 ## Latest measurement
