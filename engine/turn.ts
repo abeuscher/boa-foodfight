@@ -113,6 +113,7 @@ const buildBattleInput = (
     attackerJellyResilience: atkJelly.resilience,
     defenderJellyAttack: defJelly.attack,
     defenderJellyResilience: defJelly.resilience,
+    abilities: scenario.abilities,
   };
 };
 

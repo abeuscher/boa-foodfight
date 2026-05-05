@@ -78,6 +78,10 @@ export interface Unit {
   readonly currentHp: number;
   readonly level: number;
   readonly xp: number;
+  /** AbilityIds this unit has consumed in the current scenario. Used to
+   * gate one-shot abilities like `volley` and `mend`. Absent or empty
+   * means no abilities have fired yet. */
+  readonly usedAbilities?: readonly AbilityId[];
 }
 
 // ---------------------------------------------------------------------------

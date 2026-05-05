@@ -6,6 +6,7 @@
  * Imports allowed: `engine/types`, `engine/combat` only (see CONTRACTS.md).
  */
 
+import { applyOpeningAbilities } from './battle-abilities.ts';
 import {
   computeAgilityOrder,
   computeDamage,
@@ -16,6 +17,7 @@ import {
   type PostureMultipliers,
   type StrategyMultipliers,
 } from './combat.ts';
+import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
   BattleResult,
@@ -49,6 +51,8 @@ export interface BattleInput {
   readonly attackerJellyResilience: number;
   readonly defenderJellyAttack: number;
   readonly defenderJellyResilience: number;
+  /** Ability definitions for pre-battle resolution (volley, mend, etc.). */
+  readonly abilities: AbilitiesFile;
 }
 
 export interface BattleOutcome {
@@ -272,7 +276,20 @@ export const resolveBattle = (
   rng: Rng,
   tick: () => number,
 ): BattleOutcome => {
-  const { attacker, defender } = input;
+  // Pre-battle: fire opening abilities (volley, mend) on both sides. The
+  // returned parties carry usedAbilities flags and any HP changes from
+  // volley damage / mend healing; combat then runs against those parties.
+  const opening = applyOpeningAbilities(
+    input.attacker,
+    input.defender,
+    state.unitTemplates,
+    input.abilities,
+    state.turn,
+    tick,
+  );
+  const attacker = opening.attacker;
+  const defender = opening.defender;
+  const openingEvents = opening.events;
 
   const ctx: ResolveContext = {
     attackerStrats: attacker.strategyModifiers,
@@ -346,8 +363,9 @@ export const resolveBattle = (
     retreatTo,
   };
 
-  // Events: battle-resolved first, then unit-died (atk then def), then leader-died.
-  const events: ReplayEvent[] = [];
+  // Events: opening-ability events first (volley, mend, opening kills),
+  // then battle-resolved, then unit-died (atk then def), then leader-died.
+  const events: ReplayEvent[] = [...openingEvents];
   const turn = state.turn;
   events.push({ kind: 'battle-resolved', turn, tick: tick(), result });
   for (const id of attackerCasualties) {

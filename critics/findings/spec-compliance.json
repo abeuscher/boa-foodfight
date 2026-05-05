@@ -1,5 +1,5 @@
 {
-  "source": "out/baseline-100-v6",
+  "source": "out/baseline-100-v7",
   "findings": [
     {
       "rule": "scenario-bookends",
@@ -50,9 +50,8 @@
     },
     {
       "rule": "pheroblast-used",
-      "severity": "high",
-      "observation": "PheroBlast (or any ability) is used at least once across the batch — NEVER observed across 100 replays",
-      "suggested_action": "either the rule is unimplemented, the rule is implemented but unreachable in current play, or the AIs never trigger the conditions that would fire it"
+      "severity": "low",
+      "observation": "PheroBlast (or any ability) is used at least once across the batch — exercised in 100/100 replays"
     },
     {
       "rule": "fog-revealed",

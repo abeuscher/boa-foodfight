@@ -1,5 +1,5 @@
 {
-  "source": "out/baseline-100-v6",
+  "source": "out/baseline-100-v7",
   "findings": [
     {
       "rule": "win-rate-target",

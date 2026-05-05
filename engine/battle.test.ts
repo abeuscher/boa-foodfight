@@ -27,6 +27,25 @@ import type {
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
+// Default battle tests use a no-op abilities catalog so existing combat-math
+// tests aren't perturbed by volley/mend pre-battle effects. The dedicated
+// battle-abilities tests cover the opening-ability paths.
+const noAbilities = {
+  version: 1 as const,
+  abilities: [
+    {
+      id: 'noop' as const,
+      name: 'noop',
+      category: 'information' as const,
+      target: 'self' as const,
+      uses: 1,
+      cooldown: 0,
+      params: {},
+      description: 'noop',
+    },
+  ],
+};
+
 const makeTickClock = (): (() => number) => {
   let t = 0;
   return () => ++t;
@@ -101,6 +120,11 @@ const neutralInput = (attacker: Party, defender: Party): BattleInput => ({
   attackerJellyResilience: 1,
   defenderJellyAttack: 1,
   defenderJellyResilience: 1,
+  // Use a no-op abilities catalog by default so existing battle tests stay
+  // about combat math, not opening volley/mend interactions. Tests that
+  // care about pre-battle abilities use the dedicated battle-abilities
+  // test file, or build inputs with SHARED_DATA.abilities explicitly.
+  abilities: noAbilities,
 });
 
 // Build a tiny "smoke" matchup: 2 ant-footmen vs 2 spider-soldiers.
