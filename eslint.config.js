@@ -4,7 +4,9 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'dist/**', 'out/**', 'coverage/**', '.husky/**'],
+    // viewer/main.js is browser code, not part of the TS project. Lint
+    // would otherwise complain about it not being in tsconfig.
+    ignores: ['node_modules/**', 'dist/**', 'out/**', 'coverage/**', '.husky/**', 'viewer/main.js'],
   },
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

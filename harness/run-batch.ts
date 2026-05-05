@@ -14,8 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { baselinePlayer } from '../ai/baseline.ts';
-import { spiderL1 } from '../ai/spider-l1.ts';
+import { ENEMY_AIS, PLAYER_AIS } from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -48,6 +47,8 @@ interface Args {
   readonly outDir: string;
   readonly dataDir: string;
   readonly maxTurns: number;
+  readonly playerName: string;
+  readonly enemyName: string;
 }
 
 const parseArgs = (argv: readonly string[]): Args => {
@@ -55,6 +56,8 @@ const parseArgs = (argv: readonly string[]): Args => {
   let outDir = path.join(process.cwd(), 'out', 'runs', String(Date.now()));
   let dataDir = path.join(process.cwd(), 'data', 'level-1');
   let maxTurns = 100;
+  let playerName = 'baseline';
+  let enemyName = 'spider-l1';
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const val = argv[i + 1];
@@ -70,9 +73,15 @@ const parseArgs = (argv: readonly string[]): Args => {
     } else if (flag === '--max-turns' && val !== undefined) {
       maxTurns = Number(val);
       i += 1;
+    } else if (flag === '--player' && val !== undefined) {
+      playerName = val;
+      i += 1;
+    } else if (flag === '--enemy' && val !== undefined) {
+      enemyName = val;
+      i += 1;
     }
   }
-  return { seeds: parseSeeds(seedsArg), outDir, dataDir, maxTurns };
+  return { seeds: parseSeeds(seedsArg), outDir, dataDir, maxTurns, playerName, enemyName };
 };
 
 const POST_IDS: readonly PostId[] = [
@@ -85,6 +94,20 @@ const POST_IDS: readonly PostId[] = [
 
 const main = (): void => {
   const args = parseArgs(process.argv.slice(2));
+  const player = PLAYER_AIS[args.playerName];
+  const enemy = ENEMY_AIS[args.enemyName];
+  if (!player) {
+    console.error(
+      `unknown --player '${args.playerName}'. Available: ${Object.keys(PLAYER_AIS).join(', ')}`,
+    );
+    process.exit(1);
+  }
+  if (!enemy) {
+    console.error(
+      `unknown --enemy '${args.enemyName}'. Available: ${Object.keys(ENEMY_AIS).join(', ')}`,
+    );
+    process.exit(1);
+  }
   fs.mkdirSync(args.outDir, { recursive: true });
 
   const perSeed: PerSeed[] = [];
@@ -102,7 +125,7 @@ const main = (): void => {
     const sink = createFileSink(path.join(args.outDir, `replay-${String(seed)}.jsonl`));
     const outcome = runScenario(state, data, createRng(seed), clock.next, {
       maxTurns: args.maxTurns,
-      policies: [baselinePlayer, spiderL1],
+      policies: [player, enemy],
     });
     for (const event of outcome.events) sink.emit(event);
     sink.close();
@@ -149,7 +172,7 @@ const main = (): void => {
   fs.writeFileSync(path.join(args.outDir, 'summary.json'), JSON.stringify(summary, null, 2));
 
   console.log(
-    `Wrote ${String(args.seeds.length)} replays to ${args.outDir} in ${String(elapsedMs)} ms`,
+    `Wrote ${String(args.seeds.length)} replays (player=${args.playerName}, enemy=${args.enemyName}) to ${args.outDir} in ${String(elapsedMs)} ms`,
   );
   console.log(
     `Outcomes: ant=${String(antWins)} spider=${String(spiderWins)} timeout=${String(timeouts)}`,

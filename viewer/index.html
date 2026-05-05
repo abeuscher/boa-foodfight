@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Food Fight — replay viewer</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Food Fight — Level 1 replay</h1>
+      <div class="controls">
+        <label>
+          run
+          <select id="run-select"></select>
+        </label>
+        <label>
+          replay
+          <select id="replay-select"></select>
+        </label>
+        <button id="play-btn">▶ play</button>
+        <label>
+          speed
+          <input id="speed" type="range" min="1" max="20" value="5" />
+          <span id="speed-val">5×</span>
+        </label>
+        <span id="status"></span>
+      </div>
+      <div class="scrubber">
+        <input id="scrubber" type="range" min="0" max="0" value="0" step="1" />
+        <span id="tick-label">tick 0 / 0 — turn 0</span>
+      </div>
+    </header>
+    <main>
+      <canvas id="board" width="990" height="360"></canvas>
+      <aside id="event-log">
+        <h2>events near this tick</h2>
+        <ul id="log-list"></ul>
+      </aside>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
