@@ -22,8 +22,13 @@ export const shopFileSchema = z.object({
   shopId: idSchema,
   shopName: z.string().min(1),
   proprietor: z.string().min(1),
-  /** Post id at which this shop is located. Validated by reconciler. */
-  locationPostId: idSchema,
+  /**
+   * Post id at which this shop is located, if any. Optional because some
+   * shops (e.g., the Level 1 shoebox) are between-scenario world-loop
+   * features rather than in-scenario POSTs. When present, the reconciler
+   * verifies it resolves to a post in `map.json`.
+   */
+  locationPostId: idSchema.optional(),
   inventory: z.array(shopItemSchema).min(1),
 });
 

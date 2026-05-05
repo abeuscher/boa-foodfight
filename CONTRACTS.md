@@ -82,8 +82,13 @@ Beyond per-file schema validation, the reconciler enforces:
 - Every `abilities` entry on a unit template exists in `abilities.json`.
 - Every `leaderClass` referenced in a roster exists in `leaders.json`.
 - Every `producedTemplateId` in `queen.json` exists in `units.json`.
-- Every `pairedWith` post id resolves to another post in `map.json`.
-- Every `locationPostId` in `shop.json` resolves to a post in `map.json`.
+- Every `pairedWith` post id resolves to another post in `map.json`, the
+  pairing is mutual, and the two paired posts are on different planes.
+- If `locationPostId` is set in `shop.json`, it resolves to a post in
+  `map.json`. (It is optional: between-scenario world-loop shops like the
+  Level 1 shoebox don't have an in-scenario POST.)
+- Every `templateId` field appearing inside a shop inventory item's `effect`
+  resolves to a unit in `units.json`.
 - The Queen's party in `roster-ants.json` totals exactly 12 slot capacity, and
   the Queen unit therein has `slotCost === 4`.
 - Every other party respects an 8-slot cap in Tier 1.

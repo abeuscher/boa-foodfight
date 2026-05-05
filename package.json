@@ -17,7 +17,8 @@
     "duplication": "jscpd .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test",
+    "reconcile": "tsx harness/reconciler.ts",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test && pnpm reconcile",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
     "jscpd": "^4.0.5",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.15.0",
     "vitest": "^2.1.5",

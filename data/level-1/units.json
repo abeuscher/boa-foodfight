@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "ant-queen",
+      "name": "Ant Queen",
+      "faction": "ant",
+      "size": "huge",
+      "slotCost": 4,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 60,
+        "attack": 20,
+        "agility": 3,
+        "armor": 5,
+        "intelligence": 8,
+        "constitution": 10
+      },
+      "abilities": ["queen-ultimate"],
+      "tags": ["queen", "leader-eligible", "immobile"]
+    },
+    {
+      "id": "ant-footman",
+      "name": "Ant Footman",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 6,
+        "attack": 7,
+        "agility": 5,
+        "armor": 1,
+        "intelligence": 1,
+        "constitution": 7
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "infantry"]
+    },
+    {
+      "id": "ant-archer",
+      "name": "Ant Archer",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 5,
+        "attack": 6,
+        "agility": 7,
+        "armor": 0,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": ["volley"],
+      "tags": ["ranged"]
+    },
+    {
+      "id": "ant-worker",
+      "name": "Ant Worker",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 3,
+        "agility": 4,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 8
+      },
+      "abilities": ["boat-form", "jelly-apply"],
+      "tags": ["worker", "support"]
+    },
+    {
+      "id": "ant-scout",
+      "name": "Ant Scout",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 5,
+        "attack": 5,
+        "agility": 9,
+        "armor": 0,
+        "intelligence": 3,
+        "constitution": 6
+      },
+      "abilities": ["pheroblast", "scout-ping"],
+      "tags": ["scout", "leader-eligible"]
+    },
+    {
+      "id": "ant-potato-bug",
+      "name": "Ant Potato Bug",
+      "faction": "ant",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 12,
+        "attack": 9,
+        "agility": 3,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 9
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "heavy"]
+    },
+    {
+      "id": "ant-mage",
+      "name": "Ant Mage",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 5,
+        "attack": 4,
+        "agility": 5,
+        "armor": 0,
+        "intelligence": 8,
+        "constitution": 6
+      },
+      "abilities": ["plane-switch", "mend"],
+      "tags": ["caster", "leader-eligible", "support"]
+    },
+    {
+      "id": "spider-queen",
+      "name": "Spider Queen",
+      "faction": "spider",
+      "size": "huge",
+      "slotCost": 4,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 80,
+        "attack": 15,
+        "agility": 4,
+        "armor": 6,
+        "intelligence": 9,
+        "constitution": 6
+      },
+      "abilities": ["web-tangle"],
+      "tags": ["queen", "leader-eligible"]
+    },
+    {
+      "id": "spider-scout",
+      "name": "Spider Scout",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 10,
+        "attack": 4,
+        "agility": 7,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["scout"]
+    },
+    {
+      "id": "spider-soldier",
+      "name": "Spider Soldier",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 12,
+        "attack": 5,
+        "agility": 5,
+        "armor": 2,
+        "intelligence": 1,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["melee", "infantry"]
+    },
+    {
+      "id": "spider-spinner",
+      "name": "Spider Spinner",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 14,
+        "attack": 5,
+        "agility": 4,
+        "armor": 2,
+        "intelligence": 5,
+        "constitution": 5
+      },
+      "abilities": ["web-tangle"],
+      "tags": ["debuffer", "support"]
+    },
+    {
+      "id": "spider-elite",
+      "name": "Spider Elite",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 22,
+        "attack": 7,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 3,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["melee", "elite", "queen-guard"]
+    },
+    {
+      "id": "mouse-merc",
+      "name": "Mouse Mercenary",
+      "faction": "neutral",
+      "size": "large",
+      "slotCost": 3,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 25,
+        "attack": 5,
+        "agility": 3,
+        "armor": 2,
+        "intelligence": 1,
+        "constitution": 8
+      },
+      "abilities": [],
+      "tags": ["tank", "mercenary"]
+    }
+  ]
+}
