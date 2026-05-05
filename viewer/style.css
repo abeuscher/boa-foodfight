@@ -1,0 +1,119 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
+  margin: 0;
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+}
+header h1 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.controls {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.controls select,
+.controls input,
+.controls button {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  font: inherit;
+  border-radius: 3px;
+}
+.controls button {
+  cursor: pointer;
+  min-width: 80px;
+}
+.controls button:hover {
+  background: #3a3a3a;
+}
+.scrubber {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scrubber input[type='range'] {
+  flex: 1;
+}
+.scrubber span {
+  font-size: 12px;
+  color: #888;
+  min-width: 200px;
+}
+main {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+  padding: 16px;
+}
+canvas {
+  background: #2a2a2a;
+  border-radius: 4px;
+  display: block;
+}
+#event-log {
+  background: #2a2a2a;
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+#event-log h2 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+}
+#log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+#log-list li {
+  padding: 2px 0;
+  color: #ccc;
+  border-bottom: 1px solid #333;
+}
+#log-list li.current {
+  color: #ffe;
+  background: #3a3a3a;
+  padding-left: 4px;
+}
+#log-list li .tick {
+  color: #888;
+  margin-right: 6px;
+}
+#log-list li .kind {
+  color: #6cf;
+  margin-right: 6px;
+}
+#status {
+  color: #888;
+  font-size: 12px;
+}
