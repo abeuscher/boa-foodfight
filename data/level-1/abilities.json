@@ -100,6 +100,16 @@
       "cooldown": 1,
       "params": { "movementPenalty": 2, "durationTurns": 2 },
       "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast."
+    },
+    {
+      "id": "web-mend",
+      "name": "Web-Mend",
+      "category": "passive",
+      "target": "self",
+      "uses": null,
+      "cooldown": 0,
+      "params": { "heal": 1, "hpThreshold": 0.5 },
+      "description": "The Spider Queen weaves silk into her wounds between exchanges. Slow bleeders close while she still has thread to spare."
     }
   ]
 }

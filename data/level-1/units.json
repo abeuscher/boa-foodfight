@@ -142,7 +142,7 @@
         "intelligence": 9,
         "constitution": 6
       },
-      "abilities": ["web-tangle"],
+      "abilities": ["web-tangle", "web-mend"],
       "tags": ["queen", "leader-eligible"]
     },
     {
