@@ -1,0 +1,28 @@
+# Netlify config for the Food Fight replay viewer.
+#
+# Strategy: pure-static deploy. The build step runs the harness for each
+# variant AI (small seed range, deterministic), bundles the resulting
+# JSONL replays under viewer/dist/replays/, and writes a manifest.json
+# the in-browser viewer reads. No runtime server, no functions.
+#
+# To preview locally: `pnpm build:viewer && npx serve viewer/dist`
+
+[build]
+  command = "pnpm install --frozen-lockfile && pnpm build:viewer"
+  publish = "viewer/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_VERSION = "10"
+
+# Replays are small JSONL files; let the CDN cache them aggressively.
+[[headers]]
+  for = "/replays/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# The manifest is small but should always be fresh-on-deploy.
+[[headers]]
+  for = "/replays/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=60"
