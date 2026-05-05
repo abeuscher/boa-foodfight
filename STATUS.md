@@ -1,4 +1,4 @@
-# Status — Phase 4c.1 (engine gaps closed; tuning still required)
+# Status — Phase 4c.2 (one tuning iteration; engine improvements found mid-tune)
 
 This file is updated by the orchestrator after each Phase-4 measurement
 pass. It records the current win rate, the consolidated critic findings,
@@ -9,90 +9,100 @@ and a one-paragraph diagnosis of what's blocking the target.
 - **Date:** 2026-05-05
 - **Seeds:** 1..100
 - **Max turns:** 100
-- **Ant win rate:** 0% (target: 65–80%) — unchanged from Phase 4a
+- **Ant win rate:** 0% (target: 65–80%) — still
 - **Outcomes:** ant=0, spider=0, timeout=100
-- **Avg events/run:** 191 (down from 271 — charge spam suppressed)
-- **Replays:** `out/baseline-100-v2/`
+- **Avg events/run:** 220 (up from 191 — more battles fire)
+- **Replays:** `out/baseline-100-v6/`
 
-## Engine work landed in Phase 4c.1
+## Tuning iteration 1: spider counter-push + climbing engine rule
 
-Three engine gaps closed (per the Path A recommendation in the prior STATUS):
+Implemented the Fun Critic's #1 recommendation from Phase 4b:
 
-1. **Queen ultimate firing implemented.** When charge is at cap AND uses
-   remaining AND a living spider unit is within `radius` (Chebyshev,
-   same plane) of the Queen, the ultimate fires: every spider unit in
-   range takes flat damage, charge resets to 0, and `queen-ultimate-fired`
-   plus per-kill `unit-died` events are emitted. State now tracks
-   `queenUltimatesUsed` to enforce `usesPerScenario`.
-2. **Charge-cap event spam fixed.** `queen-ultimate-charged` is now only
-   emitted when the value changes. After the cap is hit, no more
-   spam events. Roughly 80 events/replay reclaimed.
-3. **(`scenario-end` was already implemented**; it just doesn't fire
-   because no one wins yet — that's the remaining tuning problem, not
-   an engine gap.)
+**Data side (`ai/spider-l1.ts`)** — when ants control ≥ 3 POSTs, the
+largest non-scout non-web-guard spider party (typically `silk-line`
+in the seeded roster) breaks formation and counter-pushes toward
+**wall-crack**. Initially targeted the storm-drain (lever 1's
+intended effect: pull spiders into queen-ultimate range). That
+target turned out to be physically unreachable for spiders, see
+below.
 
-## Why win rate didn't move
+**Engine side (`engine/movement.ts`)** — added the spec's "climbing
+units can transition between specific plane pairs without using
+paired POSTs" rule, scoped to wall↔ceiling only. An all-climbing
+party can step at the same (x,y) between wall and ceiling. This
+unblocks spider mobility on their natural terrain.
 
-The Queen ultimate firing is now correctly gated on having an enemy in
-range. Across 100 replays, the ultimate **never fires** — spider
-parties stay near the web on the ceiling and the lone scout heads to
-soap-dish, none close enough to (0,0) on the floor to be in radius-5.
-The ant queen sits with charge=100 from turn ~20 onward but has no
-target.
+## What the iteration revealed
 
-This matches the Fun Critic's #1 recommendation from Phase 4b:
+The structural fix worked: silk-line and web-watch now reliably
+counter-push to wall-crack via the climbing bypass and engage the
+ant vanguards camped there. Battles per run jumped from 1 to 3–4
+(88% with 3, 12% with 4). The replays are dramatically more
+watchable now — three battles, two leader deaths per side, real
+positional play on the wall plane.
 
-> **Tune the spider AI (lever 1): push silk-line toward wall-crack
-> once the ants control 3+ POSTs.** This breaks the 4-POST stalemate
-> three ways at once — gives dormant vanguard parties a real opponent,
-> puts the back half of the replay back in motion, and the Queen
-> ultimate finally has spider parties within range of its AoE near
-> the storm-drain.
+But the win rate is still 0% because:
 
-That's the exact diagnosis the engine fixes confirm. The ultimate
-isn't dead code; it's waiting for a target.
+1. **Pathfinders cannot solo the web.** Even with silk-line and
+   web-watch pulled out by the counter-push, the web still has
+   `web-guard` (spider queen + 4 elites + 4 soldiers + 2 spinners
+   = brutal HP and damage). Pathfinders' 6 weak ants get wiped on
+   turn 8, every run.
+2. **The Queen ultimate still has no targets.** The counter-push
+   stops at wall-crack on the wall plane. Spider parties can't
+   reach the floor (no ceiling↔floor route, and the
+   towel-rack/wall-crack pair is ant-controlled by the time the
+   counter-push fires). So queen ultimate sits at charge=100
+   forever with no target.
 
-## Critic findings against `out/baseline-100-v2/`
+## Updated diagnosis: this needs _multi-lever_ tuning
 
-| Critic          | High findings                                            | New since v1?                                                                               |
-| --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| metrics         | 3 (win-rate, decisive-outcomes, progress-stalemate)      | unchanged                                                                                   |
-| spec-compliance | 5 (queen-ult fires, jelly, abilities, fog, scenario-end) | unchanged — these all need the spider AI to push or the player AI to actively use abilities |
-| fun             | (not rerun — same root-cause findings hold)              | n/a                                                                                         |
+Single-lever tuning (one enemy-pattern change) is insufficient. To
+flip the win rate, several levers need to move together. Candidates,
+ordered cheapest-first:
 
-## Phase 4 next steps
+A. **Lever 4 — supplementary win condition.** "Hold 4/5 POSTs for
+N consecutive turns" turns the current 100-turn stalemate into
+a credible ant victory. Tiny engine change (2 fields on
+GameState + 1 check in end-of-turn). Would single-handedly
+move win rate to high-double-digits given current behavior.
+_Cheapest path to a measurable win rate._
+B. **Lever 2 — initial circumstances.** Weaken `web-guard`
+composition (drop 1 elite + 1 spinner) so pathfinders has a
+fighting chance solo. Or distribute plane-switch to a second
+ant party so ceiling assault is two-pronged.
+C. **Lever 1 (extension)** — make the spider AI counter-push more
+aggressive: send TWO parties (silk-line + web-watch) to
+wall-crack, AND have web-guard pursue ant parties that flee
+onto the ceiling. The spider AI is now visibly too restrained.
 
-The engine is now structurally complete enough that **data-side tuning
-can make a difference**. Three options, in order of bang-for-buck:
+## Critic findings against `out/baseline-100-v6/`
 
-A. **Tune the spider AI (lever 1).** Add a "counter-push" rule: when
-ants control ≥ 3 POSTs, send `silk-line` toward `wall-crack` (or
-`soap-dish`) instead of holding the web. This puts spider parties
-back on the floor where the Queen ultimate can hit them, AND
-gives the dormant ant vanguard parties a real opponent. Single
-highest-leverage change.
-
-B. **Distribute plane-switch (lever 2: initial circumstances).**
-Split the ant-mage out of `pathfinders` and put a copy in another
-field party, OR rebuild pathfinders to be tougher (more units).
-This makes the ceiling assault less of a single point of failure.
-
-C. **Add a supplementary win condition (lever 4).** "Hold 4/5 POSTs
-for N consecutive turns" turns the current 100-turn stalemate into
-a credible victory state. This is a scenario-goal change, the
-plan's lowest-priority lever, but it's the cheapest engine work.
-
-A is the recommended single change — closest to the spec's "spiders
-will hunker down at the web, send scouts toward the soap dish, and
-respond to threats on plane transitions" briefing, just adding a
-fourth response for when the ants are clearly winning the floor.
+| Critic          | High findings                                             | Change since v2                                            |
+| --------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| metrics         | 3 (win-rate, decisive-outcomes, progress-stalemate)       | unchanged                                                  |
+| spec-compliance | 5 (queen-ult fires, jelly, abilities, fog, scenario-end)  | unchanged                                                  |
+| fun             | (not rerun — replay quality improved but win rate didn't) | qualitative: more battles, real wall-plane positional play |
 
 ## What is locked, and won't change
 
 - `ai/baseline.ts` — the locked reference player AI.
 - The 5 spec-locked POST ids and their owners.
 - Player roster (ant unit composition).
-- Engine semantics (movement, battle math, capture rules).
+- Engine semantics (movement, battle math, capture rules) **except**
+  for spec-faithful additions like the climbing-bypass rule above,
+  which was missing.
 
-The spider AI (`ai/spider-l1.ts`) is **not locked** — it's an
-enemy-side tuning lever per the spec.
+## Decision point
+
+The engine + AI infrastructure is sound and the tuning loop now
+works as a measurement pipeline. The right next step is one of:
+
+1. **Add lever 4 (supplementary win condition).** Cheapest path to
+   a real win rate signal. ~30 lines of engine + 1 data field.
+2. **Spawn the formal tuning agent.** Multi-round (cap 10),
+   multi-lever; consumes critic findings, proposes data edits,
+   re-measures. The bigger investment but the unattended-execution
+   target the original plan calls for.
+3. **Implement Royal Jelly application.** Adds a lever the player
+   AI could use to buff pathfinders. Engine work, then AI work.

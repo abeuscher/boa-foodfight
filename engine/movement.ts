@@ -64,6 +64,31 @@ const partyHasPlaneSwitch = (
   return false;
 };
 
+/**
+ * True iff every living unit in the party has `climbing` movement mode.
+ * Used to gate the wall<->ceiling bypass — spiders climb between vertical
+ * surfaces naturally per the spec, no paired POST required.
+ */
+const partyAllClimbing = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  let any = false;
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (!tmpl) return false;
+    if (tmpl.movement !== 'climbing') return false;
+    any = true;
+  }
+  return any;
+};
+
+const isWallCeilingPair = (a: TileCoord, b: TileCoord): boolean => {
+  const planes = new Set([a.plane, b.plane]);
+  return planes.has('wall') && planes.has('ceiling');
+};
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -185,6 +210,16 @@ const tryPlaneTransition = (
   // (The spec's per-scenario use limit is deferred until ability charge
   // tracking lands; for now it's effectively at-will.)
   if (partyHasPlaneSwitch(party, templates)) {
+    return { plane: target.plane, x: party.location.x, y: party.location.y };
+  }
+
+  // Climbing passive: an all-climbing party (spec: "climbing units can
+  // transition between specific plane pairs without using paired POSTs")
+  // can step between wall and ceiling at the same (x,y). Floor is
+  // explicitly excluded — spiders are at home on vertical surfaces, not
+  // ground. To reach the floor a climbing party must still go via a
+  // paired POST.
+  if (partyAllClimbing(party, templates) && isWallCeilingPair(party.location, target)) {
     return { plane: target.plane, x: party.location.x, y: party.location.y };
   }
 

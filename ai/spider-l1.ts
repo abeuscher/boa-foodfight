@@ -33,6 +33,17 @@ const TOWEL_RACK: PostId = 'towel-rack' as PostId;
 const WALL_CRACK: PostId = 'wall-crack' as PostId;
 
 const THREAT_RADIUS = 2;
+/**
+ * When ants control this many POSTs or more, the spiders are clearly
+ * losing the floor war. The largest non-scout spider party then breaks
+ * formation and counter-pushes toward the ant home base — both to
+ * disrupt the ants' supply line and to pull one party into range of
+ * the queen ultimate. This is the spec's spider AI's fourth response,
+ * added in Phase 4c after the 0%-win-rate diagnosis showed the
+ * default patrol-to-web behavior was too passive once ants dominated
+ * the floor.
+ */
+const ANT_DOMINANCE_THRESHOLD = 3;
 
 const totalSlotCost = (
   party: Party,
@@ -121,6 +132,31 @@ const pickScout = (state: GameState): Party | null => {
   return best?.party ?? null;
 };
 
+const antControlledPostCount = (state: GameState): number => {
+  let n = 0;
+  for (const post of state.posts.values()) {
+    if (post.owner === 'ant') n += 1;
+  }
+  return n;
+};
+
+/**
+ * Largest non-scout, non-web-guard spider party by total slot cost.
+ * Deterministic tiebreak by lexical PartyId. Used as the counter-push
+ * party when ants dominate the floor.
+ */
+const pickPusher = (state: GameState, scoutId: PartyId | null): Party | null => {
+  let best: { party: Party; cost: number } | null = null;
+  for (const party of eligibleSpiders(state)) {
+    if (scoutId !== null && party.id === scoutId) continue;
+    const cost = totalSlotCost(party, state.unitTemplates);
+    if (best === null || cost > best.cost || (cost === best.cost && party.id < best.party.id)) {
+      best = { party, cost };
+    }
+  }
+  return best?.party ?? null;
+};
+
 /**
  * Closest non-scout, non-web-guard spider responder to `target`. Deterministic
  * tiebreak by lexical PartyId.
@@ -168,11 +204,23 @@ export const spiderL1: AIPolicy = {
 
     const webLoc = requirePost(state, SPIDER_WEB);
     const soapLoc = requirePost(state, SOAP_DISH);
+    // Counter-push target: wall-crack on the wall plane. The storm-drain
+    // is the conceptual goal but is physically unreachable for spiders
+    // (no ceiling↔floor route; the towel-rack/wall-crack pair is
+    // ant-controlled by the time the counter-push fires). Pushing toward
+    // wall-crack drops the spider down via the climbing bypass and puts
+    // it on top of the ant parties camped there for the ceiling assault.
+    const counterPushTargetLoc = requirePost(state, WALL_CRACK);
     const threat = decideThreat(state);
 
     const scout = pickScout(state);
     const responderTarget = threat.defend ?? webLoc;
     const responder = pickResponder(state, scout?.id ?? null, responderTarget);
+
+    // Counter-push: if ants dominate the floor, pick the largest non-scout
+    // spider party to break formation and head for the storm-drain.
+    const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
+    const pusher = counterPushActive ? pickPusher(state, scout?.id ?? null) : null;
 
     const nextParties = new Map<PartyId, Party>();
     for (const [id, party] of state.parties) {
@@ -190,7 +238,17 @@ export const spiderL1: AIPolicy = {
       }
 
       let nextOrders: readonly Order[];
-      if (id === ('web-guard' as PartyId) || isOnWeb(party, webLoc)) {
+      // Priority order: web-guard always holds (queen is sacred). Counter-push
+      // wins next — it's the whole point of the rule, so even a party that
+      // happens to be on the web tile gets pulled off when ants dominate.
+      // Otherwise on-the-web means hold; then scout; then patrol/threat.
+      if (id === ('web-guard' as PartyId)) {
+        nextOrders = [];
+      } else if (pusher !== null && id === pusher.id) {
+        nextOrders = sameCoord(party.location, counterPushTargetLoc)
+          ? []
+          : [moveTo(counterPushTargetLoc)];
+      } else if (isOnWeb(party, webLoc)) {
         nextOrders = [];
       } else if (id === scout?.id) {
         nextOrders = ordersForScout(party, soapLoc);
