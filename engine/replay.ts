@@ -53,8 +53,8 @@ export const createFileSink = (filePath: string): ReplaySink => {
  * automatically so events have a stable total order even within the same turn.
  */
 export interface TickClock {
-  current(): number;
-  next(): number;
+  readonly current: () => number;
+  readonly next: () => number;
 }
 
 export const createTickClock = (): TickClock => {
