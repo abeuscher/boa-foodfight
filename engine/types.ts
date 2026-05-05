@@ -20,7 +20,7 @@ export type UnitTemplateId = string & { readonly __brand: 'UnitTemplateId' };
 // World
 // ---------------------------------------------------------------------------
 
-export type Plane = 'floor' | 'wall' | 'ceiling';
+export type Plane = 'floor' | 'ceiling' | 'north-wall' | 'south-wall' | 'east-wall' | 'west-wall';
 export type Faction = 'ant' | 'spider' | 'neutral';
 
 export interface TileCoord {

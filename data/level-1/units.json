@@ -135,10 +135,10 @@
       "slotCost": 4,
       "movement": "climbing",
       "baseStats": {
-        "hp": 36,
-        "attack": 7,
+        "hp": 39,
+        "attack": 8,
         "agility": 4,
-        "armor": 3,
+        "armor": 2,
         "intelligence": 9,
         "constitution": 6
       },
@@ -207,7 +207,7 @@
       "slotCost": 2,
       "movement": "climbing",
       "baseStats": {
-        "hp": 13,
+        "hp": 12,
         "attack": 4,
         "agility": 5,
         "armor": 1,

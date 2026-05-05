@@ -56,12 +56,12 @@ interface TuneOptions {
  * the `hi` end gives ~0% ant wins, the `lo` end gives ~100%.
  */
 const AXES: readonly AxisSpec[] = [
-  { id: 'spider-queen.armor', templateId: 'spider-queen', statKey: 'armor', lo: 2, hi: 6 },
-  { id: 'spider-elite.armor', templateId: 'spider-elite', statKey: 'armor', lo: 1, hi: 3 },
-  { id: 'spider-queen.hp', templateId: 'spider-queen', statKey: 'hp', lo: 30, hi: 80 },
-  { id: 'spider-elite.hp', templateId: 'spider-elite', statKey: 'hp', lo: 12, hi: 22 },
-  { id: 'spider-queen.attack', templateId: 'spider-queen', statKey: 'attack', lo: 6, hi: 15 },
-  { id: 'spider-elite.attack', templateId: 'spider-elite', statKey: 'attack', lo: 4, hi: 7 },
+  { id: 'spider-queen.armor', templateId: 'spider-queen', statKey: 'armor', lo: 0, hi: 6 },
+  { id: 'spider-elite.armor', templateId: 'spider-elite', statKey: 'armor', lo: 0, hi: 3 },
+  { id: 'spider-queen.hp', templateId: 'spider-queen', statKey: 'hp', lo: 15, hi: 80 },
+  { id: 'spider-elite.hp', templateId: 'spider-elite', statKey: 'hp', lo: 6, hi: 22 },
+  { id: 'spider-queen.attack', templateId: 'spider-queen', statKey: 'attack', lo: 3, hi: 15 },
+  { id: 'spider-elite.attack', templateId: 'spider-elite', statKey: 'attack', lo: 2, hi: 7 },
 ];
 
 const DATA_DIR = path.join(process.cwd(), 'data', 'level-1');

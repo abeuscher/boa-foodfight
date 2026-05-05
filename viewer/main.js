@@ -1,8 +1,15 @@
 // Pure-consumer replay viewer. Loads a JSONL replay and walks events
-// to compute per-tick state. Renders three planes side-by-side on a
-// single canvas.
+// to compute per-tick state. Renders six planes (3x2 grid) on a single
+// canvas: floor / north-wall / ceiling on the top row, west-wall /
+// south-wall / east-wall on the bottom row.
 
-const PLANES = ['floor', 'wall', 'ceiling'];
+// Layout grid: indexed by [row, col] -> plane name.
+const PLANE_GRID = [
+  ['west-wall', 'north-wall', 'east-wall'],
+  ['floor', 'ceiling', 'south-wall'],
+];
+const PLANES = PLANE_GRID.flat();
+
 const GRID = 10;
 const CELL = 30;
 const PLANE_W = GRID * CELL;
@@ -95,21 +102,35 @@ const SPEC_POSTS = {
   'storm-drain': { plane: 'floor', x: 0, y: 0, owner: 'ant' },
   'soap-dish': { plane: 'floor', x: 5, y: 5, owner: 'neutral' },
   'towel-rack': { plane: 'floor', x: 8, y: 4, owner: 'neutral' },
-  'wall-crack': { plane: 'wall', x: 8, y: 5, owner: 'neutral' },
+  'wall-crack': { plane: 'north-wall', x: 8, y: 5, owner: 'neutral' },
   'spider-web': { plane: 'ceiling', x: 9, y: 9, owner: 'spider' },
 };
+
+function planeGridPosition(plane) {
+  for (let r = 0; r < PLANE_GRID.length; r++) {
+    const row = PLANE_GRID[r];
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] === plane) return { row: r, col: c };
+    }
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Rendering.
 // ---------------------------------------------------------------------------
 
-function planeOriginX(planeIdx) {
-  return planeIdx * (PLANE_W + PLANE_GAP);
+function planeOrigin(plane) {
+  const pos = planeGridPosition(plane);
+  if (!pos) return { ox: 0, oy: HEADER_H };
+  return {
+    ox: pos.col * (PLANE_W + PLANE_GAP),
+    oy: HEADER_H + pos.row * (PLANE_W + HEADER_H + PLANE_GAP),
+  };
 }
 
-function drawPlane(ctx, planeIdx, plane) {
-  const ox = planeOriginX(planeIdx);
-  const oy = HEADER_H;
+function drawPlane(ctx, plane) {
+  const { ox, oy } = planeOrigin(plane);
   // Plane label.
   ctx.fillStyle = '#aaa';
   ctx.font = '12px ui-sans-serif';
@@ -129,9 +150,8 @@ function drawPlane(ctx, planeIdx, plane) {
   }
 }
 
-function drawPosts(ctx, planeIdx, plane, postsState) {
-  const ox = planeOriginX(planeIdx);
-  const oy = HEADER_H;
+function drawPosts(ctx, plane, postsState) {
+  const { ox, oy } = planeOrigin(plane);
   for (const [id, def] of Object.entries(SPEC_POSTS)) {
     if (def.plane !== plane) continue;
     const live = postsState.get(id) ?? def;
@@ -163,9 +183,8 @@ function shortPostName(id) {
   );
 }
 
-function drawParties(ctx, planeIdx, plane, parties) {
-  const ox = planeOriginX(planeIdx);
-  const oy = HEADER_H;
+function drawParties(ctx, plane, parties) {
+  const { ox, oy } = planeOrigin(plane);
   // Bucket parties by tile so we can fan them out if multiple share a cell.
   const byTile = new Map();
   for (const [id, p] of parties) {
@@ -198,11 +217,11 @@ function drawParties(ctx, planeIdx, plane, parties) {
 function render(canvas, state) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  PLANES.forEach((plane, i) => {
-    drawPlane(ctx, i, plane);
-    drawPosts(ctx, i, plane, state.posts);
-    drawParties(ctx, i, plane, state.parties);
-  });
+  for (const plane of PLANES) {
+    drawPlane(ctx, plane);
+    drawPosts(ctx, plane, state.posts);
+    drawParties(ctx, plane, state.parties);
+  }
   // HUD: queen charge, turn, winner banner.
   ctx.fillStyle = '#888';
   ctx.font = '11px ui-sans-serif';

@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 export const factionSchema = z.enum(['ant', 'spider', 'neutral']);
-export const planeSchema = z.enum(['floor', 'wall', 'ceiling']);
+export const planeSchema = z.enum([
+  'floor',
+  'ceiling',
+  'north-wall',
+  'south-wall',
+  'east-wall',
+  'west-wall',
+]);
 export const unitSizeSchema = z.enum(['small', 'medium', 'large', 'huge']);
 export const movementModeSchema = z.enum(['ground', 'climbing', 'flying', 'restricted']);
 export const terrainKindSchema = z.enum(['open', 'wet', 'path', 'obstacle', 'hazard']);
