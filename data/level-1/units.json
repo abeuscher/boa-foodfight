@@ -118,13 +118,13 @@
       "movement": "ground",
       "baseStats": {
         "hp": 5,
-        "attack": 4,
+        "attack": 5,
         "agility": 5,
         "armor": 0,
         "intelligence": 8,
         "constitution": 6
       },
-      "abilities": ["plane-switch", "mend"],
+      "abilities": ["plane-switch", "mend", "jelly-apply"],
       "tags": ["caster", "leader-eligible", "support"]
     },
     {
@@ -190,7 +190,7 @@
       "movement": "climbing",
       "baseStats": {
         "hp": 14,
-        "attack": 5,
+        "attack": 6,
         "agility": 4,
         "armor": 2,
         "intelligence": 5,

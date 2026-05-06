@@ -70,9 +70,10 @@
       "uses": 1,
       "cooldown": 1,
       "params": {
-        "damage": 12
+        "damage": 12,
+        "queenBonusDamage": 4
       },
-      "description": "Archer ants loose a coordinated salvo of seed-tipped arrows. Pre-battle softening, the textbook way."
+      "description": "Archer ants loose a coordinated salvo of seed-tipped arrows. Pre-battle softening, the textbook way -- and a heavy chassis target like the Spider Queen catches the worst of it."
     },
     {
       "id": "brace",
@@ -120,9 +121,10 @@
       "cooldown": 1,
       "params": {
         "movementPenalty": 2,
+        "attackPenalty": 1,
         "durationTurns": 2
       },
-      "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast."
+      "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast — and swings half-mast while the silk drags on their joints."
     },
     {
       "id": "web-mend",
