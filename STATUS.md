@@ -1,3 +1,104 @@
+# Status — Phase 5d (Fun Critic iteration loop, 3 rounds)
+
+## Headline
+
+Three rounds of "apply Fun Critic findings → re-measure → re-grade".
+The rubric is now satisfied: **no HIGH findings, all batch_scores ≥
+2/3**. Score trajectory across iterations:
+
+| Iteration | watchability | route_diversity | composition_diversity | HIGH findings |
+| --------- | ------------ | --------------- | --------------------- | ------------- |
+| 0 (5c)    | 1/3          | 2/3             | 0/3                   | 2             |
+| 1         | 2/3          | 3/3             | 2/3                   | 1             |
+| 2         | 2/3          | 3/3             | 2/3                   | 0 ✓           |
+| 3         | (not graded) | —               | —                     | —             |
+
+Iter 2 ended with the Fun Critic explicitly stating the orchestrator
+can stop iterating. Iter 3 was a small follow-up engine improvement
+(early-loss detector) committed for code quality but not re-graded
+because measured outcomes are unchanged.
+
+## Diversity / win-rate trajectory
+
+| Iter | baseline | rush | turtle | flank | Comment                                       |
+| ---- | -------- | ---- | ------ | ----- | --------------------------------------------- |
+| 0    | 64%      | 66%  | 66%    | 64%   | All clustered, 1pp under band                 |
+| 1    | 84%      | 90%  | 90%    | 95%   | Web defense lowered, over band                |
+| 2    | 75%      | 77%  | 77%    | 62%   | 3 of 4 in [65,80]; flank meaningfully riskier |
+| 3    | 75%      | 77%  | 77%    | 62%   | unchanged (early-loss rarely fires)           |
+
+## Per-iteration changes (commits on `claude/game-agent-strategy-XQu8x`)
+
+**Iter 1 — `ef368fe` (composition + strategy diversity)**
+
+- `data/level-1/map.json`: spider-web POST `defensiveBonus` 4 → 2.
+  Effective queen defense at the web drops (armor 2 + postDef 4) ×
+  defend 1.5 = 9 → (2 + 2) × 1.5 = 6. Creates a real damage step:
+  potato-bug atk 9 consistently exceeds the floor; footman atk 7
+  sometimes; archer/mage stay at 1.
+- `ai/flank.ts`: rewritten to do genuine corner-flank routing.
+  pathfinders walks floor (0,9) → ceiling (0,9) → spider-web; vanguard-
+  bravo walks floor (9,0) → ceiling (9,0) → spider-web. The two
+  ceiling-capable parties enter the ceiling at OPPOSITE corners, far
+  from the canonical north-wall ladder.
+- Re-tune: queen HP 39 → 41.
+
+**Iter 2 — `4ea265d` (web-mend, the tuning cliff-breaker)**
+
+- New `web-mend` ability (category: `passive`). Heals 1 HP at the
+  start of each combat round while the unit's HP fraction > 50%.
+  Once below the threshold, mend stops — the threshold non-linearity
+  introduces sub-integer effective HP variance that the Fun Critic
+  iter-1 prompt asked for. Breaks the integer cliff (one queen HP
+  step flipping 84% → 51%) and lets the auto-tuner land cleanly in
+  band.
+- spider-queen template gets `web-mend` in abilities.
+- `engine/battle.ts` gets `applyRoundStartPassives` invoked before
+  each combat round.
+- `engine/schemas/abilities.ts` adds `passive` to the category enum.
+
+**Iter 3 — early-loss detector (this commit)**
+
+- `engine/end-of-turn.ts`: scenario ends with a spider-win the turn
+  every non-queen ant party has zero living units. Avoids the
+  worst-case 90-turn dead-air tail when the field force is wiped
+  but the immobile queen-guard sits idle. (In practice fires rarely
+  because vanguard-alpha typically has at least one survivor; the
+  check is harmless when it doesn't apply.)
+
+## Fun Critic verdict at iter 2
+
+> "Rubric satisfied. The orchestrator can stop iterating. Three of
+> four variants are in [65,80] (baseline 75, rush 77, turtle 77),
+> flank dipped to 62 but the cliff is broken: queen-kill battles
+> spread across 1-5 rounds, and timeouts now show queen surviving
+> with HP {0,2,7,9,13,18,19} rather than wiping the assault round-1.
+> Web-mend is firing as designed (3-7 heals per battle sequence;
+> threshold at 50% creates a visible inflection point)."
+
+flank's 62% reads as fun-tactically interesting per the critic, not
+a balance bug — the corner-flank routing exposes pathfinders to
+web-watch en route, and flank pays a real route-exposure tax for
+its earlier capture timing.
+
+## Remaining MEDIUM findings (not in scope for this loop)
+
+- `composition-diversity` archer/mage still floor-1 vs queen — pure
+  archer comp (pathfinders) still ineffective on the queen. Suggested
+  next: archer base atk 6 → 7 OR queen-targeting bonus on volley.
+- `tactical-variety` volley/mend still fire as a fixed prologue;
+  jelly never fires; queen ult never fires.
+- `outcome-credibility` field-stuck (not field-wiped) timeouts still
+  produce dead-air tails. The supplementary "hold ≥4 POSTs for N
+  turns" win condition was prototyped but pulled — at 8-turn
+  threshold it converted everything to 100% wins, distorting the
+  band; would need a higher threshold paired with a re-tune.
+
+These are stable-by-design gaps the critic flagged as "iter-2 change
+wasn't scoped to fix"; future work.
+
+---
+
 # Status — Phase 5c (6-plane geometry + obstacles + Fun Critic rerun)
 
 ## Latest measurement (2026-05-05, post-geometry)

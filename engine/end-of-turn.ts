@@ -242,10 +242,27 @@ const applyUnitProduction = (state: GameState, queen: QueenFile, nextTurn: numbe
   return { ...state, parties };
 };
 
+/** True iff every non-queen ant party has zero living units. The
+ * queen-guard is immobile and cannot progress the scenario alone, so a
+ * wiped field force is a deterministic spider win. */
+const antFieldForceWiped = (state: GameState): boolean => {
+  let sawAnyFieldParty = false;
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'ant') continue;
+    if (party.units.some((u) => isAntQueenUnit(u, state.unitTemplates))) continue;
+    sawAnyFieldParty = true;
+    for (const u of party.units) {
+      if (u.currentHp > 0) return false;
+    }
+  }
+  return sawAnyFieldParty;
+};
+
 /** Determine winner. Loss is checked before victory. Returns null if neither. */
 const checkWinner = (state: GameState): Faction | null => {
   const queenUnit = findQueenUnit(state);
   if (!queenUnit || queenUnit.currentHp <= 0) return 'spider';
+  if (antFieldForceWiped(state)) return 'spider';
   const web = state.posts.get(SPIDER_WEB_POST_ID);
   if (web?.owner === 'ant') return 'ant';
   return null;
