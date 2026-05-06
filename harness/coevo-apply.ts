@@ -43,12 +43,11 @@ const ROSTER_PATH_BY_FACTION: Record<'ant' | 'spider', string> = {
 const UNITS_PATH = 'data/level-1/units.json';
 const ABILITIES_PATH = 'data/level-1/abilities.json';
 
-const STRATEGY_LOCKED_PATHS = new Set([
-  'ai/baseline.ts',
-  'ai/policy-helpers.ts',
-  'ai/types.ts',
-  'ai/index.ts',
-]);
+// Files designers cannot propose to replace/remove. ai/index.ts is
+// intentionally NOT locked — adding a new variant requires registering
+// it there, so strategy designers must be allowed to edit the export
+// table. Designer rubric tells them to keep that edit minimal.
+const STRATEGY_LOCKED_PATHS = new Set(['ai/baseline.ts', 'ai/policy-helpers.ts', 'ai/types.ts']);
 
 const ANT_VARIANT_PREFIXES = ['ai/rush', 'ai/turtle', 'ai/flank'];
 

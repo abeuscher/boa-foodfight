@@ -44,7 +44,11 @@ const MUTABLE_DATA_FILES = [
 ];
 
 const MUTABLE_AI_DIR = 'ai';
-const LOCKED_AI_FILES = new Set(['baseline.ts', 'policy-helpers.ts', 'types.ts', 'index.ts']);
+// Files snapshot/restore should NOT cover. Empty set: the orchestrator
+// must be able to roll back any file designers or their scratch may
+// touch. Files locked from designer proposals are enforced separately
+// in coevo-apply.ts (STRATEGY_LOCKED_PATHS).
+const SNAPSHOT_AI_SKIP = new Set<string>();
 
 const BALANCE_BAND_MIN = 0.55;
 const BALANCE_BAND_MAX = 0.65;
@@ -65,7 +69,7 @@ const snapshotMutableAi = (snapshotDir: string): void => {
   const aiSnapshotDir = path.join(snapshotDir, 'ai');
   fs.mkdirSync(repoPath(aiSnapshotDir), { recursive: true });
   for (const f of fs.readdirSync(repoPath(MUTABLE_AI_DIR))) {
-    if (LOCKED_AI_FILES.has(f)) continue;
+    if (SNAPSHOT_AI_SKIP.has(f)) continue;
     if (f.endsWith('.test.ts')) continue;
     if (!f.endsWith('.ts')) continue;
     fs.copyFileSync(repoPath(path.join(MUTABLE_AI_DIR, f)), repoPath(path.join(aiSnapshotDir, f)));
@@ -91,7 +95,7 @@ const restore = (round: number): void => {
   }
   // Restore AI: delete current non-locked .ts files in ai/, then copy from snapshot.
   for (const f of fs.readdirSync(repoPath(MUTABLE_AI_DIR))) {
-    if (LOCKED_AI_FILES.has(f)) continue;
+    if (SNAPSHOT_AI_SKIP.has(f)) continue;
     if (f.endsWith('.test.ts')) continue;
     if (!f.endsWith('.ts')) continue;
     fs.unlinkSync(repoPath(path.join(MUTABLE_AI_DIR, f)));
