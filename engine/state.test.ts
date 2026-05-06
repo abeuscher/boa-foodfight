@@ -28,11 +28,15 @@ describe('loadScenario(level-1)', () => {
     expect(soapDish?.owner).toBe('neutral');
   });
 
-  it('builds tile maps for all three planes', () => {
+  it('builds tile maps for all six planes', () => {
     const { state } = loadScenario(DATA_DIR, 1);
-    expect(state.tiles.size).toBe(300);
+    // 6 planes * 10*10 = 600 tiles.
+    expect(state.tiles.size).toBe(600);
     expect(state.tiles.has(coordKey({ plane: 'floor', x: 0, y: 0 }))).toBe(true);
-    expect(state.tiles.has(coordKey({ plane: 'wall', x: 5, y: 5 }))).toBe(true);
+    expect(state.tiles.has(coordKey({ plane: 'north-wall', x: 5, y: 5 }))).toBe(true);
+    expect(state.tiles.has(coordKey({ plane: 'south-wall', x: 0, y: 0 }))).toBe(true);
+    expect(state.tiles.has(coordKey({ plane: 'east-wall', x: 0, y: 0 }))).toBe(true);
+    expect(state.tiles.has(coordKey({ plane: 'west-wall', x: 0, y: 0 }))).toBe(true);
     expect(state.tiles.has(coordKey({ plane: 'ceiling', x: 9, y: 9 }))).toBe(true);
   });
 

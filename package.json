@@ -23,12 +23,14 @@
     "diversity": "tsx harness/diversity.ts",
     "viewer": "tsx viewer/serve.ts",
     "build:viewer": "tsx viewer/build-manifest.ts",
+    "test:viewer": "playwright test --config viewer/playwright.config.ts",
     "critic:metrics": "tsx critics/metrics.ts",
     "critic:spec": "tsx critics/spec-compliance.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test && pnpm reconcile",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",

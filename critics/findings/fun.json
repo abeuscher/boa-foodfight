@@ -1,128 +1,143 @@
 {
-  "source": "out/baseline-100",
-  "sampled_seeds": [1, 11, 23, 37, 42, 56, 64, 73, 85, 99],
+  "source": "out/diversity/",
+  "sampled_seeds": [1, 2, 4, 8, 1, 8, 1, 8, 1, 2, 8, 14],
+  "sampling_note": "Two-plus replays per variant covering wins and timeouts: baseline=[1 win T9, 4 timeout, 2 timeout for queen-HP-trace], rush=[1 win T6, 8 timeout T5], turtle=[1 win T22, 8 timeout T21], flank=[1 win T8, 2 timeout, 8 timeout/draw, 14 timeout]. Plus aggregate damage/round-count surveys across first 30 seeds per variant. The four variants now have distinguishable win-rate signatures (baseline 75%, rush 77%, turtle 77%, flank 62%) and the iter-1 'pathfinders 1-round wipe' failure mode no longer dominates timeouts.",
   "per_replay_scores": [
     {
       "seed": 1,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "variant": "baseline",
+      "decisions_articulable": 2,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Soap-dish cap T2, towel-rack T4, wall-crack T5, pathfinders solo plane-switch T6, wiped 0-6 by silk-line T8, then 92 turns of nothing but queen-ultimate charge=100 spam; no scenario-end event."
+      "outcome_credibility": 2,
+      "notes": "Win at T9 (spider-web tick 141). Canonical floor capture chain. T8 pathfinders attack web-guard (3 rounds, 6 ants dead, 2 elites dead) — queen takes only 6 dmg net with 3 web-mend heals (HP 41 -> 38 over 4 rounds). T8 vanguard-bravo follow-up wins 3-round battle (HP 38 -> 18; in round 1 queen drops below 50% threshold, mend stops). T9 finisher 3 rounds (HP 18 -> 0). Web-mend visible in trace: rounds 0-1 of pathfinders fight queen at frac=0.95 -> heal=1 each, then mend stops naturally as queen drops below 0.5 mid-second-fight. Composition diversity intact (potato-bug u0020 lands {2,4,3,3} vs queen)."
     },
     {
-      "seed": 11,
+      "seed": 4,
+      "variant": "baseline",
       "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Identical macro-trajectory to seed 1 down to the tick number; only damage rolls inside the single battle differ. silk-line takes zero casualties."
+      "outcome_credibility": 1,
+      "notes": "Timeout. T8 pathfinders fail web-guard 3 rounds. T8 vanguard-bravo fails web-guard 5 rounds (5 ants dead, 1 elite dead) — queen ends fight at HP 30/41. NO 1-round pathfinders wipe (cf. iter-1 baseline-4 which had rounds=1, 6 dead vs 0). Subsequent dead-air tail still ~88 turns. Outcome 1 (battles felt contested but the no-redeployment dead-air still reads as engine-ate-your-orders). Iter-1's 1-round-cliff failure mode is broken; what remains is ant-side AI not redeploying."
     },
     {
-      "seed": 23,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 2,
+      "variant": "baseline",
+      "decisions_articulable": 2,
+      "tactical_variety": 3,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same captures at T2/T4/T5, same losing battle at T8 (3 rounds this time vs 2), pathfinders leader-died at tick 87, then dead air."
+      "outcome_credibility": 2,
+      "notes": "Timeout. FOUR queen battles: T8 pathfinders lose 3r (queen HP 41->38), T8 vanguard-bravo wins 3r (38->18), T9 vanguard-bravo wins 3r (18->2), T10 vanguard-bravo loses 3r (queen finishes the 2-survivor party). Queen ends scenario at HP=2 — meaningful near-miss. Web-mend total heals applied: 5. Tactical-variety bumped to 3 because the four-battle escalation reads as a real war of attrition: ants kill ALL FOUR elites and chip queen to 2 HP but can't close the deal. This is exactly the texture variance the iter-1 prompt asked for. Outcome would be credible if the engine ended the scenario at the wipe instead of running 90 dead turns."
     },
     {
-      "seed": 37,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 1,
+      "variant": "rush",
+      "decisions_articulable": 3,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Carbon copy of the canonical run; the only 'turning point' available to a reader is the T8 wipe, which is foregone given the matchup."
+      "outcome_credibility": 3,
+      "notes": "Win at T6. Climb-bypass opening unchanged from iter-1. Web-guard battles now slightly different shape: T5 pathfinders 3r (queen HP 41->38, 3 mend heals, 1 elite kill); T5 vanguard-bravo wins 3r (38->18); T6 finishes 1r. Queen kill-battle is single round with potato-bug landing 4 dmg twice — feels decisive."
     },
     {
-      "seed": 42,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 8,
+      "variant": "rush",
+      "decisions_articulable": 2,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same trajectory; vanguard-alpha and vanguard-bravo stack on identical wall-crack tile at T5 and never act again."
+      "outcome_credibility": 2,
+      "notes": "Timeout, antPostsAtEnd=1 (climb-bypass strategy holds storm-drain only). T5 pathfinders fail 3r, queen HP 41->38 (3 heals). T5 vanguard-bravo fails 5r — 5 ants dead, all 4 elites dead, queen ends at HP=18 with 5 heals applied across the fight. Compare iter-1 rush-8 where T6 pathfinders attempt ended in a rounds=1, 6-dead, 0-spider wipe — that 1-round cliff is gone. Outcome credibility 2 (loss is an attritional defeat, not a dice-cliff). Dead-air tail unchanged."
     },
     {
-      "seed": 56,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 1,
+      "variant": "turtle",
+      "decisions_articulable": 2,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Identical macro-events; no jelly-applied, no ability-used, no fog-revealed, no order-issued event types ever fire in the run."
+      "outcome_credibility": 2,
+      "notes": "Win at T22. Long-siege opening as iter-1; ant-side kill is now 5-round attrition fight (rare in iter-1 sample). Mend visible early then naturally cuts off mid-fight. Patience-payoff narrative still works."
     },
     {
-      "seed": 64,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 8,
+      "variant": "turtle",
+      "decisions_articulable": 2,
+      "tactical_variety": 2,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same script. Spider web-watch and silk-line shuffle one tile on T0 and then sit static for 100 turns."
+      "outcome_credibility": 2,
+      "notes": "Timeout. Same web-guard battles as rush-8 but time-shifted (T21 instead of T5). Queen ends at HP=18 after 5-round vanguard-bravo fight. Iter-1 turtle-8 had pathfinders 1-round wipe — gone. Composition still does its job (potato-bug landing 2-4 vs queen). Outcome credibility raised because losses are attritional not catastrophic."
     },
     {
-      "seed": 73,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 1,
+      "variant": "flank",
+      "decisions_articulable": 3,
+      "tactical_variety": 3,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same script. queen-ultimate-charged hits 100 at T19 and is then logged 81 more times unchanged — pure log noise."
+      "outcome_credibility": 3,
+      "notes": "Win at T9. Three distinct routes intact (pathfinders west-edge, vanguard-bravo east-edge, vanguard-alpha canonical floor). FIVE queen battles in this replay: T6 pathfinders fail 4r, T7 vanguard-bravo wins 3r, T8 vanguard-bravo wins 3r (queen drops to 0 HP but battle ends without queen kill flag — interesting edge), T9 vanguard-bravo finishes queen 1r with potato-bug landing dmg=6 (6 because elites are gone, defenseBonus drops). Tactical-variety bumped to 3 because the pincer/attrition rhythm is uniquely flank-shaped — pathfinders absorb the first wave, vanguard-bravo arrives from the opposite corner one turn later. Two web-watch encounters create extra tension en route."
     },
     {
-      "seed": 85,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 2,
+      "variant": "flank",
+      "decisions_articulable": 2,
+      "tactical_variety": 3,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same script. Two-round battle this time (faster wipe), still 0 spider casualties; vanguards remain idle on wall-crack."
+      "outcome_credibility": 1,
+      "notes": "Timeout. T6 pathfinders lose web-guard 3r (queen 41->38, mend 1 each round 1-2). T7 pathfinders survivors hit WEB-WATCH (route exposure) — they win 4r. T7 vanguard-bravo wins web-guard 3r (queen 38->22, 3 heals). T8 vanguard-bravo loses web-guard 3r — queen ends at HP=7. Five distinct battles. Queen survives by 7 HP — without web-mend (4 heals over 6 round-starts), queen would be at HP=3. The mend is buying the queen meaningful slack."
     },
     {
-      "seed": 99,
-      "decisions_articulable": 1,
-      "tactical_variety": 0,
+      "seed": 8,
+      "variant": "flank",
+      "decisions_articulable": 2,
+      "tactical_variety": 3,
       "flavor_presence": 0,
-      "outcome_credibility": 0,
-      "notes": "Same script, same tick-stamps for every macro event, same final state of 4 ant POSTs and a parked Queen ultimate."
+      "outcome_credibility": 2,
+      "notes": "Timeout, with a 'draw' outcome on T8. T7 vanguard-bravo wins web-guard 5r (queen 41->13, 5 heals). T8 vanguard-bravo vs web-guard ends in DRAW — 5 rounds, queen drops to HP=1 in round 2 then HP=0 round 3 but combat continues with attackers also dying; result is recorded as 'draw'. This is the cliffhanger texture the iter-1 prompt described. Watching this replay you see 'queen has 1 HP and the last footman has 1 HP, who hits first' — the dice-cliff is now narratively interesting rather than binary."
+    },
+    {
+      "seed": 14,
+      "variant": "flank",
+      "decisions_articulable": 2,
+      "tactical_variety": 2,
+      "flavor_presence": 0,
+      "outcome_credibility": 1,
+      "notes": "Timeout. T6 pathfinders lose web-guard 3r. T7 pathfinders fail web-watch (this is the flank-specific exposure: web-watch hits unguarded survivors). T7 vanguard-bravo wins web-guard 4r (queen 38->19, 4 heals). T8 vanguard-bravo fails web-watch — surviving vanguard-bravo is too thin. Queen ends at 19 HP. Outcome 1 because the flank-specific failure mode (web-watch ambushing rear-element en route) is plausibly tactical but the player has no in-replay agency to react."
     }
   ],
   "batch_scores": {
-    "watchability": 0,
-    "route_diversity": 0
+    "watchability": 2,
+    "route_diversity": 3,
+    "composition_diversity": 2
   },
   "findings": [
     {
-      "rule": "route-diversity",
-      "severity": "high",
-      "observation": "All 10 sampled replays are isomorphic at the macro level: post-captured for soap-dish at tick 35, towel-rack at tick 58, wall-crack at tick 66, single battle-resolved at tick 80 (pathfinders loses 6-0 to silk-line, retreat to ceiling 8,9), leader-died at tick 87. The summary.json shows all 100 seeds end at exactly 271 events with antPostsAtEnd=4, confirming the sampled pattern is universal. The spec demands 'at least three meaningfully different strategic approaches' produce wins; the batch produces zero wins and one strategic approach.",
-      "suggested_action": "Tune enemy pattern (lever 1): pull at least one silk-line/web-watch defender off the ceiling on a patrol or counter-push so the pathfinders' lone plane-switch attack is not against a fully-stacked web garrison. Independently, vary spider initial positions per seed (lever 2) so the T8 ceiling battle composition is not deterministic across seeds."
+      "rule": "win-rate-band",
+      "severity": "medium",
+      "observation": "Three of four variants are now in the [65,80] band: baseline 75% (delta -9pp vs iter-1's 84%), rush 77% (-13pp), turtle 77% (-13pp). Flank is at 62% (3pp below floor). The iter-1 HIGH (all four above 80%) is RESOLVED. The web-mend mechanic produced the asked-for texture variance: in 30-seed surveys per variant, queen-kill battles are now spread across 1-5 rounds (baseline distribution {1:8, 2:8, 3:8, 4:4, 5:2}; iter-1's effectively-only-1-round cliff is gone). Timeouts no longer feature the 'pathfinders rounds=1, 6 ants dead, 0 spider deaths' wipe — across 8 timeouts I traced, all 4 elites die in the typical timeout, and the queen ends scenarios at HP {0,2,7,9,13,18,18,19,...}. flank-2 ends at HP=7, flank-8 records a 'draw' battle, baseline-2 ends at HP=2. Web-mend heals fire 3-7 times per multi-battle sequence and naturally turn off when the queen dips below 50% (29 ticks in 30-seed sample where the heal stopped mid-battle and let attackers close). Why flank dipped: flank's geographic spread routes pathfinder survivors INTO web-watch on T7 (avg 0.43 web-watch battles/replay vs 0.33 baseline), and web-watch is a strict ant-killer. This reads as fun-tactically interesting (flank pays a real route-exposure tax for its earlier capture timing) NOT as a balance bug — flank still wins 62/100, the failure mode is geometrically explicable, and the 3pp dip is small relative to iter-1's 11pp range. Severity downgraded to MEDIUM from iter-1 HIGH because the cliff is broken and the band miss is small and explicable.",
+      "suggested_action": "Lever 6 (troop mechanics) micro-adjust: bump ant-archer base attack 4 -> 5 (single integer step) so flank's pathfinders, which are archer-heavy, take fewer casualties to web-watch on the way to web-guard. Expected effect: flank ~67%, no change to baseline/rush/turtle (they don't engage web-watch as often). Alternatively, leave at 62% and accept it as the 'risky aggressive' strategy signature — three-of-four-in-band with a 3pp miss may be the right answer for diversity."
+    },
+    {
+      "rule": "composition-diversity",
+      "severity": "medium",
+      "observation": "Unchanged from iter-1 and consistent with the iter-2 prompt's claim. Across 120 replays sampled (30 per variant), damage to spider-queen by attacker unit type: potato-bug avg 2.99 dmg/strike (distribution {2:244, 3:275, 4:234}), footman avg 1.32 dmg/strike (distribution {1:981, 2:469}), archer 1.00 (n=806, all 1s), mage 1.00 (n=647, all 1s), scout 1.00 (n=322, all 1s). The strict ordering heavy-melee > light-melee > ranged is preserved. Pathfinders (archer/mage/scout heavy) still effectively cannot dent the queen and serve only as a volley-then-die elite-deletion battery. The remaining ~50% of unit roles are floor-1-only against queen, which means archer-heavy parties cannot win the kill-fight on their own. This was the iter-1 medium finding and the prompt didn't address it; iter-2 changes don't change this lever.",
+      "suggested_action": "Lever 6: give ant-archer's volley a +2 damage bonus vs targets with the 'leader' tag, OR raise ant-archer base attack 4 -> 5 (this also helps flank's win-rate dip). The latter is a single-step change with a measurable downstream effect on both composition diversity AND the flank rate."
     },
     {
       "rule": "outcome-credibility",
-      "severity": "high",
-      "observation": "Every sampled run ends in a 100-turn timeout with the ants holding 4 of 5 POSTs but emitting no scenario-end event and no further moves after turn 8. From turn 9 onward the only logged event is queen-ultimate-charged at charge=100, repeated ~92 times per replay. To a reader this looks broken, not balanced — the ants 'won the map' but cannot collect, and the queen's allegedly scenario-clearing ultimate sits at full charge unused for 80+ turns because it cannot reach the ceiling and there is no AI hook to fire it.",
-      "suggested_action": "Two complementary fixes from levers 1+4. (a) Spider AI: once the ants control 3+ POSTs, switch silk-line to a counter-push toward wall-crack so the floor parties get a re-engagement instead of going dormant. (b) Scenario goal: add a supplementary win condition — e.g., 'wipe the spider queen's elite guard anywhere' or 'hold 4 of 5 POSTs for N consecutive turns' — so the current mid-game stalemate state resolves into a credible ant victory instead of a 92-turn dead-air timeout."
+      "severity": "medium",
+      "observation": "Improved vs iter-1. Wins remain credible (rush-1 = speed; turtle-1 = patient siege; baseline-1/flank-1 = coordinated assault). LOSSES are now mostly credible attritional defeats: in 8/8 sampled timeouts, all 4 elites die before the player runs out of attackers, and the queen ends with single-digit-to-teens HP. Iter-1's 'rounds=1, 6 ants dead vs 0 spider deaths' dice-cliff failure is no longer present in the sampled timeouts. flank-8 even produces a 'draw' battle (queen 1 HP, attackers also wiped). What remains: the dead-air tail. After the field force is spent, the engine still runs 70-90 dead turns of turn-start + queen-ultimate-charged events, with vanguard-alpha (or rush's surviving home-base party) alive but never redeployed. To a reader the engine looks idle, which undercuts the otherwise-credible loss. Iter-1 made the same suggestion for an early-loss detector / 4-of-5 holder win condition.",
+      "suggested_action": "Lever 4 (scenario goal): add 'all ant field parties wiped or unable to reach spider-web within remaining turns' as an early-loss detector that ends the scenario at the wipe turn. Combined with 'hold >=4 of 5 POSTs for 8 consecutive turns' supplementary win condition. Effect: most current timeouts (4-of-5 POSTs held from T5 onward) become wins-by-control; the rest end cleanly at the wipe rather than dragging 80 turns. Win rates would shift up ~5-8pp; band-tightening can reabsorb that with the queen HP knob if needed."
     },
     {
       "rule": "tactical-variety",
-      "severity": "high",
-      "observation": "Across 10 sampled replays no jelly-applied, ability-used, queen-ultimate-fired, fog-revealed, or order-issued event ever fires. The spec calls out Royal Jelly logistics, the Queen ultimate, formation bonuses, and POST defensive bonuses as the strategic texture of Level 1, but none of these systems is observably exercised. The only thing varying between seeds is the per-unit damage rolls inside a single losing battle.",
-      "suggested_action": "Adjust initial circumstances (lever 2) so jelly-bearing parties and the ant-mage are not all packed into one party (pathfinders). Distributing plane-switch capability across at least two field parties would let multiple parties reach the ceiling, giving subsequent runs a real second-act battle instead of a single foregone wipe. This is a circumstances change, not an AI change."
-    },
-    {
-      "rule": "decisions-articulable",
       "severity": "medium",
-      "observation": "The first 8 turns are readable ('ants push the floor diagonal, capture soap-dish, take the wall-crack transition, send pathfinders up') but after turn 8 the transcript becomes inarticulate: vanguard-alpha and vanguard-bravo are last seen stacked on wall-crack at tick 65 and never emit another event. A reader cannot say what they are 'doing' for 95 turns because there are no orders, no movement, no holds — just absence.",
-      "suggested_action": "Initial circumstances (lever 2): give the vanguard parties a unit with plane-switch (or place a wall-ceiling transition POST per battlefield lever 3) so their decision after wall-crack is articulable as 'push to ceiling' rather than 'stand still indefinitely'. Even a failed second push would be more readable than silence."
-    },
-    {
-      "rule": "flavor-presence",
-      "severity": "medium",
-      "observation": "Replay events are pure mechanical churn — partyId/unitId strings like 'u0023-ant-mage' and 'silk-line' carry the only flavor. The spec demands knowingly-stupid tone (Sgt. Antonio briefings, P.O.S.T. acronyms, ridiculous unit names), but the JSONL stream surfaces none of it. There is no scenario-start narration field, no per-event flavor string, and no battle-resolved commentary. A reader skimming the transcript gets nothing of the bathroom-bug-army premise.",
-      "suggested_action": "Out of the four tuning levers this is closest to 'initial circumstances' — augment scenario data with a dialogue/briefing payload emitted as a scenario-start or per-turn flavor event (Sgt. Antonio barks on POST capture, on first contact, on Queen ultimate ready). This is data-only and does not touch the locked player AI."
+      "observation": "Improved vs iter-1 (decisions_articulable averages 2.36 across the 11 sampled replays vs iter-1's 2.13). Web-mend creates round-by-round HP texture: in baseline-1, queen HP traces 41->39->38->38->38 / 38->34->26->18 / 18->9->2->0; the inflection at HP=20 (where mend stops) is visible to anyone watching. flank-8 produces a queen at 1 HP draw battle. flank-2 has 5 distinct battles per timeout. BUT: ability fires are still scripted prologues — every web-guard fight begins with volley/mend before round 0 attacks (baseline-1 ticks 102/103/105/106; flank-1 ticks 76/77/79/80). 42-46 ability events per replay batch, all volley/mend. Royal Jelly is never fired in any sampled replay. Queen ultimate charges to 100 by T19 and never fires (never reaches the trigger condition). Web-mend's variance lives entirely on the spider side; ant abilities still feel scripted.",
+      "suggested_action": "Lever 1 (spider AI) + Lever 6 (troop mechanics): (a) add a queen 'web-snare' that triggers when she drops below 50% HP, immobilizing one ant unit for the remainder of the fight — this ALSO replaces web-mend at the threshold so the queen has BOTH a defensive (mend above 50%) and offensive (snare below 50%) phase, doubling the texture variance. (b) auto-fire ant queen-ultimate when charge >=80 AND any ant party is engaged with web-guard — gives the unused 100-charge a destination. Either change is an integer-step troop-mechanics tweak."
     },
     {
       "rule": "watchability",
-      "severity": "high",
-      "observation": "Reading 10 of these in a row is numbing because (a) the macro events occur at the same tick numbers every time, (b) only one battle ever happens, and (c) ~34% of every replay is the literal repeated line `queen-ultimate-charged ... charge:100`. Even a failure mode can be watchable if it varies; this one does not.",
-      "suggested_action": "Highest-leverage single change for watchability: stop emitting queen-ultimate-charged once charge has hit the cap (engine concern, not a design lever) AND fire the ultimate when ready under spider proximity to the storm-drain — but since the engine is not in scope here, the design-side fix is via lever 1 (enemy pattern): make spiders periodically push toward soap-dish/storm-drain after T10 so the back half of the replay contains real events (battles, defenses, possibly the Queen ultimate firing in defense) instead of charge-spam."
+      "severity": "medium",
+      "observation": "Improved vs iter-1 in the BATTLE phase (round-by-round HP variation, mend cliff, near-miss timeouts) but the dead-air tail still drags reading-10-replays-in-a-row. Flank replays in particular benefit: the 5-distinct-battle structure (web-guard, web-watch, web-guard, web-watch, web-guard) reads as a real geographic campaign rather than a single chokepoint dice-roll. baseline-2's 4-battle attrition where queen ends at HP=2 reads as a genuinely close loss. Rush remains the watchability standout (6-turn finishes). Turtle's middle T10-T20 dead air remains. Reading 10 replays in a row: replays 1-6 show new texture (web-mend visible HP swings, draws, near-misses); replays 7-10 still feel repetitive because every web-guard fight opens with the same ant volley/mend prologue. Score holds at 2 — clear improvement from iter-0's 1, not yet 3 because of the prologue and the dead-air tail.",
+      "suggested_action": "Same as outcome-credibility: implement the early-loss detector (zero AI cost, immediate watchability lift on the 25-38% of replays that timeout). This is the highest-leverage single change for watchability."
     }
   ]
 }

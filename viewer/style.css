@@ -66,7 +66,7 @@ header h1 {
 }
 main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 320px;
   gap: 16px;
   padding: 16px;
 }
@@ -74,19 +74,59 @@ canvas {
   background: #2a2a2a;
   border-radius: 4px;
   display: block;
+  cursor: crosshair;
 }
+#side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#inspect-panel,
 #event-log {
   background: #2a2a2a;
   border-radius: 4px;
   padding: 12px;
+}
+#inspect-panel {
   max-height: 360px;
   overflow-y: auto;
 }
+#event-log {
+  max-height: 360px;
+  overflow-y: auto;
+}
+#inspect-panel h2,
 #event-log h2 {
   margin: 0 0 8px 0;
   font-size: 13px;
   font-weight: 600;
   color: #aaa;
+}
+#inspect-content {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+#inspect-content.empty {
+  color: #666;
+  font-style: italic;
+}
+#inspect-content .label {
+  color: #888;
+}
+#inspect-content .value {
+  color: #ffe;
+}
+#inspect-content .ant {
+  color: #e85d4a;
+}
+#inspect-content .spider {
+  color: #aaa;
+}
+#inspect-content .neutral {
+  color: #888;
 }
 #log-list {
   list-style: none;

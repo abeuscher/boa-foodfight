@@ -186,12 +186,19 @@ const ordersForScout = (party: Party, soapLoc: TileCoord): readonly Order[] => {
 const ordersForPatrolOrThreat = (
   party: Party,
   threat: TileCoord | null,
-  webLoc: TileCoord,
+  _webLoc: TileCoord,
   isResponder: boolean,
 ): readonly Order[] => {
-  const target = isResponder && threat !== null ? threat : webLoc;
-  if (sameCoord(party.location, target)) return [];
-  return [moveTo(target)];
+  // If actively responding to a threat, move to the threatened POST.
+  // Otherwise hold position (no orders). With the 6-plane geometry,
+  // having every party patrol back to spider-web causes pile-ups on
+  // the web tile that overwhelm any ant assault — so the default is
+  // to anchor at the starting tile and only move on demand.
+  if (isResponder && threat !== null) {
+    if (sameCoord(party.location, threat)) return [];
+    return [moveTo(threat)];
+  }
+  return [];
 };
 
 export const spiderL1: AIPolicy = {

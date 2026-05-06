@@ -8,6 +8,7 @@ export const abilityCategorySchema = z.enum([
   'buff',
   'debuff',
   'special-attack',
+  'passive',
 ]);
 
 export const abilityTargetSchema = z.enum(['self', 'tile', 'party', 'post', 'area', 'global']);

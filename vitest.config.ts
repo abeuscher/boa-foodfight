@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['**/*.test.ts'],
-    exclude: ['node_modules/**', 'dist/**', 'out/**'],
+    exclude: ['node_modules/**', 'dist/**', 'out/**', 'viewer/dist/**', 'viewer/*.spec.ts'],
     globals: false,
     reporters: ['default'],
     coverage: {

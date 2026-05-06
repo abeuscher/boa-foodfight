@@ -126,29 +126,23 @@ describe('spiderL1', () => {
     expect(responderCount).toBeGreaterThanOrEqual(1);
   });
 
-  it('with no threat, non-scout patrol parties target the spider-web', () => {
+  it('with no threat, non-scout patrol parties hold position (no orders)', () => {
     const { state: initial, data } = loadScenario(DATA_DIR, 1);
     const state = isolateAnts(initial);
-    const web = requirePost(state, 'spider-web' as PostId);
 
     const next = spiderL1.decide(state, data, createRng(1));
     const scout = next.parties.get('advance-scout' as PartyId);
 
-    // Each non-web-guard, non-scout spider party should either already be on
-    // the web (orders empty) or have a move-to toward the web.
+    // Each non-web-guard, non-scout spider party should hold position
+    // when there's no threat (the 6-plane geometry made spider-web
+    // pile-ups overwhelming, so default patrol is to anchor in place).
     let patrolCount = 0;
     for (const party of next.parties.values()) {
       if (party.faction !== 'spider') continue;
       if (party.id === ('web-guard' as PartyId)) continue;
       if (party.id === scout?.id) continue;
       patrolCount += 1;
-      if (sameCoord(party.location, web.location)) {
-        expect(party.orders).toEqual([]);
-      } else {
-        const order = party.orders[0] as MoveOrder | undefined;
-        expect(order?.kind).toBe('move-to');
-        expect(order?.target).toEqual(web.location);
-      }
+      expect(party.orders).toEqual([]);
     }
     expect(patrolCount).toBeGreaterThan(0);
   });

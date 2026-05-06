@@ -23,5 +23,12 @@
     "types": ["node"]
   },
   "include": ["engine/**/*", "data/**/*", "ai/**/*", "harness/**/*", "critics/**/*", "viewer/**/*"],
-  "exclude": ["node_modules", "dist", "out"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    "viewer/dist",
+    "viewer/viewer.spec.ts",
+    "viewer/playwright.config.ts"
+  ]
 }

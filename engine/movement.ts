@@ -34,6 +34,7 @@
  */
 
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
+import { edgeAnchor, edgeNeighbor } from './edges.ts';
 import { baseMovementAllowance } from './parties.ts';
 import type {
   AbilityId,
@@ -62,31 +63,6 @@ const partyHasPlaneSwitch = (
     if (tmpl?.abilities.includes(PLANE_SWITCH)) return true;
   }
   return false;
-};
-
-/**
- * True iff every living unit in the party has `climbing` movement mode.
- * Used to gate the wall<->ceiling bypass — spiders climb between vertical
- * surfaces naturally per the spec, no paired POST required.
- */
-const partyAllClimbing = (
-  party: Party,
-  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
-): boolean => {
-  let any = false;
-  for (const u of party.units) {
-    if (u.currentHp <= 0) continue;
-    const tmpl = templates.get(u.templateId);
-    if (!tmpl) return false;
-    if (tmpl.movement !== 'climbing') return false;
-    any = true;
-  }
-  return any;
-};
-
-const isWallCeilingPair = (a: TileCoord, b: TileCoord): boolean => {
-  const planes = new Set([a.plane, b.plane]);
-  return planes.has('wall') && planes.has('ceiling');
 };
 
 // ---------------------------------------------------------------------------
@@ -187,14 +163,18 @@ const pickGreedyStep = (
 };
 
 /**
- * If the party currently stands on a paired POST whose partner is on the
- * target's plane and is not enemy-held, returns the partner's location.
- * Otherwise undefined. A neutral partner is traversable (the party will
- * capture it on arrival via resolveCaptures); an enemy-held partner
- * blocks passage. This is the spec's "moving party must control both
- * endpoints" rule, relaxed so the first capture of a plane-paired POST
- * can occur without the chicken-and-egg of needing both ends already
- * friendly.
+ * Decide where a party should land when stepping toward a target tile
+ * on a different plane. Three mechanisms in order:
+ *
+ * 1. Plane-switch passive (ant-mage). Teleport to the same (x,y) on the
+ *    target plane. Works any plane-to-any plane.
+ * 2. Edge adjacency (geometric). The bathroom is a cube; a tile on a
+ *    plane's boundary maps to a single tile on the adjacent plane via
+ *    `engine/edges.ts`. Anyone can use this.
+ * 3. Paired POST shortcut. If the party stands on a POST that is
+ *    `pairedWith` another POST on the target plane, and the partner
+ *    is not enemy-held, the party "steps through" — useful for
+ *    non-adjacent planes (e.g., a duct from floor to ceiling).
  */
 const tryPlaneTransition = (
   party: Party,
@@ -204,25 +184,16 @@ const tryPlaneTransition = (
 ): TileCoord | undefined => {
   if (party.location.plane === target.plane) return undefined;
 
-  // Plane-switch passive: a party with any unit owning the plane-switch
-  // ability can step between planes at the same (x,y) without needing a
-  // paired POST. This is the ant-mage's intended bridge to the ceiling.
-  // (The spec's per-scenario use limit is deferred until ability charge
-  // tracking lands; for now it's effectively at-will.)
+  // 1. Plane-switch ability: teleport same (x,y).
   if (partyHasPlaneSwitch(party, templates)) {
     return { plane: target.plane, x: party.location.x, y: party.location.y };
   }
 
-  // Climbing passive: an all-climbing party (spec: "climbing units can
-  // transition between specific plane pairs without using paired POSTs")
-  // can step between wall and ceiling at the same (x,y). Floor is
-  // explicitly excluded — spiders are at home on vertical surfaces, not
-  // ground. To reach the floor a climbing party must still go via a
-  // paired POST.
-  if (partyAllClimbing(party, templates) && isWallCeilingPair(party.location, target)) {
-    return { plane: target.plane, x: party.location.x, y: party.location.y };
-  }
+  // 2. Edge adjacency: party is on a shared edge with the target plane.
+  const adj = edgeNeighbor(party.location, target.plane);
+  if (adj !== undefined) return adj;
 
+  // 3. Paired POST traversal.
   const here = postAt(party.location, posts);
   if (!here?.pairedWith) return undefined;
   const partner = posts.get(here.pairedWith);
@@ -265,8 +236,14 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
     let next: TileCoord | undefined;
 
     if (location.plane !== target.plane) {
-      // Cross-plane: only via paired friendly POSTs.
+      // Cross-plane: try a direct transition first (ability teleport,
+      // edge adjacency, or paired POST). If none works, walk toward
+      // the boundary edge that connects to the target plane.
       next = tryPlaneTransition({ ...partyIn, location }, target, state.posts, state.unitTemplates);
+      if (!next) {
+        const anchor = edgeAnchor(location, target.plane);
+        if (anchor) next = pickGreedyStep(location, anchor, state.tiles, tiebreak);
+      }
       if (!next) break; // Order stalls; will retry next turn.
     } else {
       next = pickGreedyStep(location, target, state.tiles, tiebreak);

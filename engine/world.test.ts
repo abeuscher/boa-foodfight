@@ -63,7 +63,7 @@ describe('engine/world', () => {
       // Level 1 planes are 10x10; index 10 is out.
       expect(inBounds(state, { plane: 'floor', x: 10, y: 0 })).toBe(false);
       expect(inBounds(state, { plane: 'floor', x: 0, y: 10 })).toBe(false);
-      expect(inBounds(state, { plane: 'wall', x: 10, y: 10 })).toBe(false);
+      expect(inBounds(state, { plane: 'north-wall', x: 10, y: 10 })).toBe(false);
     });
 
     it('accepts coords inside the loaded plane', () => {
@@ -80,7 +80,7 @@ describe('engine/world', () => {
       const partner = pairedPostAt(state, { plane: 'floor', x: 8, y: 2 });
       expect(partner).toBeDefined();
       expect(partner?.id).toBe('wall-crack');
-      expect(partner?.location).toEqual({ plane: 'wall', x: 8, y: 5 });
+      expect(partner?.location).toEqual({ plane: 'north-wall', x: 8, y: 5 });
     });
 
     it('returns undefined for a coord without a paired post', () => {
@@ -94,7 +94,7 @@ describe('engine/world', () => {
     it('is symmetric: each end resolves to the other', () => {
       const { state } = loadScenario(DATA_DIR, 1);
       const fromFloor = pairedPostAt(state, { plane: 'floor', x: 8, y: 2 });
-      const fromWall = pairedPostAt(state, { plane: 'wall', x: 8, y: 5 });
+      const fromWall = pairedPostAt(state, { plane: 'north-wall', x: 8, y: 5 });
       expect(fromFloor?.id).toBe('wall-crack');
       expect(fromWall?.id).toBe('towel-rack');
     });

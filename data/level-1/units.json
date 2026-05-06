@@ -135,14 +135,14 @@
       "slotCost": 4,
       "movement": "climbing",
       "baseStats": {
-        "hp": 36,
-        "attack": 7,
+        "hp": 41,
+        "attack": 8,
         "agility": 4,
-        "armor": 3,
+        "armor": 2,
         "intelligence": 9,
         "constitution": 6
       },
-      "abilities": ["web-tangle"],
+      "abilities": ["web-tangle", "web-mend"],
       "tags": ["queen", "leader-eligible"]
     },
     {

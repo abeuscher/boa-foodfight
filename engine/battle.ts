@@ -71,6 +71,7 @@ interface LiveUnit {
   readonly id: UnitId;
   readonly side: Side;
   readonly stats: Stats;
+  readonly abilities: readonly UnitTemplate['abilities'][number][];
   readonly isLeader: boolean;
   hp: number;
   killed: boolean;
@@ -99,6 +100,7 @@ const buildLiveUnits = (
       id: u.id,
       side,
       stats: tmpl.baseStats,
+      abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
       hp: u.currentHp,
       killed: u.currentHp <= 0,
@@ -107,6 +109,28 @@ const buildLiveUnits = (
 
 const livingOnSide = (units: readonly LiveUnit[], side: Side): readonly LiveUnit[] =>
   units.filter((u) => !u.killed && u.side === side);
+
+/**
+ * Apply round-start passive abilities. Currently:
+ *   web-mend — heals `heal` HP at the start of every round while the
+ *              unit's HP fraction is above `hpThreshold`. Once the unit
+ *              drops to / below the threshold it stops mending — which
+ *              is what introduces sub-integer effective-HP variance and
+ *              breaks the queen-HP integer cliff for the tuner.
+ */
+const applyRoundStartPassives = (units: readonly LiveUnit[], abilities: AbilitiesFile): void => {
+  const mend = abilities.abilities.find((a) => a.id === 'web-mend');
+  if (!mend) return;
+  const heal = Number(mend.params.heal ?? 0);
+  const threshold = Number(mend.params.hpThreshold ?? 0.5);
+  if (heal <= 0) return;
+  for (const u of units) {
+    if (u.killed) continue;
+    if (!u.abilities.includes('web-mend' as UnitTemplate['abilities'][number])) continue;
+    if (u.hp / u.stats.hp <= threshold) continue;
+    u.hp = Math.min(u.stats.hp, u.hp + heal);
+  }
+};
 
 /**
  * Targeting policy:
@@ -314,6 +338,7 @@ export const resolveBattle = (
   for (let i = 0; i < roundCount; i++) {
     if (livingOnSide(live, 'attacker').length === 0) break;
     if (livingOnSide(live, 'defender').length === 0) break;
+    applyRoundStartPassives(live, input.abilities);
     rounds.push(runRound(i, live, ctx, agilityRng, targetCounter));
   }
 

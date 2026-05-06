@@ -31,10 +31,16 @@
       </div>
     </header>
     <main>
-      <canvas id="board" width="990" height="360"></canvas>
-      <aside id="event-log">
-        <h2>events near this tick</h2>
-        <ul id="log-list"></ul>
+      <canvas id="board" width="990" height="720"></canvas>
+      <aside id="side-panel">
+        <section id="inspect-panel">
+          <h2>inspect (click a tile)</h2>
+          <div id="inspect-content" class="empty">no tile selected</div>
+        </section>
+        <section id="event-log">
+          <h2>events near this tick</h2>
+          <ul id="log-list"></ul>
+        </section>
       </aside>
     </main>
     <script type="module" src="./main.js"></script>
