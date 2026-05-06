@@ -24,22 +24,64 @@ interface PostMarker {
   owner: string;
 }
 
+interface PartyMarker {
+  id: string;
+  faction: 'ant' | 'spider' | 'neutral';
+  plane: string;
+  x: number;
+  y: number;
+}
+
 interface ReducedState {
   initialPosts: PostMarker[] | null;
   obstacles: { plane: string; x: number; y: number }[];
+  parties: PartyMarker[];
 }
+
+// Mirror of viewer/main.js::guessFaction. Faction is derived from the
+// party id by prefix because the replay events don't carry it.
+const guessFaction = (id: string): 'ant' | 'spider' | 'neutral' => {
+  if (id.startsWith('queen-guard') || id.startsWith('vanguard') || id.startsWith('pathfinders'))
+    return 'ant';
+  if (id.startsWith('web') || id.startsWith('silk') || id.startsWith('advance')) return 'spider';
+  return 'neutral';
+};
 
 /**
  * Mirror of viewer/main.js's reduceWithInitial, but only the parts that
  * affect map rendering (initialPosts + obstacles). Keep this in sync
  * with the browser reducer or the PNG renderer drifts.
  */
+interface MoveEvent {
+  kind: 'party-moved';
+  partyId: string;
+  tick: number;
+  from: { plane: string; x: number; y: number };
+  to: { plane: string; x: number; y: number };
+}
+
 const reduceMapAtTick = (
   events: { tick: number; kind: string }[],
   targetTick: number,
 ): ReducedState => {
   let initialPosts: PostMarker[] | null = null;
   let obstacles: { plane: string; x: number; y: number }[] = [];
+  const parties = new Map<string, PartyMarker>();
+  // First pass: hydrate every party from its first party-moved event's
+  // `from` (initial position). Same approach as viewer/main.js.
+  for (const e of events) {
+    if (e.kind !== 'party-moved') continue;
+    const m = e as unknown as MoveEvent;
+    if (parties.has(m.partyId)) continue;
+    parties.set(m.partyId, {
+      id: m.partyId,
+      faction: guessFaction(m.partyId),
+      plane: m.from.plane,
+      x: m.from.x,
+      y: m.from.y,
+    });
+  }
+  // Second pass: scenario-start (anytime) + replay party movement up to targetTick.
   for (const e of events) {
     if (e.kind === 'scenario-start') {
       const ss = e as unknown as ScenarioStartEvent;
@@ -58,8 +100,17 @@ const reduceMapAtTick = (
       continue;
     }
     if (e.tick > targetTick) break;
+    if (e.kind === 'party-moved') {
+      const m = e as unknown as MoveEvent;
+      const party = parties.get(m.partyId);
+      if (party) {
+        party.plane = m.to.plane;
+        party.x = m.to.x;
+        party.y = m.to.y;
+      }
+    }
   }
-  return { initialPosts, obstacles };
+  return { initialPosts, obstacles, parties: [...parties.values()] };
 };
 
 const GRID = 10;
@@ -80,10 +131,12 @@ const COLOR_GRID = '#3a3a3f';
 const COLOR_LABEL = '#9ca3af';
 const COLOR_OBSTACLE = '#3a2a18';
 const COLOR_OBSTACLE_OUTLINE = '#5a3f22';
+// Match viewer/main.js's FACTION_COLOR so this headless renderer
+// faithfully reflects what the deployed viewer draws.
 const COLOR_OWNER: Record<string, string> = {
-  ant: '#22c55e',
-  spider: '#ef4444',
-  neutral: '#94a3b8',
+  ant: '#e85d4a',
+  spider: '#c026d3',
+  neutral: '#888',
 };
 
 const planeOrigin = (plane: string): { ox: number; oy: number } => {
@@ -124,7 +177,7 @@ const renderReplay = (replayPath: string, outPath: string): void => {
     .split('\n')
     .filter((l) => l.length > 0);
   const events = lines.map((l) => JSON.parse(l) as { tick: number; kind: string });
-  const { initialPosts, obstacles } = reduceMapAtTick(events, 0);
+  const { initialPosts, obstacles, parties } = reduceMapAtTick(events, 0);
   if (!initialPosts) {
     throw new Error(
       `replay ${replayPath} produced no initialPosts at tick 0 — viewer would fall back to SPEC_POSTS`,
@@ -190,6 +243,35 @@ const renderReplay = (replayPath: string, outPath: string): void => {
       ctx.textAlign = 'center';
       ctx.fillText(shortPostName(p.id), cx, cy + 3);
       ctx.textAlign = 'start';
+    }
+    // Parties: 6px circles with white outline. Same fan-out logic as
+    // viewer/main.js when multiple parties share a tile.
+    const byTile = new Map<string, PartyMarker[]>();
+    for (const party of parties) {
+      if (party.plane !== plane) continue;
+      const key = `${String(party.x)},${String(party.y)}`;
+      const bucket = byTile.get(key) ?? [];
+      bucket.push(party);
+      byTile.set(key, bucket);
+    }
+    for (const [key, bucket] of byTile) {
+      const [xs, ys] = key.split(',');
+      const x = Number(xs ?? 0);
+      const y = Number(ys ?? 0);
+      const cx = ox + x * CELL + CELL / 2;
+      const cy = oy + y * CELL + CELL / 2;
+      bucket.forEach((p, i) => {
+        const angle = (i / bucket.length) * Math.PI * 2;
+        const dx = bucket.length > 1 ? Math.cos(angle) * 6 : 0;
+        const dy = bucket.length > 1 ? Math.sin(angle) * 6 : 0;
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, 6, 0, Math.PI * 2);
+        ctx.fillStyle = COLOR_OWNER[p.faction] ?? '#888';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
     }
   }
 

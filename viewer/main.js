@@ -15,7 +15,10 @@ const CELL = 30;
 const PLANE_W = GRID * CELL;
 const PLANE_GAP = 30;
 const HEADER_H = 30;
-const FACTION_COLOR = { ant: '#e85d4a', spider: '#1f1f1f', neutral: '#888' };
+// Spider was '#1f1f1f' (near-black) which blended into the dark canvas
+// background — party circles became invisible. Magenta/purple gives
+// clear contrast against both the bg and the orange-red ants.
+const FACTION_COLOR = { ant: '#e85d4a', spider: '#c026d3', neutral: '#888' };
 
 // ---------------------------------------------------------------------------
 // State reduction: walk events up to a target tick, return derived state.
@@ -288,10 +291,13 @@ function render(canvas, state) {
   ctx.font = '11px ui-sans-serif';
   ctx.fillText(`turn ${state.turn} · queen ult charge ${state.queenCharge}`, 8, canvas.height - 8);
   if (state.winner) {
-    ctx.fillStyle = state.winner === 'ant' ? '#7c4' : '#e63';
+    // Ant-POV banner: read clearly even with no map context. Green
+    // for ANTS WIN, red for ANTS LOSE.
+    const antsWon = state.winner === 'ant';
+    ctx.fillStyle = antsWon ? '#7c4' : '#e63';
     ctx.font = 'bold 18px ui-sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${state.winner.toUpperCase()} VICTORY`, canvas.width / 2, canvas.height - 12);
+    ctx.fillText(antsWon ? 'ANTS WIN' : 'ANTS LOSE', canvas.width / 2, canvas.height - 12);
     ctx.textAlign = 'start';
   }
 }
@@ -539,8 +545,9 @@ function setTick(tick) {
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
+  const winnerText = state.winner ? (state.winner === 'ant' ? ' — ANTS WIN' : ' — ANTS LOSE') : '';
   document.getElementById('tick-label').textContent =
-    `tick ${t} / ${MAX_TICK} — turn ${state.turn}${state.winner ? ` — ${state.winner.toUpperCase()} WINS` : ''}`;
+    `tick ${t} / ${MAX_TICK} — turn ${state.turn}${winnerText}`;
 }
 
 function togglePlay() {
