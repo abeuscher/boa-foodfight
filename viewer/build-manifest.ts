@@ -74,7 +74,9 @@ const VARIANT_LABELS: Readonly<Record<string, string>> = {
   baseline: 'baseline (locked reference, soap-dish staging)',
   rush: 'rush (skip staging, b-line for the web)',
   turtle: 'turtle (vanguards capture floor; mages wait for queen ult)',
-  flank: 'flank (two-phase: floor secured before ceiling assault)',
+  flank: 'flank (corner-flank routes; jelly pre-buff turn 0)',
+  'jelly-rush': 'jelly-rush (queen-guard supplies field parties with jelly each turn)',
+  dive: 'dive (pathfinders mid-board ceiling entry at 5,5)',
 };
 
 const VARIANTS = Object.keys(VARIANT_LABELS);

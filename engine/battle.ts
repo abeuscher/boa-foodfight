@@ -75,6 +75,13 @@ interface LiveUnit {
   readonly isLeader: boolean;
   hp: number;
   killed: boolean;
+  /** Number of upcoming rounds in which this unit cannot attack
+   * (decremented at end-of-round). Set by debuff abilities like
+   * web-snare. 0 = unimpaired. */
+  immobilizedRounds: number;
+  /** Set once a per-unit one-shot debuff (currently web-snare) has
+   * fired. Prevents the bearer from re-firing in subsequent rounds. */
+  snareUsed: boolean;
 }
 
 interface ResolveContext {
@@ -104,6 +111,8 @@ const buildLiveUnits = (
       isLeader: u.id === party.leaderId,
       hp: u.currentHp,
       killed: u.currentHp <= 0,
+      immobilizedRounds: 0,
+      snareUsed: false,
     };
   });
 
@@ -111,24 +120,63 @@ const livingOnSide = (units: readonly LiveUnit[], side: Side): readonly LiveUnit
   units.filter((u) => !u.killed && u.side === side);
 
 /**
- * Apply round-start passive abilities. Currently:
- *   web-mend — heals `heal` HP at the start of every round while the
- *              unit's HP fraction is above `hpThreshold`. Once the unit
- *              drops to / below the threshold it stops mending — which
- *              is what introduces sub-integer effective-HP variance and
- *              breaks the queen-HP integer cliff for the tuner.
+ * Apply round-start passive abilities:
+ *
+ *   web-mend  — heals `heal` HP at the start of every round while the
+ *               unit's HP fraction is above `hpThreshold`. Once the unit
+ *               drops to / below the threshold it stops mending — which
+ *               is what introduces sub-integer effective-HP variance and
+ *               breaks the queen-HP integer cliff for the tuner.
+ *
+ *   web-snare — one-shot debuff that fires the round the bearer's HP
+ *               crosses below `hpThreshold` for the first time. Picks
+ *               the lowest-HP non-leader enemy and immobilizes them for
+ *               `durationTurns` rounds (their attack action is skipped).
+ *               Bearer flips `snareUsed` so the snare doesn't re-fire.
  */
 const applyRoundStartPassives = (units: readonly LiveUnit[], abilities: AbilitiesFile): void => {
   const mend = abilities.abilities.find((a) => a.id === 'web-mend');
-  if (!mend) return;
-  const heal = Number(mend.params.heal ?? 0);
-  const threshold = Number(mend.params.hpThreshold ?? 0.5);
-  if (heal <= 0) return;
-  for (const u of units) {
-    if (u.killed) continue;
-    if (!u.abilities.includes('web-mend' as UnitTemplate['abilities'][number])) continue;
-    if (u.hp / u.stats.hp <= threshold) continue;
-    u.hp = Math.min(u.stats.hp, u.hp + heal);
+  if (mend) {
+    const heal = Number(mend.params.heal ?? 0);
+    const threshold = Number(mend.params.hpThreshold ?? 0.5);
+    if (heal > 0) {
+      for (const u of units) {
+        if (u.killed) continue;
+        if (!u.abilities.includes('web-mend' as UnitTemplate['abilities'][number])) continue;
+        if (u.hp / u.stats.hp <= threshold) continue;
+        u.hp = Math.min(u.stats.hp, u.hp + heal);
+      }
+    }
+  }
+
+  const snare = abilities.abilities.find((a) => a.id === 'web-snare');
+  if (snare) {
+    const snareThreshold = Number(snare.params.hpThreshold ?? 0.33);
+    const snareDuration = Number(snare.params.durationTurns ?? 1);
+    const snareCount = Number(snare.params.immobilizeCount ?? 1);
+    if (snareDuration > 0 && snareCount > 0) {
+      for (const bearer of units) {
+        if (bearer.killed) continue;
+        if (bearer.snareUsed) continue;
+        if (!bearer.abilities.includes('web-snare' as UnitTemplate['abilities'][number])) continue;
+        if (bearer.hp / bearer.stats.hp > snareThreshold) continue;
+        // Pick `snareCount` enemies on the opposite side, preferring
+        // non-leader and lowest HP. Leader-protect prevents the snare
+        // from instantly killing tactical depth when a leader exists.
+        const enemySide: Side = bearer.side === 'attacker' ? 'defender' : 'attacker';
+        const candidates = units
+          .filter((u) => u.side === enemySide && !u.killed && u.immobilizedRounds === 0)
+          .sort((a, b) => {
+            if (a.isLeader !== b.isLeader) return a.isLeader ? 1 : -1;
+            if (a.hp !== b.hp) return a.hp - b.hp;
+            return a.id < b.id ? -1 : 1;
+          });
+        if (candidates.length === 0) break;
+        const targets = candidates.slice(0, snareCount);
+        for (const t of targets) t.immobilizedRounds = snareDuration;
+        bearer.snareUsed = true;
+      }
+    }
   }
 };
 
@@ -258,6 +306,10 @@ const runRound = (
   for (const actorId of order) {
     const actor = byId.get(actorId);
     if (!actor || actor.killed) continue;
+    // Snared / immobilized: skip this round's attack entirely. The
+    // counter is decremented at end-of-round below so the unit is free
+    // again for the next round (when durationTurns hits 0).
+    if (actor.immobilizedRounds > 0) continue;
     const enemies = livingOnSide(units, actor.side === 'attacker' ? 'defender' : 'attacker');
     if (enemies.length === 0) break;
 
@@ -278,6 +330,11 @@ const runRound = (
     const killed = target.hp <= 0;
     if (killed) target.killed = true;
     actions.push({ attackerId: actor.id, defenderId: target.id, damage: dmg, killed });
+  }
+
+  // Tick down active snares so they expire after `durationTurns` rounds.
+  for (const u of units) {
+    if (u.immobilizedRounds > 0) u.immobilizedRounds -= 1;
   }
 
   return { index, actions };
