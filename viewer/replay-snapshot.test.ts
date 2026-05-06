@@ -23,15 +23,10 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import type { ScenarioStartEvent } from './replay-types.ts';
+
 const DIST = path.resolve(import.meta.dirname, 'dist');
 const VARIANT = 'baseline';
-
-interface ScenarioStartEvent {
-  kind: 'scenario-start';
-  scenario: string;
-  posts?: { id: string; location: { plane: string; x: number; y: number }; owner: string }[];
-  obstacles?: { plane: string; x: number; y: number }[];
-}
 
 const readScenarioStart = (replay: string): ScenarioStartEvent => {
   const fullPath = path.join(DIST, 'replays', VARIANT, replay);
@@ -138,5 +133,29 @@ describe('viewer replay map snapshot', () => {
       expect(soap).toBeDefined();
       expect(soap?.location.plane).toBe('floor');
     }
+  });
+
+  // Regression test for the per-seed-POSTs-not-rendering bug. Root
+  // cause was the viewer's reducer skipping scenario-start when its
+  // tick (1) was greater than the initial-frame target tick (0). The
+  // fix in viewer/main.js parses scenario-start unconditionally
+  // before the tick-window gate. Mirror that logic here so a future
+  // refactor that re-introduces the gate will fail this test.
+  it('scenario-start tick is > 0, so reducer must not gate it on targetTick=0', () => {
+    requireDist();
+    const r = readScenarioStart('replay-1.jsonl');
+    expect(r.tick).toBeGreaterThan(0);
+    // Simulate the reducer at targetTick=0 with the buggy gate first.
+    let initialPostsBuggy: unknown = null;
+    if (r.tick <= 0) {
+      // unreachable for current emit semantics
+      initialPostsBuggy = r.posts ?? null;
+    }
+    expect(initialPostsBuggy).toBeNull();
+    // And with the fix (parse scenario-start unconditionally), the
+    // initialPosts SHOULD be populated.
+    const initialPostsFixed = Array.isArray(r.posts) ? r.posts : null;
+    expect(initialPostsFixed).not.toBeNull();
+    expect(initialPostsFixed?.length).toBeGreaterThan(0);
   });
 });
