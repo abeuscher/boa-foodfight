@@ -13,6 +13,7 @@ import type {
   Party,
   PartyId,
   Posture,
+  Post,
   PostId,
   TileCoord,
 } from '../engine/types.ts';
@@ -55,6 +56,20 @@ export const moveToOrHold = (party: Party, target: TileCoord): readonly Order[] 
 /** Look up a POST's location by id; returns undefined if the post is missing. */
 export const postLocation = (state: GameState, id: PostId): TileCoord | undefined =>
   state.posts.get(id)?.location;
+
+/** The canonical floor + wall-crack capture chain in order. Variants
+ * that build through it (turtle, flank, dive) share this list. */
+export const FLOOR_AND_WALL_POSTS: readonly PostId[] = [SOAP_DISH, TOWEL_RACK, WALL_CRACK];
+
+/** Returns the first POST in `FLOOR_AND_WALL_POSTS` that is not yet
+ * ant-owned, or undefined if the entire chain is captured. */
+export const nextStageTarget = (state: GameState): Post | undefined => {
+  for (const id of FLOOR_AND_WALL_POSTS) {
+    const p = state.posts.get(id);
+    if (p && p.owner !== 'ant') return p;
+  }
+  return undefined;
+};
 
 // ---------------------------------------------------------------------------
 // Policy-construction helper.

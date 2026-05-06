@@ -8,12 +8,28 @@
       "leaderIndex": 0,
       "slotCapacity": 12,
       "units": [
-        { "templateId": "ant-queen", "count": 1 },
-        { "templateId": "ant-footman", "count": 4 },
-        { "templateId": "ant-archer", "count": 2 },
-        { "templateId": "ant-worker", "count": 2 }
+        {
+          "templateId": "ant-queen",
+          "count": 1
+        },
+        {
+          "templateId": "ant-footman",
+          "count": 4
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 2
+        },
+        {
+          "templateId": "ant-worker",
+          "count": 2
+        }
       ],
-      "startingLocation": { "plane": "floor", "x": 0, "y": 0 },
+      "startingLocation": {
+        "plane": "floor",
+        "x": 0,
+        "y": 0
+      },
       "posture": "defend"
     },
     {
@@ -22,11 +38,24 @@
       "leaderIndex": 2,
       "slotCapacity": 8,
       "units": [
-        { "templateId": "ant-footman", "count": 4 },
-        { "templateId": "ant-archer", "count": 2 },
-        { "templateId": "ant-scout", "count": 1 }
+        {
+          "templateId": "ant-footman",
+          "count": 4
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 2
+        },
+        {
+          "templateId": "ant-scout",
+          "count": 1
+        }
       ],
-      "startingLocation": { "plane": "floor", "x": 1, "y": 0 },
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 0
+      },
       "posture": "fight"
     },
     {
@@ -35,12 +64,28 @@
       "leaderIndex": 0,
       "slotCapacity": 8,
       "units": [
-        { "templateId": "ant-footman", "count": 3 },
-        { "templateId": "ant-potato-bug", "count": 1 },
-        { "templateId": "ant-archer", "count": 1 },
-        { "templateId": "ant-mage", "count": 1 }
+        {
+          "templateId": "ant-footman",
+          "count": 3
+        },
+        {
+          "templateId": "ant-potato-bug",
+          "count": 1
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 1
+        },
+        {
+          "templateId": "ant-mage",
+          "count": 1
+        }
       ],
-      "startingLocation": { "plane": "floor", "x": 0, "y": 1 },
+      "startingLocation": {
+        "plane": "floor",
+        "x": 0,
+        "y": 1
+      },
       "posture": "fight"
     },
     {
@@ -49,11 +94,24 @@
       "leaderIndex": 0,
       "slotCapacity": 8,
       "units": [
-        { "templateId": "ant-mage", "count": 1 },
-        { "templateId": "ant-scout", "count": 2 },
-        { "templateId": "ant-archer", "count": 3 }
+        {
+          "templateId": "ant-mage",
+          "count": 1
+        },
+        {
+          "templateId": "ant-scout",
+          "count": 2
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 3
+        }
       ],
-      "startingLocation": { "plane": "floor", "x": 1, "y": 1 },
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 1
+      },
       "posture": "fight"
     }
   ]

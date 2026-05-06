@@ -1,3 +1,138 @@
+# Status — Phase 6 (coevolution loop, 6 rounds)
+
+## Headline
+
+Two LLM designer agents per faction (firepower + strategy = 4 total)
+proposed atomic changes over 6 alternating rounds, with deterministic
+gates (typecheck, tests, balance band, diversity floor) auto-rolling
+back failures. The ant baseline win rate moved from **75%** to **64%**
+— inside the user's "60/40 thereabouts" target band of `[55%, 65%]`.
+
+## Win-rate trajectory (locked baseline AI vs current spider AI)
+
+| Round | Type      | baseline | rush | turtle | flank | result  |
+| ----- | --------- | -------- | ---- | ------ | ----- | ------- |
+| start |           | 75%      | 77%  | 77%    | 62%   | over    |
+| 1     | firepower | **62%**  | 62%  | 62%    | 56%   | in-band |
+| 2     | strategy  | 62%      | 62%  | 62%    | 56%   | rest    |
+| 3     | firepower | 64%      | 64%  | 64%    | 56%   | in-band |
+| 4     | strategy  | 64%      | 64%  | 64%    | 56%   | rest    |
+| 5     | firepower | 64%      | 64%  | 64%    | 56%   | rest    |
+| 6     | strategy  | 64%      | 64%  | 64%    | 56%   | no-op   |
+
+Rest rounds added systems (variants, AI wrinkles, ability mods) without
+moving scalar metrics — a sign the system was already in equilibrium.
+Round 6 was declared a no-op after both designers' proposals failed
+the gate (spider overshot to 53%; ant introduced a test for code it
+didn't change).
+
+## Architecture
+
+**Designer roles** (autonomous LLM agents, spawned per round):
+
+- `ant-firepower` / `spider-firepower` — propose atomic JSON edits to
+  units.json, abilities.json, roster files
+- `ant-strategy` / `spider-strategy` — propose AI policy edits to
+  ai/\*.ts files
+
+**Locked anchors** (designers cannot touch):
+
+- `engine/**` semantics
+- `ai/baseline.ts` (the spec-locked ant reference player; balance
+  gate measures THIS AI's win rate)
+- `ai/policy-helpers.ts`, `ai/types.ts`
+- The 5 spec-locked POSTs (storm-drain, soap-dish, towel-rack,
+  wall-crack, spider-web)
+
+**Gate** (per round):
+
+1. Typecheck must pass
+2. All tests must pass
+3. Baseline ant win rate in [55%, 65%]
+4. ≥ 3 of 4 ant variants ≥ 40% (diversity floor)
+
+**Hard caps**:
+
+- ≤ 3 proposals per designer per round
+- ≤ 12 unit templates per faction
+- ≤ 15 abilities total
+- ≤ 6 ant variant AI files; ≤ 4 spider AI files
+- Each proposal must declare ≥ 2 existing-system interactions
+
+## What landed across the loop
+
+**New abilities**:
+
+- `web-snare` (spider-queen passive, fires <33% HP, 1-turn immobilize)
+
+**Modified abilities**:
+
+- `volley`: uses 2 → 1; new `queenBonusDamage 4` parameter
+- `jelly-apply`: now has real effect params — `attackBonus 1`,
+  `armorBonus 1`, `durationTurns 2`, single use, cooldown 2
+- `web-tangle`: new `attackPenalty 1` parameter alongside existing
+  movement penalty
+
+**Stat tuning**:
+
+- ant-archer atk 6 → 5
+- ant-mage atk 4 → 5; gained `jelly-apply` ability
+- spider-elite HP 13 → 14
+- spider-soldier HP 12 → 13
+- spider-spinner atk 5 → 6
+
+**New ant variants** (registered in ai/index.ts but only baseline +
+rush + turtle + flank are run by the diversity gate):
+
+- `jelly-rush.ts` — queen-guard issues jelly-apply orders to field
+  parties each turn, exercising the previously-dead AbilityOrder
+  channel
+- `dive.ts` — pathfinders mid-board ceiling entry at floor (5,5),
+  bypassing both wall-crack ladder and corner-flank routes
+
+**Modified AI policies**:
+
+- flank.ts: pathfinders + vanguard-bravo issue jelly-apply self-buff
+  on turn 0 before starting the corner march
+- spider-l1.ts: advance-scout diverts to towel-rack when soap-dish
+  flips ant; wall-crack threat radius widens 2 → 3 when ants own
+  towel-rack
+
+## Loop mechanics observations
+
+- **Cliff risk is real even between designers**: round 5 first attempt
+  was three small ant proposals + three small spider proposals;
+  combined effect was +15pp baseline because the spider designer
+  misread `web-mend.hpThreshold 0.5 → 0.6` as "starts earlier" when
+  the engine treats it as "stops earlier" (heal stops once HP fraction
+  falls below threshold). Even a deliberate "small" coevolved round
+  required two retries.
+
+- **Strategy-side hard counters break diversity asymmetrically**:
+  round 2 first attempt put web-watch at ceiling (1,1) where rush
+  plane-switches in. Rush dropped to 1% (broke 40% floor) while other
+  variants were unaffected. Lesson: any AI change that fires before
+  the kill battle on the ceiling has outsize impact on rush.
+
+- **"Rest rounds" are not failures**: 4 of 6 rounds didn't move scalar
+  win rates but added abilities, params, and AI wrinkles that show up
+  in replay quality (Fun Critic eval pending at end of loop).
+
+- **Snapshot/restore needs full coverage**: discovered mid-loop that
+  the original snapshot skipped `ai/index.ts`. Strategy designers
+  edit it to register new variants; without snapshot coverage, rollback
+  was incomplete. Fixed in round 2.
+
+## What's next
+
+A Fun Critic re-eval is dispatched against the end state to grade the
+loop's effect on watchability / route diversity / composition
+diversity. The new abilities (web-snare, jelly armor, web-tangle
+attack-debuff) and the new ant variants are mostly "depth" changes
+that should show up qualitatively rather than in win-rate.
+
+---
+
 # Status — Phase 5d (Fun Critic iteration loop, 3 rounds)
 
 ## Headline

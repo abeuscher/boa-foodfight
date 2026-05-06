@@ -46,7 +46,7 @@
       "movement": "ground",
       "baseStats": {
         "hp": 5,
-        "attack": 6,
+        "attack": 5,
         "agility": 7,
         "armor": 0,
         "intelligence": 2,
@@ -118,13 +118,13 @@
       "movement": "ground",
       "baseStats": {
         "hp": 5,
-        "attack": 4,
+        "attack": 5,
         "agility": 5,
         "armor": 0,
         "intelligence": 8,
         "constitution": 6
       },
-      "abilities": ["plane-switch", "mend"],
+      "abilities": ["plane-switch", "mend", "jelly-apply"],
       "tags": ["caster", "leader-eligible", "support"]
     },
     {
@@ -142,7 +142,7 @@
         "intelligence": 9,
         "constitution": 6
       },
-      "abilities": ["web-tangle", "web-mend"],
+      "abilities": ["web-tangle", "web-mend", "web-snare"],
       "tags": ["queen", "leader-eligible"]
     },
     {
@@ -171,7 +171,7 @@
       "slotCost": 1,
       "movement": "climbing",
       "baseStats": {
-        "hp": 12,
+        "hp": 13,
         "attack": 5,
         "agility": 5,
         "armor": 2,
@@ -190,7 +190,7 @@
       "movement": "climbing",
       "baseStats": {
         "hp": 14,
-        "attack": 5,
+        "attack": 6,
         "agility": 4,
         "armor": 2,
         "intelligence": 5,
@@ -207,7 +207,7 @@
       "slotCost": 2,
       "movement": "climbing",
       "baseStats": {
-        "hp": 13,
+        "hp": 14,
         "attack": 4,
         "agility": 5,
         "armor": 1,

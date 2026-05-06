@@ -13,32 +13,20 @@
  * ~16 instead of ~8, producing a noticeably longer scenario.
  */
 
-import type { GameState, Post, PostId } from '../engine/types.ts';
+import type { GameState } from '../engine/types.ts';
 
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
   moveToOrHold,
+  nextStageTarget,
   postLocation,
-  SOAP_DISH,
   SPIDER_WEB,
-  TOWEL_RACK,
-  WALL_CRACK,
 } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
-const STAGE_TARGETS: readonly PostId[] = [SOAP_DISH, TOWEL_RACK, WALL_CRACK];
-
 /** Charge fraction at which the held parties unleash. */
 const UNLEASH_FRACTION = 0.8;
-
-const nextStageTarget = (state: GameState): Post | undefined => {
-  for (const id of STAGE_TARGETS) {
-    const p = state.posts.get(id);
-    if (p && p.owner !== 'ant') return p;
-  }
-  return undefined;
-};
 
 export const turtlePlayer: AIPolicy = ((): AIPolicy => {
   // Closure over scenario isn't supported by the policy interface, so
