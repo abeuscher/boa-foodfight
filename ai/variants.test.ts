@@ -73,9 +73,25 @@ describe('turtle variant', () => {
 });
 
 describe('flank variant', () => {
-  it('ceiling-capable parties walk to opposite floor corners (genuine flank)', () => {
+  it('ceiling-capable parties pre-buff with jelly-apply on turn 0', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
+    expect(state.turn).toBe(0);
     const next = flankPlayer.decide(state, data, createRng(1));
+    for (const partyId of ['pathfinders', 'vanguard-bravo'] as PartyId[]) {
+      const party = next.parties.get(partyId);
+      expect(party?.orders).toHaveLength(1);
+      const order = party?.orders[0];
+      expect(order?.kind).toBe('use-ability');
+      if (order?.kind !== 'use-ability') throw new Error('expected ability order');
+      expect(order.abilityId).toBe('jelly-apply');
+      expect(order.target).toBe(partyId);
+    }
+  });
+
+  it('ceiling-capable parties walk to opposite floor corners after the opening turn', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const turnOne = { ...state, turn: 1 };
+    const next = flankPlayer.decide(turnOne, data, createRng(1));
     const pathfinders = next.parties.get('pathfinders' as PartyId);
     const vanguardBravo = next.parties.get('vanguard-bravo' as PartyId);
     const pfOrder = pathfinders?.orders[0] as MoveOrder | undefined;

@@ -9,6 +9,18 @@
  *
  * The AI is a read-only consumer of engine state. It mutates only the
  * `orders` of spider parties; ant parties are returned unchanged.
+ *
+ * Round 4 conservative tuning (post-rejection lessons from round 2):
+ *  - Avoid any ceiling intercept logic: round-2 web-watch (1,1) and
+ *    silk-line midpoint intercepts hard-countered rush. All new
+ *    behavior is restricted to the floor / wall plane.
+ *  - advance-scout harasses the floor wall-crack ladder (towel-rack)
+ *    once ants own soap-dish, denying the canonical capture chain
+ *    (soap-dish -> towel-rack -> wall-crack) one beat earlier.
+ *  - Wall-crack threat radius widens by 1 when ants own towel-rack,
+ *    pulling a non-scout responder onto the ladder before the climb
+ *    completes. This is the same conditional-gate idea but on the
+ *    *floor/wall* side, not the ceiling.
  */
 
 import { distance, sameCoord } from '../engine/coord.ts';
@@ -81,6 +93,11 @@ const closestAntDistance = (state: GameState, target: TileCoord): number => {
   return best;
 };
 
+const postOwnedByAnt = (state: GameState, id: PostId): boolean => {
+  const p = state.posts.get(id);
+  return p ? p.owner === 'ant' : false;
+};
+
 interface ThreatDecision {
   readonly defend: TileCoord | null;
 }
@@ -90,8 +107,14 @@ const decideThreat = (state: GameState): ThreatDecision => {
   const crackLoc = requirePost(state, WALL_CRACK);
   const towelD = closestAntDistance(state, towelLoc);
   const crackD = closestAntDistance(state, crackLoc);
+  // Conditional gate: if ants already own towel-rack, the wall-crack
+  // ladder is the next imminent capture. Widen the wall-crack radius
+  // by 1 so a non-scout responder is dispatched one turn earlier.
+  // This is a floor/wall-side trigger only; it does not touch the
+  // ceiling, so rush (which lives on the ceiling) is unaffected.
+  const crackRadius = postOwnedByAnt(state, TOWEL_RACK) ? THREAT_RADIUS + 1 : THREAT_RADIUS;
   const towelThreat = towelD <= THREAT_RADIUS;
-  const crackThreat = crackD <= THREAT_RADIUS;
+  const crackThreat = crackD <= crackRadius;
   if (!towelThreat && !crackThreat) return { defend: null };
   if (towelThreat && !crackThreat) return { defend: towelLoc };
   if (crackThreat && !towelThreat) return { defend: crackLoc };
@@ -177,7 +200,25 @@ const pickResponder = (
   return best?.party ?? null;
 };
 
-const ordersForScout = (party: Party, soapLoc: TileCoord): readonly Order[] => {
+/**
+ * Scout orders:
+ *   - Default: walk to soap-dish (preserved for the existing test).
+ *   - If ants already own the soap-dish, harass the towel-rack on the
+ *     floor instead. Towel-rack is the next link in the canonical
+ *     soap-dish -> towel-rack -> wall-crack ladder; jamming a 4-slot
+ *     scout there forces the ant turtle/baseline opener to either
+ *     stop and dislodge it (slowing capture by 1-2 turns) or skip
+ *     ahead to wall-crack with a wounded escort.
+ *   - This is floor-only behavior — advance-scout never touches the
+ *     ceiling, so rush's plane-switch route is untouched.
+ */
+const ordersForScout = (state: GameState, party: Party, soapLoc: TileCoord): readonly Order[] => {
+  if (postOwnedByAnt(state, SOAP_DISH)) {
+    const towelLoc = requirePost(state, TOWEL_RACK);
+    if (sameCoord(party.location, towelLoc)) return [];
+    if (distance(party.location, towelLoc) <= 1) return [];
+    return [moveTo(towelLoc)];
+  }
   if (sameCoord(party.location, soapLoc)) return [];
   if (distance(party.location, soapLoc) <= 1) return [];
   return [moveTo(soapLoc)];
@@ -258,7 +299,7 @@ export const spiderL1: AIPolicy = {
       } else if (isOnWeb(party, webLoc)) {
         nextOrders = [];
       } else if (id === scout?.id) {
-        nextOrders = ordersForScout(party, soapLoc);
+        nextOrders = ordersForScout(state, party, soapLoc);
       } else {
         const isResponder = responder !== null && id === responder.id;
         nextOrders = ordersForPatrolOrThreat(party, threat.defend, webLoc, isResponder);
