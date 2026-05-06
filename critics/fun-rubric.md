@@ -17,10 +17,13 @@ review are flagged for redesign."
 Beyond the original watchability rubric, the critic now grades these
 **objectives explicitly**:
 
-1. **Win-rate band** — ant win rate must lie in `[65%, 80%]` for the
-   locked baseline player. (Already enforced by the metrics critic;
-   the Fun Critic re-flags it because a balanced win rate is a
-   precondition for a fun scenario.)
+1. **Win-rate band** — ant win rate must lie in `[55%, 65%]` for the
+   locked baseline player against the current spider AI. (Already
+   enforced by the metrics critic; the Fun Critic re-flags it because
+   a balanced win rate is a precondition for a fun scenario.) The
+   prior band of `[65%, 80%]` was the heroic-campaign target; the
+   coevolution loop targets the tighter `[55%, 65%]` "60/40 thereabouts"
+   posture.
 
 2. **Strategy diversity** — at least three distinct player strategies
    should achieve **≥ 40% win rate** each. Current variants are

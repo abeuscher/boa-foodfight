@@ -21,6 +21,7 @@
     "harness:run": "tsx harness/run-batch.ts",
     "tune": "tsx harness/tune.ts",
     "diversity": "tsx harness/diversity.ts",
+    "coevo": "tsx harness/coevo.ts",
     "viewer": "tsx viewer/serve.ts",
     "build:viewer": "tsx viewer/build-manifest.ts",
     "test:viewer": "playwright test --config viewer/playwright.config.ts",
