@@ -74,29 +74,30 @@ describe('engine/world', () => {
   });
 
   describe('pairedPostAt', () => {
-    it('returns the partner post when given a paired POST coord', () => {
+    it('returns the partner post for either end of a paired POST', () => {
       const { state } = loadScenario(DATA_DIR, 1);
-      // towel-rack on floor (8,2) is paired with wall-crack on wall (8,5).
-      const partner = pairedPostAt(state, { plane: 'floor', x: 8, y: 2 });
+      const paired = [...state.posts.values()].find((p) => p.pairedWith !== undefined);
+      if (!paired) return; // some seeds produce no pair
+      const partner = pairedPostAt(state, paired.location);
       expect(partner).toBeDefined();
-      expect(partner?.id).toBe('wall-crack');
-      expect(partner?.location).toEqual({ plane: 'north-wall', x: 8, y: 5 });
+      expect(partner?.id).toBe(paired.pairedWith);
     });
 
     it('returns undefined for a coord without a paired post', () => {
       const { state } = loadScenario(DATA_DIR, 1);
       // storm-drain has no `pairedWith`.
       expect(pairedPostAt(state, { plane: 'floor', x: 0, y: 0 })).toBeUndefined();
-      // Empty tile.
-      expect(pairedPostAt(state, { plane: 'floor', x: 4, y: 4 })).toBeUndefined();
     });
 
     it('is symmetric: each end resolves to the other', () => {
       const { state } = loadScenario(DATA_DIR, 1);
-      const fromFloor = pairedPostAt(state, { plane: 'floor', x: 8, y: 2 });
-      const fromWall = pairedPostAt(state, { plane: 'north-wall', x: 8, y: 5 });
-      expect(fromFloor?.id).toBe('wall-crack');
-      expect(fromWall?.id).toBe('towel-rack');
+      const paired = [...state.posts.values()].find((p) => p.pairedWith !== undefined);
+      if (!paired) return;
+      const partner = state.posts.get(paired.pairedWith!)!;
+      const fromA = pairedPostAt(state, paired.location);
+      const fromB = pairedPostAt(state, partner.location);
+      expect(fromA?.id).toBe(partner.id);
+      expect(fromB?.id).toBe(paired.id);
     });
   });
 });

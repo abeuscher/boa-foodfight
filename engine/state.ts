@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { coordKey } from './coord.ts';
+import { generateRandomMap } from './map-gen.ts';
 import {
   abilitiesFileSchema,
   dialogueFileSchema,
@@ -213,8 +214,13 @@ const buildInitialFog = (tiles: ReadonlyMap<string, Tile>): ReadonlyMap<string, 
 
 export const buildInitialState = (data: ScenarioData, seed: number): GameState => {
   const unitTemplates = buildUnitTemplates(data.units);
-  const tiles = buildTiles(data.map);
-  const posts = buildPosts(data.map);
+  // Per-seed map randomization: each scenario gets its own POST layout
+  // (3-5 mid-POSTs subject to ≤2 per plane) and obstacle clusters
+  // (2-5 per plane, biased to contiguity). storm-drain (start) and
+  // spider-web (finish) stay fixed.
+  const randomizedMap = generateRandomMap({ seed, base: data.map });
+  const tiles = buildTiles(randomizedMap);
+  const posts = buildPosts(randomizedMap);
   const parties = buildParties(data.rosters, unitTemplates);
   const fog = buildInitialFog(tiles);
 

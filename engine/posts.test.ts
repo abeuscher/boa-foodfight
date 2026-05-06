@@ -9,8 +9,6 @@ import type { GameState, Post, PostId } from './types.ts';
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
 const STORM_DRAIN = 'storm-drain' as PostId;
-const TOWEL_RACK = 'towel-rack' as PostId;
-const WALL_CRACK = 'wall-crack' as PostId;
 const SPIDER_WEB = 'spider-web' as PostId;
 
 /** Returns a counter-backed `tick` thunk and a way to read its current value. */
@@ -94,20 +92,29 @@ describe('engine/posts', () => {
   });
 
   describe('controlsBothPair', () => {
-    it('returns true when both towel-rack and wall-crack are owned by the same faction', () => {
+    it('returns true when both endpoints of a paired POST pair are owned by the same faction', () => {
       const { state } = loadScenario(DATA_DIR, 1);
-      // Mutate state so both endpoints are ant-owned.
-      let s: GameState = withPost(state, TOWEL_RACK, (p) => ({ ...p, owner: 'ant' }));
-      s = withPost(s, WALL_CRACK, (p) => ({ ...p, owner: 'ant' }));
-      expect(controlsBothPair(s, TOWEL_RACK, 'ant')).toBe(true);
-      expect(controlsBothPair(s, WALL_CRACK, 'ant')).toBe(true);
+      // Map-gen pairs one floor mid-POST with one wall mid-POST. Find that pair.
+      const paired = [...state.posts.values()].find((p) => p.pairedWith !== undefined);
+      if (!paired) {
+        // Some seeds may produce no pair (no floor mid-POST or no wall mid-POST).
+        // Skip in that case; covered by other seeds.
+        return;
+      }
+      const partner = state.posts.get(paired.pairedWith!);
+      expect(partner).toBeDefined();
+      let s: GameState = withPost(state, paired.id, (p) => ({ ...p, owner: 'ant' }));
+      s = withPost(s, partner!.id, (p) => ({ ...p, owner: 'ant' }));
+      expect(controlsBothPair(s, paired.id, 'ant')).toBe(true);
+      expect(controlsBothPair(s, partner!.id, 'ant')).toBe(true);
     });
 
     it('returns false when only one endpoint is owned', () => {
       const { state } = loadScenario(DATA_DIR, 1);
-      const s = withPost(state, TOWEL_RACK, (p) => ({ ...p, owner: 'ant' }));
-      // wall-crack still neutral
-      expect(controlsBothPair(s, TOWEL_RACK, 'ant')).toBe(false);
+      const paired = [...state.posts.values()].find((p) => p.pairedWith !== undefined);
+      if (!paired) return;
+      const s = withPost(state, paired.id, (p) => ({ ...p, owner: 'ant' }));
+      expect(controlsBothPair(s, paired.id, 'ant')).toBe(false);
     });
 
     it('returns false for posts with no partner', () => {

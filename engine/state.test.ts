@@ -17,15 +17,22 @@ describe('loadScenario(level-1)', () => {
     expect(state.queenUltimateCharge).toBe(0);
   });
 
-  it('loads the 5 spec-locked POSTs with correct ownership', () => {
+  it('loads fixed start + finish + 3-5 random mid-POSTs with correct ownership', () => {
     const { state } = loadScenario(DATA_DIR, 1);
-    expect(state.posts.size).toBe(5);
+    // 2 fixed (storm-drain, spider-web) + 3-5 mid-POSTs (per map-gen).
+    expect(state.posts.size).toBeGreaterThanOrEqual(5);
+    expect(state.posts.size).toBeLessThanOrEqual(7);
     const stormDrain = state.posts.get('storm-drain' as PostId);
     const spiderWeb = state.posts.get('spider-web' as PostId);
-    const soapDish = state.posts.get('soap-dish' as PostId);
     expect(stormDrain?.owner).toBe('ant');
+    expect(stormDrain?.location).toEqual({ plane: 'floor', x: 0, y: 0 });
     expect(spiderWeb?.owner).toBe('spider');
-    expect(soapDish?.owner).toBe('neutral');
+    expect(spiderWeb?.location).toEqual({ plane: 'ceiling', x: 9, y: 9 });
+    // Every mid-POST should be neutral.
+    for (const post of state.posts.values()) {
+      if (post.id === ('storm-drain' as PostId) || post.id === ('spider-web' as PostId)) continue;
+      expect(post.owner).toBe('neutral');
+    }
   });
 
   it('builds tile maps for all six planes', () => {

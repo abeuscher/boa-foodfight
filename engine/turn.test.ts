@@ -9,7 +9,7 @@ import { createTickClock } from './replay.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
 import { runScenario, runTurn } from './turn.ts';
-import type { PostId, ReplayEvent } from './types.ts';
+import type { ReplayEvent } from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -117,22 +117,28 @@ describe('runScenario with AI policies (Phase 3 integration)', () => {
     expect(moveEvents.length).toBeGreaterThan(0);
   });
 
-  it('baseline AI captures soap-dish within a reasonable number of turns', () => {
+  it('baseline AI captures the first mid-POST within a reasonable number of turns', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const clock = createTickClock();
+    // Map gen randomizes POSTs per seed; allow more turns since some
+    // seeds place the first soap-dish across an obstacle field or on
+    // a non-floor plane.
     const outcome = runScenario(state, data, createRng(1), clock.next, {
-      maxTurns: 30,
+      maxTurns: 60,
       policies: [baselinePlayer, spiderL1],
     });
-    const soapDish = outcome.finalState.posts.get('soap-dish' as PostId);
-    expect(soapDish?.owner).toBe('ant');
+    let captured = false;
+    for (const post of outcome.finalState.posts.values()) {
+      if (post.id.startsWith('soap-dish') && post.owner === 'ant') captured = true;
+    }
+    expect(captured).toBe(true);
   });
 
   it('emits post-captured events as POSTs change hands', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const clock = createTickClock();
     const outcome = runScenario(state, data, createRng(1), clock.next, {
-      maxTurns: 30,
+      maxTurns: 60,
       policies: [baselinePlayer, spiderL1],
     });
     const captureEvents = outcome.events.filter((e) => e.kind === 'post-captured');

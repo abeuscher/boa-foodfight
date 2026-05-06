@@ -52,11 +52,34 @@ import type {
 } from './types.ts';
 
 const PLANE_SWITCH: AbilityId = 'plane-switch' as AbilityId;
+/**
+ * Tag that, when present on any LIVING unit in a party, suppresses the
+ * party's plane-switch teleport — the unit is too heavy / earthbound to
+ * be carried up by a mage. Such parties must use paired POSTs or edge
+ * adjacency to cross planes. Tag is data-driven (set on a unit
+ * template's `tags` array).
+ */
+const NO_FLY_TAG = 'no-fly';
+
+const partyHasNoFly = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (tmpl?.tags.includes(NO_FLY_TAG)) return true;
+  }
+  return false;
+};
 
 const partyHasPlaneSwitch = (
   party: Party,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
 ): boolean => {
+  // A no-fly unit anchors the whole party to the ground; even a mage
+  // carrying plane-switch can't teleport everyone up.
+  if (partyHasNoFly(party, templates)) return false;
   for (const u of party.units) {
     if (u.currentHp <= 0) continue;
     const tmpl = templates.get(u.templateId);

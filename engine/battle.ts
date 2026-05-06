@@ -17,6 +17,7 @@ import {
   type PostureMultipliers,
   type StrategyMultipliers,
 } from './combat.ts';
+import { inPlaneNeighbors } from './coord.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
@@ -212,13 +213,6 @@ const HOME_POST_BY_FACTION: Readonly<Record<Faction, string | null>> = {
 };
 
 const tileKey = (c: TileCoord): string => `${c.plane}:${String(c.x)},${String(c.y)}`;
-
-const inPlaneNeighbors = (c: TileCoord): readonly TileCoord[] => [
-  { plane: c.plane, x: c.x + 1, y: c.y },
-  { plane: c.plane, x: c.x - 1, y: c.y },
-  { plane: c.plane, x: c.x, y: c.y + 1 },
-  { plane: c.plane, x: c.x, y: c.y - 1 },
-];
 
 /**
  * Manhattan distance within a plane (4-neighbor moves don't reach diagonals,
