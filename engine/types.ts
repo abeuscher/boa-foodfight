@@ -212,7 +212,20 @@ export interface ReplayEventCommon {
 }
 
 export type ReplayEvent =
-  | (ReplayEventCommon & { readonly kind: 'scenario-start'; readonly scenario: string })
+  | (ReplayEventCommon & {
+      readonly kind: 'scenario-start';
+      readonly scenario: string;
+      /** Initial POST layout: id, location, owner. Lets the viewer
+       * render per-seed randomized POSTs without re-loading data. */
+      readonly posts?: readonly {
+        readonly id: PostId;
+        readonly location: TileCoord;
+        readonly owner: Faction;
+      }[];
+      /** Per-seed obstacle tile coords (kind === 'obstacle'). Lets the
+       * viewer render the random obstacle clusters. */
+      readonly obstacles?: readonly TileCoord[];
+    })
   | (ReplayEventCommon & { readonly kind: 'turn-start' })
   | (ReplayEventCommon & {
       readonly kind: 'order-issued';

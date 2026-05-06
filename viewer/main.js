@@ -59,12 +59,29 @@ function hydrateInitialPositions(events) {
 function reduceWithInitial(events, targetTick) {
   const parties = hydrateInitialPositions(events);
   const posts = new Map();
+  // Initial map state from scenario-start. Per-seed map randomization
+  // means this varies between replays — fall back to SPEC_POSTS only
+  // if the replay is older and doesn't carry the snapshot.
+  let initialPosts = null;
+  let obstacles = [];
   let turn = 0;
   let queenCharge = 0;
   let winner = null;
   for (const e of events) {
     if (e.tick > targetTick) break;
     switch (e.kind) {
+      case 'scenario-start':
+        if (Array.isArray(e.posts)) {
+          initialPosts = e.posts.map((p) => ({
+            id: p.id,
+            plane: p.location.plane,
+            x: p.location.x,
+            y: p.location.y,
+            owner: p.owner,
+          }));
+        }
+        if (Array.isArray(e.obstacles)) obstacles = e.obstacles;
+        break;
       case 'turn-start':
         turn = e.turn;
         break;
@@ -90,7 +107,7 @@ function reduceWithInitial(events, targetTick) {
         break;
     }
   }
-  return { parties, posts, turn, queenCharge, winner };
+  return { parties, posts, initialPosts, obstacles, turn, queenCharge, winner };
 }
 
 // ---------------------------------------------------------------------------
@@ -150,12 +167,41 @@ function drawPlane(ctx, plane) {
   }
 }
 
-function drawPosts(ctx, plane, postsState) {
+/** Pick the per-seed POST list if the replay included one, else fall
+ * back to the canonical SPEC_POSTS layout. Returns the unified array
+ * shape `{id, plane, x, y, owner}`. */
+function postSource(initialPosts) {
+  if (initialPosts) return initialPosts;
+  return Object.entries(SPEC_POSTS).map(([id, def]) => ({
+    id,
+    plane: def.plane,
+    x: def.x,
+    y: def.y,
+    owner: def.owner,
+  }));
+}
+
+function drawObstacles(ctx, plane, obstacles) {
+  if (!obstacles || obstacles.length === 0) return;
   const { ox, oy } = planeOrigin(plane);
-  for (const [id, def] of Object.entries(SPEC_POSTS)) {
+  ctx.fillStyle = '#3a2a18';
+  ctx.strokeStyle = '#5a3f22';
+  ctx.lineWidth = 1;
+  for (const o of obstacles) {
+    if (o.plane !== plane) continue;
+    const x = ox + o.x * CELL;
+    const y = oy + o.y * CELL;
+    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+    ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+  }
+}
+
+function drawPosts(ctx, plane, postsState, initialPosts) {
+  const { ox, oy } = planeOrigin(plane);
+  for (const def of postSource(initialPosts)) {
     if (def.plane !== plane) continue;
-    const live = postsState.get(id) ?? def;
-    const owner = live.owner ?? def.owner;
+    const live = postsState.get(def.id);
+    const owner = live?.owner ?? def.owner;
     const cx = ox + def.x * CELL + CELL / 2;
     const cy = oy + def.y * CELL + CELL / 2;
     ctx.fillStyle = FACTION_COLOR[owner] ?? '#888';
@@ -166,21 +212,29 @@ function drawPosts(ctx, plane, postsState) {
     ctx.fillStyle = '#fff';
     ctx.font = '9px ui-monospace, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(shortPostName(id), cx, cy + 3);
+    ctx.fillText(shortPostName(def.id), cx, cy + 3);
     ctx.textAlign = 'start';
   }
 }
 
+// Type-prefix labels: per-seed map gen emits IDs like `soap-dish-1`,
+// `soap-dish-2`. Show the type label for the prefix and append the
+// instance number when there are extras.
 function shortPostName(id) {
-  return (
-    {
-      'storm-drain': 'SD',
-      'soap-dish': 'SOAP',
-      'towel-rack': 'TWL',
-      'wall-crack': 'WC',
-      'spider-web': 'WEB',
-    }[id] ?? id.slice(0, 4)
-  );
+  const labels = {
+    'storm-drain': 'SD',
+    'soap-dish': 'SOAP',
+    'towel-rack': 'TWL',
+    'wall-crack': 'WC',
+    'spider-web': 'WEB',
+  };
+  if (labels[id]) return labels[id];
+  // Try suffix-stripped match: `soap-dish-2` -> `soap-dish` -> 'SOAP'.
+  const m = id.match(/^([a-z-]+)-(\d+)$/);
+  if (m && labels[m[1]]) {
+    return `${labels[m[1]]}${m[2]}`;
+  }
+  return id.slice(0, 4);
 }
 
 function drawParties(ctx, plane, parties) {
@@ -219,7 +273,8 @@ function render(canvas, state) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const plane of PLANES) {
     drawPlane(ctx, plane);
-    drawPosts(ctx, plane, state.posts);
+    drawObstacles(ctx, plane, state.obstacles);
+    drawPosts(ctx, plane, state.posts, state.initialPosts);
     drawParties(ctx, plane, state.parties);
   }
   // HUD: queen charge, turn, winner banner.
@@ -286,10 +341,10 @@ function partiesAtTile(state, tile) {
 }
 
 function postAtTile(state, tile) {
-  for (const [id, def] of Object.entries(SPEC_POSTS)) {
+  for (const def of postSource(state.initialPosts)) {
     if (def.plane !== tile.plane || def.x !== tile.x || def.y !== tile.y) continue;
-    const live = state.posts.get(id);
-    return { id, ...def, owner: live?.owner ?? def.owner };
+    const live = state.posts.get(def.id);
+    return { ...def, owner: live?.owner ?? def.owner };
   }
   return null;
 }
