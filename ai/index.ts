@@ -6,7 +6,9 @@
  */
 
 import { baselinePlayer } from './baseline.ts';
+import { divePlayer } from './dive.ts';
 import { flankPlayer } from './flank.ts';
+import { jellyRushPlayer } from './jelly-rush.ts';
 import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
 import { turtlePlayer } from './turtle.ts';
@@ -17,11 +19,21 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   rush: rushPlayer,
   turtle: turtlePlayer,
   flank: flankPlayer,
+  'jelly-rush': jellyRushPlayer,
+  dive: divePlayer,
 };
 
 export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l1': spiderL1,
 };
 
-export { baselinePlayer, flankPlayer, rushPlayer, spiderL1, turtlePlayer };
+export {
+  baselinePlayer,
+  divePlayer,
+  flankPlayer,
+  jellyRushPlayer,
+  rushPlayer,
+  spiderL1,
+  turtlePlayer,
+};
 export type { AIPolicy };

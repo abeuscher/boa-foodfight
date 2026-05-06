@@ -18,23 +18,19 @@
  */
 
 import { sameCoord } from '../engine/coord.ts';
-import type { GameState, Party, PartyId, Post, PostId, TileCoord } from '../engine/types.ts';
+import type { GameState, Party, PartyId, TileCoord } from '../engine/types.ts';
 
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
   moveToOrHold,
+  nextStageTarget,
   PATHFINDERS,
   postLocation,
-  SOAP_DISH,
   SPIDER_WEB,
-  TOWEL_RACK,
   VANGUARD_BRAVO,
-  WALL_CRACK,
 } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
-
-const FLOOR_AND_WALL_POSTS: readonly PostId[] = [SOAP_DISH, TOWEL_RACK, WALL_CRACK];
 
 const FLOOR_CORNER: ReadonlyMap<PartyId, TileCoord> = new Map([
   [PATHFINDERS, { plane: 'floor', x: 0, y: 9 }],
@@ -45,14 +41,6 @@ const CEILING_CORNER: ReadonlyMap<PartyId, TileCoord> = new Map([
   [PATHFINDERS, { plane: 'ceiling', x: 0, y: 9 }],
   [VANGUARD_BRAVO, { plane: 'ceiling', x: 9, y: 0 }],
 ]);
-
-const nextStageTarget = (state: GameState): Post | undefined => {
-  for (const id of FLOOR_AND_WALL_POSTS) {
-    const p = state.posts.get(id);
-    if (p && p.owner !== 'ant') return p;
-  }
-  return undefined;
-};
 
 const flankWaypoint = (party: Party): TileCoord | undefined => {
   const floorCorner = FLOOR_CORNER.get(party.id);
