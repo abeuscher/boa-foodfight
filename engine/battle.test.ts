@@ -149,6 +149,16 @@ describe('resolveBattle: smoke', () => {
     expect(out.result.rounds.length).toBeLessThanOrEqual(5);
     expect(['draw', atk.id, def.id]).toContain(out.result.winner);
     expect(out.events[0]?.kind).toBe('battle-resolved');
+    // BattleResult.participants populated for the viewer's
+    // play-by-play panel. Each participant carries unitId, templateId,
+    // side, hp, maxHp, isLeader.
+    expect(out.result.participants.length).toBeGreaterThan(0);
+    const sample = out.result.participants[0]!;
+    expect(sample.unitId).toBeDefined();
+    expect(sample.templateId).toBeDefined();
+    expect(['attacker', 'defender']).toContain(sample.side);
+    expect(sample.maxHp).toBeGreaterThan(0);
+    expect(sample.hp).toBeLessThanOrEqual(sample.maxHp);
   });
 
   it('round count is in [3,5] when neither side is wiped early', () => {

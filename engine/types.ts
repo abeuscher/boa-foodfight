@@ -162,6 +162,20 @@ export interface BattleRound {
   readonly actions: readonly BattleAction[];
 }
 
+/**
+ * Snapshot of a single unit's state at the moment a battle begins. Lets
+ * the replay viewer render a play-by-play with running HP without
+ * needing to load unit-template data or track HP across battles.
+ */
+export interface BattleParticipant {
+  readonly unitId: UnitId;
+  readonly templateId: UnitTemplateId;
+  readonly side: 'attacker' | 'defender';
+  readonly hp: number;
+  readonly maxHp: number;
+  readonly isLeader: boolean;
+}
+
 export interface BattleResult {
   readonly attackerPartyId: PartyId;
   readonly defenderPartyId: PartyId;
@@ -170,6 +184,10 @@ export interface BattleResult {
   readonly attackerCasualties: readonly UnitId[];
   readonly defenderCasualties: readonly UnitId[];
   readonly retreatTo: TileCoord | null;
+  /** Per-unit snapshots at battle start. The viewer subtracts each
+   * action's damage from these values to produce a running HP for the
+   * play-by-play panel. */
+  readonly participants: readonly BattleParticipant[];
 }
 
 // ---------------------------------------------------------------------------
