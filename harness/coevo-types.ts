@@ -51,6 +51,13 @@ const removeAbilitySchema = z.object({
   rationale: z.string().min(20),
 });
 
+const replaceAbilitySchema = z.object({
+  kind: z.literal('replace-ability'),
+  abilityId: z.string().min(1),
+  ability: abilityDefinitionSchema,
+  rationale: z.string().min(20),
+});
+
 // Roster party schema: keep it loose; the harness already validates against
 // the full roster schema after apply.
 const rosterPartySchema = z.object({
@@ -106,6 +113,7 @@ const firepowerProposalSchema = z.discriminatedUnion('kind', [
   removeAbilityFromUnitSchema,
   addAbilitySchema,
   removeAbilitySchema,
+  replaceAbilitySchema,
   setRosterPartySchema,
   addUnitTemplateSchema,
   removeUnitTemplateSchema,
@@ -164,6 +172,7 @@ export const isFirepowerKind = (kind: string): boolean =>
     'remove-ability-from-unit',
     'add-ability',
     'remove-ability',
+    'replace-ability',
     'set-roster-party',
     'add-unit-template',
     'remove-unit-template',

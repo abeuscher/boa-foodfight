@@ -92,6 +92,12 @@ Output a single JSON object:
       "rationale": "..."
     },
     {
+      "kind": "replace-ability",
+      "abilityId": "volley",
+      "ability": { /* full new AbilityDefinition with same id */ },
+      "rationale": "..."
+    },
+    {
       "kind": "add-unit-template",
       "template": { /* full template schema */ },
       "rationale": "..."

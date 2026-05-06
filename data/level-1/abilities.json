@@ -8,7 +8,9 @@
       "target": "area",
       "uses": 2,
       "cooldown": 0,
-      "params": { "radius": 3 },
+      "params": {
+        "radius": 3
+      },
       "description": "Scout ants release a concentrated phero-burst, blowing the fog off everything within smelling distance."
     },
     {
@@ -28,7 +30,9 @@
       "target": "party",
       "uses": null,
       "cooldown": 0,
-      "params": { "minWorkers": 3 },
+      "params": {
+        "minWorkers": 3
+      },
       "description": "Worker ants link mandibles and legs into a buoyant raft. Stay low, stay dry, stay alive."
     },
     {
@@ -36,10 +40,14 @@
       "name": "Apply Royal Jelly",
       "category": "buff",
       "target": "party",
-      "uses": null,
-      "cooldown": 1,
-      "params": { "doses": 1 },
-      "description": "A dose of the good stuff — Her Majesty's blessing in jar form. Hits like coffee on a battlefield."
+      "uses": 1,
+      "cooldown": 2,
+      "params": {
+        "doses": 1,
+        "attackBonus": 1,
+        "durationTurns": 2
+      },
+      "description": "A dose of the good stuff -- Her Majesty's blessing in jar form. Hits like coffee on a battlefield."
     },
     {
       "id": "queen-ultimate",
@@ -48,7 +56,10 @@
       "target": "area",
       "uses": 1,
       "cooldown": 0,
-      "params": { "radius": 5, "damage": 50 },
+      "params": {
+        "radius": 5,
+        "damage": 50
+      },
       "description": "The Queen unleashes the full fury of the colony. Everything in range is forcibly reminded who runs this bathroom."
     },
     {
@@ -56,9 +67,11 @@
       "name": "Volley",
       "category": "special-attack",
       "target": "party",
-      "uses": 2,
+      "uses": 1,
       "cooldown": 1,
-      "params": { "damage": 12 },
+      "params": {
+        "damage": 12
+      },
       "description": "Archer ants loose a coordinated salvo of seed-tipped arrows. Pre-battle softening, the textbook way."
     },
     {
@@ -68,7 +81,10 @@
       "target": "self",
       "uses": null,
       "cooldown": 1,
-      "params": { "armorBonus": 3, "durationTurns": 1 },
+      "params": {
+        "armorBonus": 3,
+        "durationTurns": 1
+      },
       "description": "Defenders lock shields and dig in. Nothing's getting through — not on their watch."
     },
     {
@@ -78,7 +94,9 @@
       "target": "party",
       "uses": 3,
       "cooldown": 1,
-      "params": { "heal": 6 },
+      "params": {
+        "heal": 6
+      },
       "description": "The medic patches up the squad with sap-salve and stern words. Walk it off, soldier."
     },
     {
@@ -88,7 +106,9 @@
       "target": "party",
       "uses": null,
       "cooldown": 2,
-      "params": { "radius": 1 },
+      "params": {
+        "radius": 1
+      },
       "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap."
     },
     {
@@ -98,7 +118,10 @@
       "target": "party",
       "uses": 2,
       "cooldown": 1,
-      "params": { "movementPenalty": 2, "durationTurns": 2 },
+      "params": {
+        "movementPenalty": 2,
+        "durationTurns": 2
+      },
       "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast."
     },
     {
@@ -108,8 +131,25 @@
       "target": "self",
       "uses": null,
       "cooldown": 0,
-      "params": { "heal": 1, "hpThreshold": 0.5 },
+      "params": {
+        "heal": 1,
+        "hpThreshold": 0.5
+      },
       "description": "The Spider Queen weaves silk into her wounds between exchanges. Slow bleeders close while she still has thread to spare."
+    },
+    {
+      "id": "web-snare",
+      "name": "Web-Snare",
+      "category": "debuff",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "params": {
+        "hpThreshold": 0.33,
+        "immobilizeCount": 1,
+        "durationTurns": 1
+      },
+      "description": "When the silk runs thin and her wounds won't close, the Spider Queen flings the last strand as a snare. One attacker is bound for a single beat — long enough, if the timing is right."
     }
   ]
 }

@@ -114,6 +114,19 @@ interface RosterFile {
   }[];
 }
 
+const cloneAbility = (
+  a: AbilitiesFile['abilities'][number],
+): AbilitiesFile['abilities'][number] => ({
+  id: a.id,
+  name: a.name,
+  category: a.category,
+  target: a.target,
+  uses: a.uses,
+  cooldown: a.cooldown,
+  params: a.params ?? {},
+  description: a.description,
+});
+
 const checkFirepowerScope = (
   proposal: FirepowerProposal,
   designerFaction: 'ant' | 'spider',
@@ -144,6 +157,7 @@ const checkFirepowerScope = (
     }
     case 'add-ability':
     case 'remove-ability':
+    case 'replace-ability':
       return null;
   }
 };
@@ -210,16 +224,7 @@ const applyFirepowerInMemory = (
       }
       const key = `ability:${proposal.ability.id}`;
       if (!claim(key)) return { ok: false, reason: `conflict: ${key} already edited this round` };
-      abilities.abilities.push({
-        id: proposal.ability.id,
-        name: proposal.ability.name,
-        category: proposal.ability.category,
-        target: proposal.ability.target,
-        uses: proposal.ability.uses,
-        cooldown: proposal.ability.cooldown,
-        params: proposal.ability.params ?? {},
-        description: proposal.ability.description,
-      });
+      abilities.abilities.push(cloneAbility(proposal.ability));
       return { ok: true };
     }
     case 'remove-ability': {
@@ -234,6 +239,20 @@ const applyFirepowerInMemory = (
       const key = `ability:${proposal.abilityId}`;
       if (!claim(key)) return { ok: false, reason: `conflict: ${key} already edited this round` };
       abilities.abilities.splice(idx, 1);
+      return { ok: true };
+    }
+    case 'replace-ability': {
+      const idx = abilities.abilities.findIndex((a) => a.id === proposal.abilityId);
+      if (idx === -1) return { ok: false, reason: `ability '${proposal.abilityId}' not found` };
+      if (proposal.ability.id !== proposal.abilityId) {
+        return {
+          ok: false,
+          reason: `replace-ability id mismatch: ${proposal.abilityId} vs ${proposal.ability.id}`,
+        };
+      }
+      const key = `ability:${proposal.abilityId}`;
+      if (!claim(key)) return { ok: false, reason: `conflict: ${key} already edited this round` };
+      abilities.abilities[idx] = cloneAbility(proposal.ability);
       return { ok: true };
     }
     case 'add-unit-template': {
