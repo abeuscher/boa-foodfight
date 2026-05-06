@@ -45,9 +45,10 @@
       "params": {
         "doses": 1,
         "attackBonus": 1,
+        "armorBonus": 1,
         "durationTurns": 2
       },
-      "description": "A dose of the good stuff -- Her Majesty's blessing in jar form. Hits like coffee on a battlefield."
+      "description": "A dose of the good stuff -- Her Majesty's blessing in jar form. Stiffens the carapace and sharpens the bite, briefly."
     },
     {
       "id": "queen-ultimate",
