@@ -8,6 +8,7 @@
  * it returns a new state plus the `ReplayEvent`s emitted this turn. No I/O.
  */
 
+import { resolveAbilityOrders } from './abilities.ts';
 import { resolveBattle } from './battle.ts';
 import type { BattleInput } from './battle.ts';
 import { distance } from './coord.ts';
@@ -125,6 +126,12 @@ export const runTurn = (
 ): TurnOutcome => {
   let working = state;
   const events: ReplayEvent[] = [];
+
+  // 0. Ability orders (use-ability). Resolved before movement so the
+  //    jelly buff is active when movement-triggered battles fire.
+  const abilityOutcome = resolveAbilityOrders(working, scenario.jelly, tick);
+  working = abilityOutcome.state;
+  events.push(...abilityOutcome.events);
 
   // 1. Movement.
   const moveOutcome = resolveMovement(working, rng.fork('movement'), tick);

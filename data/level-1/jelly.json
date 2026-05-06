@@ -4,6 +4,6 @@
   "capacityPerParty": 3,
   "dosesPerApplication": 1,
   "durationTurns": 2,
-  "attackMultiplier": 1.25,
-  "resilienceMultiplier": 1.15
+  "attackMultiplier": 1.1,
+  "resilienceMultiplier": 1.05
 }

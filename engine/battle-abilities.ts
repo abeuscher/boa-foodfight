@@ -74,6 +74,10 @@ const fireVolleys = (
   if (!def) return { shooter, target, events: [] };
   const damage = def.params.damage ?? 0;
   if (damage <= 0) return { shooter, target, events: [] };
+  // Optional queen-targeting bonus, configured by the coevolution-loop
+  // round-3 ant-firepower designer. When the volley lands on a unit
+  // tagged `queen`, add this bonus damage on top of the base.
+  const queenBonus = def.params.queenBonusDamage ?? 0;
 
   const events: ReplayEvent[] = [];
   let workingShooter = shooter;
@@ -97,7 +101,10 @@ const fireVolleys = (
     if (targetIdx < 0) break;
     const before = workingTargetUnits[targetIdx];
     if (!before) break;
-    const newHp = Math.max(0, before.currentHp - damage);
+    const targetTmpl = templates.get(before.templateId);
+    const isQueenTarget = targetTmpl?.tags.includes('queen') ?? false;
+    const totalDamage = damage + (isQueenTarget ? queenBonus : 0);
+    const newHp = Math.max(0, before.currentHp - totalDamage);
     workingTargetUnits[targetIdx] = { ...before, currentHp: newHp };
 
     workingShooter = {
