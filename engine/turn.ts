@@ -208,7 +208,27 @@ export const runScenario = (
   scenarioName = 'level-1',
 ): ScenarioOutcome => {
   const events: ReplayEvent[] = [];
-  events.push({ kind: 'scenario-start', turn: 0, tick: tick(), scenario: scenarioName });
+  // Snapshot the initial POST layout and obstacle tiles so the viewer
+  // can render per-seed map randomization. (Without this, the viewer
+  // would fall back to the canonical layout and per-seed POSTs would
+  // appear identical across all replays.)
+  const postsSnapshot = [...initial.posts.values()].map((p) => ({
+    id: p.id,
+    location: p.location,
+    owner: p.owner,
+  }));
+  const obstaclesSnapshot: TileCoord[] = [];
+  for (const tile of initial.tiles.values()) {
+    if (tile.terrain.kind === 'obstacle') obstaclesSnapshot.push(tile.coord);
+  }
+  events.push({
+    kind: 'scenario-start',
+    turn: 0,
+    tick: tick(),
+    scenario: scenarioName,
+    posts: postsSnapshot,
+    obstacles: obstaclesSnapshot,
+  });
   events.push({ kind: 'turn-start', turn: 1, tick: tick() });
 
   let working = initial;
