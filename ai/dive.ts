@@ -46,7 +46,8 @@ import {
   nextStageTarget,
   PATHFINDERS,
   postLocation,
-  SOAP_DISH,
+  postsOfType,
+  SOAP_DISH_TYPE,
   SPIDER_WEB,
   VANGUARD_BRAVO,
 } from './policy-helpers.ts';
@@ -81,7 +82,11 @@ const pathfindersTarget = (
 
 export const divePlayer: AIPolicy = buildAntPolicy('dive', (state: GameState) => {
   const stageTarget = nextStageTarget(state);
-  const soap = state.posts.get(SOAP_DISH);
+  // First unowned soap-dish (any plane). With per-seed map gen the
+  // soap-dish location varies; the dive variant picks whichever
+  // canonical-type instance exists first, captures it, then dives to
+  // ceiling at that (x,y) via mage plane-switch.
+  const soap = postsOfType(state, SOAP_DISH_TYPE).find((p) => p.owner !== 'ant');
   const webLoc = postLocation(state, SPIDER_WEB);
   return (party) => {
     if (party.id === PATHFINDERS) {

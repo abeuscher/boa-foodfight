@@ -7,6 +7,7 @@ import { loadScenario } from '../engine/state.ts';
 import type { MoveOrder, PartyId, PostId } from '../engine/types.ts';
 
 import { flankPlayer } from './flank.ts';
+import { postsOfType, SOAP_DISH_TYPE } from './policy-helpers.ts';
 import { rushPlayer } from './rush.ts';
 import { turtlePlayer } from './turtle.ts';
 
@@ -48,10 +49,10 @@ describe('turtle variant', () => {
     }
   });
 
-  it('floor vanguards capture floor POSTs even while uncharged (to trigger spider counter-push)', () => {
+  it('floor vanguards capture mid-POSTs even while uncharged (to trigger spider counter-push)', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = turtlePlayer.decide(state, data, createRng(1));
-    const soap = state.posts.get('soap-dish' as PostId);
+    const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
     const vanguardAlpha = next.parties.get('vanguard-alpha' as PartyId);
     expect(vanguardAlpha?.orders).toHaveLength(1);
     const order = vanguardAlpha?.orders[0] as MoveOrder;
@@ -100,12 +101,12 @@ describe('flank variant', () => {
     expect(vbOrder?.target).toEqual({ plane: 'floor', x: 9, y: 0 });
   });
 
-  it('vanguard-alpha still stages floor POSTs while pathfinders flanks', () => {
+  it('vanguard-alpha still stages mid-POSTs while pathfinders flanks', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = flankPlayer.decide(state, data, createRng(1));
     const vanguardAlpha = next.parties.get('vanguard-alpha' as PartyId);
     const order = vanguardAlpha?.orders[0] as MoveOrder | undefined;
-    const soap = state.posts.get('soap-dish' as PostId);
+    const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
     expect(order?.target.x).toBe(soap?.location.x);
     expect(order?.target.y).toBe(soap?.location.y);
   });

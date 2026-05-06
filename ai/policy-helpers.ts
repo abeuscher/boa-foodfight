@@ -25,10 +25,33 @@ import type { AIPolicy } from './types.ts';
 // ---------------------------------------------------------------------------
 
 export const SPIDER_WEB: PostId = 'spider-web' as PostId;
-export const SOAP_DISH: PostId = 'soap-dish' as PostId;
-export const TOWEL_RACK: PostId = 'towel-rack' as PostId;
-export const WALL_CRACK: PostId = 'wall-crack' as PostId;
 export const STORM_DRAIN: PostId = 'storm-drain' as PostId;
+
+/**
+ * Mid-POST type prefixes. The map generator emits POST IDs of the form
+ * `<type>-<n>` (e.g., `soap-dish-1`, `soap-dish-2`) so each scenario can
+ * have a variable count of each type. AI helpers below match by prefix.
+ */
+export const SOAP_DISH_TYPE = 'soap-dish';
+export const TOWEL_RACK_TYPE = 'towel-rack';
+export const WALL_CRACK_TYPE = 'wall-crack';
+export const MID_POST_TYPES: readonly string[] = [SOAP_DISH_TYPE, TOWEL_RACK_TYPE, WALL_CRACK_TYPE];
+
+/** True iff `postId` belongs to the given mid-POST type prefix. */
+export const postOfType = (postId: PostId, type: string): boolean => {
+  const id = String(postId);
+  return id === type || id.startsWith(`${type}-`);
+};
+
+/** All POSTs of a given type in stable id order. */
+export const postsOfType = (state: GameState, type: string): readonly Post[] => {
+  const matches: Post[] = [];
+  for (const post of state.posts.values()) {
+    if (postOfType(post.id, type)) matches.push(post);
+  }
+  matches.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return matches;
+};
 
 export const QUEEN_PARTY: PartyId = 'queen-guard' as PartyId;
 export const PATHFINDERS: PartyId = 'pathfinders' as PartyId;
@@ -57,18 +80,44 @@ export const moveToOrHold = (party: Party, target: TileCoord): readonly Order[] 
 export const postLocation = (state: GameState, id: PostId): TileCoord | undefined =>
   state.posts.get(id)?.location;
 
-/** The canonical floor + wall-crack capture chain in order. Variants
- * that build through it (turtle, flank, dive) share this list. */
-export const FLOOR_AND_WALL_POSTS: readonly PostId[] = [SOAP_DISH, TOWEL_RACK, WALL_CRACK];
-
-/** Returns the first POST in `FLOOR_AND_WALL_POSTS` that is not yet
- * ant-owned, or undefined if the entire chain is captured. */
+/**
+ * Returns the next mid-POST to capture, walking the type chain
+ * (soap-dish → towel-rack → wall-crack) and within each type picking
+ * the lowest-id unowned instance. Skips the type entirely if all
+ * instances of that type are already ant-owned. Returns undefined if
+ * every mid-POST is owned (i.e., chain complete).
+ */
 export const nextStageTarget = (state: GameState): Post | undefined => {
-  for (const id of FLOOR_AND_WALL_POSTS) {
-    const p = state.posts.get(id);
-    if (p && p.owner !== 'ant') return p;
+  for (const type of MID_POST_TYPES) {
+    for (const post of postsOfType(state, type)) {
+      if (post.owner !== 'ant') return post;
+    }
   }
   return undefined;
+};
+
+/** Returns the closest unowned POST of `type` to `from`, or undefined
+ * if all are ant-owned. Distance is Manhattan within-plane, infinity
+ * across planes. */
+export const closestUnownedPostOfType = (
+  state: GameState,
+  type: string,
+  from: TileCoord,
+): Post | undefined => {
+  let best: Post | undefined;
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (const post of postsOfType(state, type)) {
+    if (post.owner === 'ant') continue;
+    const d =
+      post.location.plane === from.plane
+        ? Math.abs(post.location.x - from.x) + Math.abs(post.location.y - from.y)
+        : Number.POSITIVE_INFINITY;
+    if (d < bestDist) {
+      bestDist = d;
+      best = post;
+    }
+  }
+  return best;
 };
 
 // ---------------------------------------------------------------------------

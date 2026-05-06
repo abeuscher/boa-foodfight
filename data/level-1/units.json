@@ -128,6 +128,24 @@
       "tags": ["caster", "leader-eligible", "support"]
     },
     {
+      "id": "ant-tank",
+      "name": "Ant Tank",
+      "faction": "ant",
+      "size": "large",
+      "slotCost": 3,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 22,
+        "attack": 8,
+        "agility": 2,
+        "armor": 4,
+        "intelligence": 1,
+        "constitution": 10
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "heavy", "no-fly"]
+    },
+    {
       "id": "spider-queen",
       "name": "Spider Queen",
       "faction": "spider",

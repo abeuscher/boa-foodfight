@@ -30,6 +30,7 @@ import type {
   Order,
   Party,
   PartyId,
+  Post,
   PostId,
   Rng,
   TileCoord,
@@ -37,12 +38,14 @@ import type {
   UnitTemplateId,
 } from '../engine/types.ts';
 
+import {
+  postsOfType,
+  SOAP_DISH_TYPE,
+  SPIDER_WEB,
+  TOWEL_RACK_TYPE,
+  WALL_CRACK_TYPE,
+} from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
-
-const SPIDER_WEB: PostId = 'spider-web' as PostId;
-const SOAP_DISH: PostId = 'soap-dish' as PostId;
-const TOWEL_RACK: PostId = 'towel-rack' as PostId;
-const WALL_CRACK: PostId = 'wall-crack' as PostId;
 
 const THREAT_RADIUS = 2;
 /**
@@ -75,6 +78,22 @@ const requirePost = (state: GameState, id: PostId): TileCoord => {
   return post.location;
 };
 
+const firstPostOfType = (state: GameState, type: string): Post | undefined =>
+  postsOfType(state, type)[0];
+
+const requireFirstPostOfType = (state: GameState, type: string): TileCoord => {
+  const post = firstPostOfType(state, type);
+  if (!post) throw new Error(`spiderL1: no POST of type '${type}' (map-gen failed to place one)`);
+  return post.location;
+};
+
+/** True iff every POST of `type` is ant-owned. (Empty pool returns false.) */
+const allPostsOfTypeOwnedByAnt = (state: GameState, type: string): boolean => {
+  const all = postsOfType(state, type);
+  if (all.length === 0) return false;
+  return all.every((p) => p.owner === 'ant');
+};
+
 const moveTo = (target: TileCoord): Order => ({ kind: 'move-to', target });
 
 /**
@@ -93,34 +112,47 @@ const closestAntDistance = (state: GameState, target: TileCoord): number => {
   return best;
 };
 
-const postOwnedByAnt = (state: GameState, id: PostId): boolean => {
-  const p = state.posts.get(id);
-  return p ? p.owner === 'ant' : false;
-};
-
 interface ThreatDecision {
   readonly defend: TileCoord | null;
 }
 
+/** Closest ant distance among all POSTs of a given type. Returns the
+ * matching POST and the distance, or {null, Infinity} when no
+ * unowned threat-eligible POST exists. */
+const closestThreatenedOfType = (
+  state: GameState,
+  type: string,
+): { post: Post | null; distance: number } => {
+  let best: Post | null = null;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const post of postsOfType(state, type)) {
+    if (post.owner === 'ant') continue; // already lost; skip
+    const d = closestAntDistance(state, post.location);
+    if (d < bestD) {
+      bestD = d;
+      best = post;
+    }
+  }
+  return { post: best, distance: bestD };
+};
+
 const decideThreat = (state: GameState): ThreatDecision => {
-  const towelLoc = requirePost(state, TOWEL_RACK);
-  const crackLoc = requirePost(state, WALL_CRACK);
-  const towelD = closestAntDistance(state, towelLoc);
-  const crackD = closestAntDistance(state, crackLoc);
-  // Conditional gate: if ants already own towel-rack, the wall-crack
+  const towel = closestThreatenedOfType(state, TOWEL_RACK_TYPE);
+  const crack = closestThreatenedOfType(state, WALL_CRACK_TYPE);
+  // Conditional gate: if every towel-rack is ant-owned, the wall-crack
   // ladder is the next imminent capture. Widen the wall-crack radius
   // by 1 so a non-scout responder is dispatched one turn earlier.
-  // This is a floor/wall-side trigger only; it does not touch the
-  // ceiling, so rush (which lives on the ceiling) is unaffected.
-  const crackRadius = postOwnedByAnt(state, TOWEL_RACK) ? THREAT_RADIUS + 1 : THREAT_RADIUS;
-  const towelThreat = towelD <= THREAT_RADIUS;
-  const crackThreat = crackD <= crackRadius;
+  const crackRadius = allPostsOfTypeOwnedByAnt(state, TOWEL_RACK_TYPE)
+    ? THREAT_RADIUS + 1
+    : THREAT_RADIUS;
+  const towelThreat = towel.post !== null && towel.distance <= THREAT_RADIUS;
+  const crackThreat = crack.post !== null && crack.distance <= crackRadius;
   if (!towelThreat && !crackThreat) return { defend: null };
-  if (towelThreat && !crackThreat) return { defend: towelLoc };
-  if (crackThreat && !towelThreat) return { defend: crackLoc };
+  if (towelThreat && !crackThreat) return { defend: towel.post?.location ?? null };
+  if (crackThreat && !towelThreat) return { defend: crack.post?.location ?? null };
   // Both threatened: defend whichever has the closer ant; tiebreak to wall-crack.
-  if (towelD < crackD) return { defend: towelLoc };
-  return { defend: crackLoc };
+  if (towel.distance < crack.distance) return { defend: towel.post?.location ?? null };
+  return { defend: crack.post?.location ?? null };
 };
 
 const isOnWeb = (party: Party, webLoc: TileCoord): boolean => sameCoord(party.location, webLoc);
@@ -213,8 +245,9 @@ const pickResponder = (
  *     ceiling, so rush's plane-switch route is untouched.
  */
 const ordersForScout = (state: GameState, party: Party, soapLoc: TileCoord): readonly Order[] => {
-  if (postOwnedByAnt(state, SOAP_DISH)) {
-    const towelLoc = requirePost(state, TOWEL_RACK);
+  // If every soap-dish is ant-owned, harass the (first un-owned) towel-rack.
+  if (allPostsOfTypeOwnedByAnt(state, SOAP_DISH_TYPE)) {
+    const towelLoc = requireFirstPostOfType(state, TOWEL_RACK_TYPE);
     if (sameCoord(party.location, towelLoc)) return [];
     if (distance(party.location, towelLoc) <= 1) return [];
     return [moveTo(towelLoc)];
@@ -251,14 +284,12 @@ export const spiderL1: AIPolicy = {
     rng.fork('spider-l1-tiebreak');
 
     const webLoc = requirePost(state, SPIDER_WEB);
-    const soapLoc = requirePost(state, SOAP_DISH);
-    // Counter-push target: wall-crack on the wall plane. The storm-drain
-    // is the conceptual goal but is physically unreachable for spiders
-    // (no ceiling↔floor route; the towel-rack/wall-crack pair is
-    // ant-controlled by the time the counter-push fires). Pushing toward
-    // wall-crack drops the spider down via the climbing bypass and puts
-    // it on top of the ant parties camped there for the ceiling assault.
-    const counterPushTargetLoc = requirePost(state, WALL_CRACK);
+    const soapLoc = requireFirstPostOfType(state, SOAP_DISH_TYPE);
+    // Counter-push target: the first wall-crack on the wall plane.
+    // Pushing toward wall-crack drops the spider down via the climbing
+    // bypass and puts it on top of the ant parties camped there for the
+    // ceiling assault.
+    const counterPushTargetLoc = requireFirstPostOfType(state, WALL_CRACK_TYPE);
     const threat = decideThreat(state);
 
     const scout = pickScout(state);

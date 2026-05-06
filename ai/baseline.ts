@@ -26,33 +26,29 @@ import type {
   Party,
   PartyId,
   Post,
-  PostId,
   Rng,
 } from '../engine/types.ts';
 
+import { nextStageTarget, SPIDER_WEB } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
 const FACTION: Faction = 'ant';
 
 const QUEEN_PARTY: PartyId = 'queen-guard' as PartyId;
 
-/** Spec-locked POST ids in the order the staging strategy targets them. */
-const STAGE_TARGETS: readonly PostId[] = [
-  'soap-dish' as PostId,
-  'towel-rack' as PostId,
-  'wall-crack' as PostId,
-  'spider-web' as PostId,
-];
-
-const findPost = (state: GameState, id: PostId): Post | undefined => state.posts.get(id);
-
-/** Returns the current strategic target POST, or undefined if every stage POST is already ours. */
+/**
+ * Returns the current strategic target POST, or undefined if every
+ * stage POST and the spider-web are already ours. Walks the type
+ * chain (soap-dish → towel-rack → wall-crack) via `nextStageTarget`
+ * which handles per-seed POST randomization (multiple instances of
+ * each type, suffixed `-1`, `-2`, ...). Falls through to spider-web
+ * once every mid-POST is ant-owned.
+ */
 const currentStageTarget = (state: GameState): Post | undefined => {
-  for (const id of STAGE_TARGETS) {
-    const post = findPost(state, id);
-    if (!post) continue;
-    if (post.owner !== FACTION) return post;
-  }
+  const next = nextStageTarget(state);
+  if (next) return next;
+  const web = state.posts.get(SPIDER_WEB);
+  if (web && web.owner !== FACTION) return web;
   return undefined;
 };
 
