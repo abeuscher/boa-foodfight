@@ -68,20 +68,26 @@ function reduceWithInitial(events, targetTick) {
   let queenCharge = 0;
   let winner = null;
   for (const e of events) {
+    // scenario-start carries the initial map state. Its emit tick (1)
+    // is technically AFTER targetTick=0 (the initial frame the viewer
+    // first shows), so don't gate this event on the tick window —
+    // otherwise the renderer never sees per-seed POST/obstacle data
+    // and falls back to the canonical SPEC_POSTS layout.
+    if (e.kind === 'scenario-start') {
+      if (Array.isArray(e.posts)) {
+        initialPosts = e.posts.map((p) => ({
+          id: p.id,
+          plane: p.location.plane,
+          x: p.location.x,
+          y: p.location.y,
+          owner: p.owner,
+        }));
+      }
+      if (Array.isArray(e.obstacles)) obstacles = e.obstacles;
+      continue;
+    }
     if (e.tick > targetTick) break;
     switch (e.kind) {
-      case 'scenario-start':
-        if (Array.isArray(e.posts)) {
-          initialPosts = e.posts.map((p) => ({
-            id: p.id,
-            plane: p.location.plane,
-            x: p.location.x,
-            y: p.location.y,
-            owner: p.owner,
-          }));
-        }
-        if (Array.isArray(e.obstacles)) obstacles = e.obstacles;
-        break;
       case 'turn-start':
         turn = e.turn;
         break;
