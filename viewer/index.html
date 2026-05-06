@@ -33,6 +33,19 @@
     <main>
       <canvas id="board" width="990" height="720"></canvas>
       <aside id="side-panel">
+        <section id="battle-panel" class="hidden">
+          <h2>
+            <span id="battle-title">battle</span>
+            <span id="battle-step-controls">
+              <button id="battle-prev" title="previous action">◀</button>
+              <button id="battle-toggle" title="play / pause">▶</button>
+              <button id="battle-next" title="next action">▶▶</button>
+              <button id="battle-jump-end" title="skip to result">⏭</button>
+            </span>
+          </h2>
+          <div id="battle-rosters"></div>
+          <ol id="battle-log"></ol>
+        </section>
         <section id="inspect-panel">
           <h2>inspect (click a tile)</h2>
           <div id="inspect-content" class="empty">no tile selected</div>

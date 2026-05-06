@@ -21,6 +21,7 @@ import { inPlaneNeighbors } from './coord.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
+  BattleParticipant,
   BattleResult,
   BattleRound,
   Faction,
@@ -382,6 +383,28 @@ export const resolveBattle = (
     ...buildLiveUnits(defender, 'defender', state.unitTemplates),
   ];
 
+  // Snapshot every participant's HP at battle start (post-opening, since
+  // volley/mend already fired). The replay viewer subtracts each
+  // action's damage from these to render running HP in the play-by-play
+  // panel without needing to load template data or track HP across
+  // battles.
+  const participants: BattleParticipant[] = live.map((u) => {
+    // Recover the templateId by looking up the source unit; the live
+    // shape doesn't carry it (only template ref via stats), so we walk
+    // the parties.
+    const sourceParty = u.side === 'attacker' ? attacker : defender;
+    const sourceUnit = sourceParty.units.find((su) => su.id === u.id);
+    const templateId = sourceUnit?.templateId ?? ('' as UnitTemplateId);
+    return {
+      unitId: u.id,
+      templateId,
+      side: u.side,
+      hp: u.hp,
+      maxHp: u.stats.hp,
+      isLeader: u.isLeader,
+    };
+  });
+
   const roundCount = decideRoundCount(rng.fork('battle-rounds'));
   const agilityRng = rng.fork('battle-agility');
   const targetCounter = { atk: 0, def: 0 };
@@ -437,6 +460,7 @@ export const resolveBattle = (
     attackerCasualties,
     defenderCasualties,
     retreatTo,
+    participants,
   };
 
   // Events: opening-ability events first (volley, mend, opening kills),

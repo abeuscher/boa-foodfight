@@ -157,3 +157,134 @@ canvas {
   color: #888;
   font-size: 12px;
 }
+
+/* ---------------------------------------------------------------------------
+ * Battle play-by-play panel
+ * ------------------------------------------------------------------------ */
+#battle-panel {
+  background: #2a2a2a;
+  border-radius: 4px;
+  padding: 12px;
+  border: 1px solid #444;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+#battle-panel.hidden {
+  display: none;
+}
+#battle-panel h2 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#battle-step-controls {
+  display: inline-flex;
+  gap: 4px;
+}
+#battle-step-controls button {
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: #ddd;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  min-width: 0;
+}
+#battle-step-controls button:hover {
+  background: #4a4a4a;
+}
+#battle-rosters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+.roster-side h3 {
+  margin: 0 0 4px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+}
+.roster-side.attackers h3 {
+  color: #e85d4a;
+}
+.roster-side.defenders h3 {
+  color: #c026d3;
+}
+.roster-unit {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 1px 0;
+  color: #ccc;
+}
+.roster-unit.dead {
+  color: #555;
+  text-decoration: line-through;
+}
+.roster-unit.acting {
+  background: #3a3a3a;
+  border-radius: 2px;
+  padding: 1px 4px;
+  margin: 0 -4px;
+}
+.roster-unit.targeted {
+  background: #2a1820;
+  border-radius: 2px;
+  padding: 1px 4px;
+  margin: 0 -4px;
+}
+.hp-bar {
+  display: inline-flex;
+  font-size: 9px;
+  letter-spacing: -1px;
+  color: #4a4a4a;
+}
+.hp-bar .hp-filled {
+  color: #5fae5f;
+}
+.roster-unit.dead .hp-bar .hp-filled {
+  color: #555;
+}
+.unit-leader::before {
+  content: '★ ';
+  color: #ffe066;
+}
+#battle-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  color: #ccc;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 100px;
+  max-height: 240px;
+}
+#battle-log li {
+  padding: 1px 0;
+  border-bottom: 1px solid #333;
+}
+#battle-log li.round-header {
+  color: #6cf;
+  font-weight: 600;
+  margin-top: 4px;
+}
+#battle-log li.kill {
+  color: #f88;
+}
+#battle-log li.outcome {
+  color: #ffe066;
+  font-weight: 600;
+  margin-top: 4px;
+  border-bottom: none;
+}

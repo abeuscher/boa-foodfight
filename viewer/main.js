@@ -416,6 +416,243 @@ function renderInspect(state, events, tick) {
   panel.innerHTML = html;
 }
 
+// ---------------------------------------------------------------------------
+// Battle play-by-play panel.
+//
+// Auto-shows when the main scrubber lands on a tick matching a
+// battle-resolved event. The panel walks the event's rounds[].actions[]
+// step-by-step, tracking running HP from each participant's snapshot.
+// While the panel is showing a battle, main playback is paused.
+// ---------------------------------------------------------------------------
+
+// Currently-displayed battle's state. null = panel hidden.
+//   event       — the battle-resolved event
+//   actions     — flattened list of {round, action} entries
+//   index       — how many actions have resolved so far
+//                 (-1 = pre-battle, len-1 = final action shown,
+//                  len   = battle complete, outcome shown)
+//   playing     — auto-advance through actions
+//   timer       — interval id when playing
+let BATTLE_STATE = null;
+
+function flattenActions(rounds) {
+  const flat = [];
+  for (const r of rounds) {
+    for (const a of r.actions) flat.push({ round: r.index, action: a });
+  }
+  return flat;
+}
+
+/** Locate the battle-resolved event whose tick is exactly `tick`, if any. */
+function battleAtTick(events, tick) {
+  for (const e of events) {
+    if (e.tick > tick) break;
+    if (e.tick === tick && e.kind === 'battle-resolved') return e;
+  }
+  return null;
+}
+
+/** Compute every participant's HP after `actionsApplied` actions have
+ * resolved. Returns Map<unitId, {hp, dead}>. */
+function deriveRunningHps(participants, allActions, actionsApplied) {
+  const out = new Map();
+  for (const p of participants) {
+    out.set(p.unitId, { hp: p.hp, maxHp: p.maxHp, dead: p.hp <= 0 });
+  }
+  for (let i = 0; i < actionsApplied && i < allActions.length; i++) {
+    const a = allActions[i].action;
+    const cur = out.get(a.defenderId);
+    if (!cur) continue;
+    const next = Math.max(0, cur.hp - a.damage);
+    out.set(a.defenderId, { hp: next, maxHp: cur.maxHp, dead: next <= 0 || a.killed });
+  }
+  return out;
+}
+
+function templateOf(unitId) {
+  // Unit ids are like "u0017-ant-footman". Strip the "u####-" prefix.
+  const m = /^u\d+-(.+)$/.exec(unitId);
+  return m ? m[1] : unitId;
+}
+
+function shortTemplate(templateId) {
+  const labels = {
+    'ant-queen': 'queen',
+    'ant-footman': 'footman',
+    'ant-archer': 'archer',
+    'ant-mage': 'mage',
+    'ant-scout': 'scout',
+    'ant-worker': 'worker',
+    'ant-potato-bug': 'potato-bug',
+    'ant-tank': 'tank',
+    'spider-queen': 'queen',
+    'spider-elite': 'elite',
+    'spider-soldier': 'soldier',
+    'spider-spinner': 'spinner',
+    'spider-scout': 'scout',
+  };
+  return labels[templateId] ?? templateId;
+}
+
+function hpBar(hp, maxHp) {
+  const filled = Math.max(0, Math.min(maxHp, hp));
+  const empty = maxHp - filled;
+  return (
+    `<span class="hp-bar"><span class="hp-filled">${'■'.repeat(filled)}</span>` +
+    `<span>${'·'.repeat(empty)}</span></span>`
+  );
+}
+
+function renderRoster(side, partyId, participants, hps, currentAction) {
+  const sideUnits = participants.filter((p) => p.side === side);
+  const lines = sideUnits.map((p) => {
+    const live = hps.get(p.unitId) ?? { hp: p.hp, maxHp: p.maxHp, dead: p.hp <= 0 };
+    const cls = ['roster-unit'];
+    if (live.dead) cls.push('dead');
+    if (currentAction && currentAction.attackerId === p.unitId) cls.push('acting');
+    if (currentAction && currentAction.defenderId === p.unitId) cls.push('targeted');
+    const leaderCls = p.isLeader ? 'unit-leader' : '';
+    const name = shortTemplate(p.templateId);
+    const idShort = p.unitId.slice(0, 5);
+    return (
+      `<div class="${cls.join(' ')}">` +
+      `<span class="${leaderCls}">${idShort}</span> ` +
+      `<span>${escapeHtml(name)}</span> ` +
+      `${hpBar(live.hp, live.maxHp)} ` +
+      `<span style="color:#888">${live.hp}/${live.maxHp}</span>` +
+      `</div>`
+    );
+  });
+  const sideClass = side === 'attacker' ? 'attackers' : 'defenders';
+  return (
+    `<div class="roster-side ${sideClass}">` +
+    `<h3>${side} — ${escapeHtml(partyId)}</h3>` +
+    lines.join('\n') +
+    `</div>`
+  );
+}
+
+function renderBattleLog(state) {
+  const items = [];
+  let lastRound = -1;
+  for (let i = 0; i < state.actions.length && i <= state.index; i++) {
+    const { round, action } = state.actions[i];
+    if (round !== lastRound) {
+      items.push(`<li class="round-header">— round ${round + 1} —</li>`);
+      lastRound = round;
+    }
+    const atk = `${action.attackerId.slice(0, 5)} ${shortTemplate(templateOf(action.attackerId))}`;
+    const def = `${action.defenderId.slice(0, 5)} ${shortTemplate(templateOf(action.defenderId))}`;
+    const cls = action.killed ? 'kill' : '';
+    const msg = `${atk} → ${def} : ${action.damage} dmg${action.killed ? ' (killed)' : ''}`;
+    items.push(`<li class="${cls}">${escapeHtml(msg)}</li>`);
+  }
+  if (state.index >= state.actions.length) {
+    const e = state.event;
+    const r = e.result;
+    const outcome =
+      r.winner === 'draw'
+        ? 'DRAW'
+        : `${r.winner} wins (${r.attackerCasualties.length} attacker / ${r.defenderCasualties.length} defender casualties)`;
+    items.push(`<li class="outcome">▸ ${escapeHtml(outcome)}</li>`);
+  }
+  return items.join('');
+}
+
+function renderBattlePanel() {
+  const panel = document.getElementById('battle-panel');
+  if (!BATTLE_STATE) {
+    panel.classList.add('hidden');
+    return;
+  }
+  panel.classList.remove('hidden');
+  const e = BATTLE_STATE.event;
+  const r = e.result;
+  document.getElementById('battle-title').textContent =
+    `${r.attackerPartyId} vs ${r.defenderPartyId}` +
+    ` — action ${Math.min(BATTLE_STATE.index + 1, BATTLE_STATE.actions.length)}` +
+    ` / ${BATTLE_STATE.actions.length}`;
+
+  const hps = deriveRunningHps(r.participants ?? [], BATTLE_STATE.actions, BATTLE_STATE.index + 1);
+  const currentAction =
+    BATTLE_STATE.index >= 0 && BATTLE_STATE.index < BATTLE_STATE.actions.length
+      ? BATTLE_STATE.actions[BATTLE_STATE.index].action
+      : null;
+  const rosters = document.getElementById('battle-rosters');
+  rosters.innerHTML =
+    renderRoster('attacker', r.attackerPartyId, r.participants ?? [], hps, currentAction) +
+    renderRoster('defender', r.defenderPartyId, r.participants ?? [], hps, currentAction);
+
+  document.getElementById('battle-log').innerHTML = renderBattleLog(BATTLE_STATE);
+  document.getElementById('battle-toggle').textContent = BATTLE_STATE.playing ? '⏸' : '▶';
+}
+
+function stopBattlePlayback() {
+  if (BATTLE_STATE && BATTLE_STATE.timer) {
+    clearInterval(BATTLE_STATE.timer);
+    BATTLE_STATE.timer = null;
+  }
+  if (BATTLE_STATE) BATTLE_STATE.playing = false;
+}
+
+function startBattlePlayback() {
+  if (!BATTLE_STATE) return;
+  stopBattlePlayback();
+  BATTLE_STATE.playing = true;
+  const speed = Number(document.getElementById('speed').value);
+  const intervalMs = Math.max(120, 800 / speed);
+  BATTLE_STATE.timer = setInterval(() => {
+    if (!BATTLE_STATE) return;
+    if (BATTLE_STATE.index >= BATTLE_STATE.actions.length) {
+      stopBattlePlayback();
+      renderBattlePanel();
+      return;
+    }
+    BATTLE_STATE.index += 1;
+    renderBattlePanel();
+  }, intervalMs);
+  renderBattlePanel();
+}
+
+function openBattlePanel(event) {
+  // Pause main playback when a battle is in view.
+  if (PLAY_TIMER) {
+    clearInterval(PLAY_TIMER);
+    PLAY_TIMER = null;
+    document.getElementById('play-btn').textContent = '▶ play';
+  }
+  stopBattlePlayback();
+  const actions = flattenActions(event.result.rounds);
+  BATTLE_STATE = {
+    event,
+    actions,
+    // No actions (e.g., opening volley wiped one side): jump straight
+    // to the outcome line. Otherwise start at -1 so the first
+    // auto-advance reveals action 0 with a beat of suspense.
+    index: actions.length === 0 ? 0 : -1,
+    playing: false,
+    timer: null,
+  };
+  renderBattlePanel();
+  if (actions.length > 0) startBattlePlayback();
+}
+
+function closeBattlePanel() {
+  stopBattlePlayback();
+  BATTLE_STATE = null;
+  renderBattlePanel();
+}
+
+function maybeUpdateBattlePanelForTick(events, tick) {
+  const battle = battleAtTick(events, tick);
+  if (!battle) {
+    closeBattlePanel();
+    return;
+  }
+  if (BATTLE_STATE && BATTLE_STATE.event === battle) return; // already showing
+  openBattlePanel(battle);
+}
+
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -545,6 +782,7 @@ function setTick(tick) {
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
+  maybeUpdateBattlePanelForTick(CURRENT_EVENTS, t);
   const winnerText = state.winner ? (state.winner === 'ant' ? ' — ANTS WIN' : ' — ANTS LOSE') : '';
   document.getElementById('tick-label').textContent =
     `tick ${t} / ${MAX_TICK} — turn ${state.turn}${winnerText}`;
@@ -594,6 +832,32 @@ async function init() {
   document.getElementById('replay-select').addEventListener('change', (e) => {
     const run = document.getElementById('run-select').value;
     loadReplay(run, e.target.value);
+  });
+
+  // Battle panel step controls.
+  document.getElementById('battle-prev').addEventListener('click', () => {
+    if (!BATTLE_STATE) return;
+    stopBattlePlayback();
+    BATTLE_STATE.index = Math.max(-1, BATTLE_STATE.index - 1);
+    renderBattlePanel();
+  });
+  document.getElementById('battle-next').addEventListener('click', () => {
+    if (!BATTLE_STATE) return;
+    stopBattlePlayback();
+    BATTLE_STATE.index = Math.min(BATTLE_STATE.actions.length, BATTLE_STATE.index + 1);
+    renderBattlePanel();
+  });
+  document.getElementById('battle-toggle').addEventListener('click', () => {
+    if (!BATTLE_STATE) return;
+    if (BATTLE_STATE.playing) stopBattlePlayback();
+    else startBattlePlayback();
+    renderBattlePanel();
+  });
+  document.getElementById('battle-jump-end').addEventListener('click', () => {
+    if (!BATTLE_STATE) return;
+    stopBattlePlayback();
+    BATTLE_STATE.index = BATTLE_STATE.actions.length;
+    renderBattlePanel();
   });
 
   const runs = await loadRuns();
