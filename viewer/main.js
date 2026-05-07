@@ -526,7 +526,7 @@ function shortPostName(id) {
   return id.slice(0, 4);
 }
 
-function drawParties(ctx, plane, parties, neutralHypno, area) {
+function drawParties(ctx, plane, parties, neutralHypno, area, followPartyId) {
   const { ox, oy, cellSize } = area;
   // Party-circle radius scales with cell size; fan-out distance does too.
   const radius = Math.max(6, Math.floor(cellSize * 0.22));
@@ -569,6 +569,16 @@ function drawParties(ctx, plane, parties, neutralHypno, area) {
         ctx.lineWidth = 1;
       }
       ctx.stroke();
+      // Follow-mode marker: bright yellow ring 2 px wider than the
+      // party circle so the followed party is easy to spot when zoomed
+      // in. Drawn on top of the faction/hypno stroke so it always wins.
+      if (followPartyId && p.id === followPartyId) {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, radius + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     });
   }
 }
@@ -612,7 +622,7 @@ function render(canvas, state) {
     drawDamageZones(ctx, plane, state.damageZones, area);
     drawWebs(ctx, plane, state.webs, area);
     drawPosts(ctx, plane, state.posts, state.initialPosts, area);
-    drawParties(ctx, plane, state.parties, state.neutralHypno, area);
+    drawParties(ctx, plane, state.parties, state.neutralHypno, area, FOLLOW_PARTY);
     drawBattleHighlight(ctx, plane, state, area);
   }
   // HUD: queen charge, turn, winner banner.
@@ -877,6 +887,13 @@ let BATTLE_STATE = null;
 // click the focused plane again (or the "back to 6-grid" button) to
 // return to the default 3×2 layout.
 let FOCUSED_PLANE = null;
+
+// Follow mode: when set to a partyId, each render frame slaves
+// FOCUSED_PLANE to that party's current plane so the camera tracks the
+// party as it crosses planes. Setting it via the header dropdown.
+// Cleared automatically on replay load if the party isn't in the new
+// replay; otherwise persists across runs/replays.
+let FOLLOW_PARTY = null;
 
 function flattenActions(rounds) {
   const flat = [];
@@ -1289,15 +1306,61 @@ async function loadReplay(run, name) {
   const scrubber = document.getElementById('scrubber');
   scrubber.max = MAX_TICK;
   scrubber.value = 0;
+  rebuildFollowDropdown();
   setTick(0);
   document.getElementById('status').textContent =
     `${CURRENT_EVENTS.length} events, ${MAX_TICK} ticks${MANIFEST ? ' · static' : ' · dev'}`;
+}
+
+// Rebuild the "follow" header dropdown from the parties present in the
+// just-loaded replay. If a party was being followed and is still in the
+// new replay we keep the selection; otherwise we drop back to "(none)".
+function rebuildFollowDropdown() {
+  const parties = hydrateInitialPositions(CURRENT_EVENTS);
+  const select = document.getElementById('follow-select');
+  // Sort by faction then id so ants are grouped together — easier to
+  // scan in-game.
+  const ids = [...parties.entries()]
+    .sort((a, b) => {
+      const fa = a[1].faction ?? 'neutral';
+      const fb = b[1].faction ?? 'neutral';
+      if (fa !== fb) return fa.localeCompare(fb);
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([id, p]) => ({ id, faction: p.faction ?? 'neutral' }));
+  select.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '(none)';
+  select.appendChild(none);
+  for (const { id, faction } of ids) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${id} [${faction}]`;
+    select.appendChild(opt);
+  }
+  // Drop the follow target if it's not in this replay. We also drop
+  // the focused plane in that case so the new replay opens in the
+  // 6-grid view, not on whatever plane the previous followed party
+  // happened to be on.
+  if (FOLLOW_PARTY && !parties.has(FOLLOW_PARTY)) {
+    FOLLOW_PARTY = null;
+    FOCUSED_PLANE = null;
+  }
+  select.value = FOLLOW_PARTY ?? '';
 }
 
 function setTick(tick) {
   const t = Math.max(0, Math.min(MAX_TICK, tick));
   document.getElementById('scrubber').value = t;
   const state = reduceWithInitial(CURRENT_EVENTS, t);
+  // Follow mode: if a party is being followed, slave the focused plane
+  // to wherever that party is right now. Dead parties keep their last
+  // known plane (we only update when we have a current location).
+  if (FOLLOW_PARTY) {
+    const followed = state.parties.get(FOLLOW_PARTY);
+    if (followed?.plane) FOCUSED_PLANE = followed.plane;
+  }
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
@@ -1350,8 +1413,22 @@ async function init() {
     setTick(Number(document.getElementById('scrubber').value));
   });
   document.getElementById('focus-reset').addEventListener('click', () => {
-    if (FOCUSED_PLANE === null) return;
+    // Clearing focus also exits follow mode — otherwise the next render
+    // would immediately re-focus the followed party's plane.
+    if (FOCUSED_PLANE === null && FOLLOW_PARTY === null) return;
     FOCUSED_PLANE = null;
+    FOLLOW_PARTY = null;
+    document.getElementById('follow-select').value = '';
+    setTick(Number(document.getElementById('scrubber').value));
+  });
+  document.getElementById('follow-select').addEventListener('change', (e) => {
+    FOLLOW_PARTY = e.target.value || null;
+    if (FOLLOW_PARTY === null) {
+      // Exiting follow returns to whatever view was up before — i.e.,
+      // we drop the auto-focus too. The user can still click a plane
+      // afterward to focus manually.
+      FOCUSED_PLANE = null;
+    }
     setTick(Number(document.getElementById('scrubber').value));
   });
   document.getElementById('speed').addEventListener('input', (e) => {
