@@ -46,6 +46,26 @@ function guessFaction(partyId) {
 
 function hydrateInitialPositions(events) {
   const seen = new Map();
+  // Round-7 feature 2: scenario-start may carry a `partyPositions`
+  // snapshot (post-placement positions). Prefer that as the source of
+  // truth so the viewer renders the initial board correctly even for
+  // parties that never end up moving. Fall back to the first
+  // party-moved event for older replays without the snapshot.
+  for (const e of events) {
+    if (e.kind === 'scenario-start' && Array.isArray(e.partyPositions)) {
+      for (const entry of e.partyPositions) {
+        if (seen.has(entry.partyId)) continue;
+        seen.set(entry.partyId, {
+          faction: guessFaction(entry.partyId),
+          alive: true,
+          plane: entry.location.plane,
+          x: entry.location.x,
+          y: entry.location.y,
+        });
+      }
+      break;
+    }
+  }
   for (const e of events) {
     if (e.kind !== 'party-moved') continue;
     if (seen.has(e.partyId)) continue;

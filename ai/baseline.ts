@@ -70,6 +70,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
@@ -145,7 +146,21 @@ const queenGuardOrders = (state: GameState, _queenGuard: Party): readonly Order[
   return [jellyApplyOrder(PATHFINDERS)];
 };
 
-export const baselinePlayer: AIPolicy = buildAntPolicy(
+/**
+ * Round-7 feature 2 placement: vanguard-alpha forward to (3, 3) for
+ * early POST capture; pathfinders forward to (5, 5) for diagonal
+ * reach; vanguard-bravo forward to (3, 5). Queen-guard stays at
+ * storm-drain (engine rejects any attempt to move it). All targets
+ * are within the Chebyshev-5 placement radius.
+ */
+const baselinePlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    'vanguard-alpha': { plane: 'floor', x: 3, y: 3 },
+    pathfinders: { plane: 'floor', x: 5, y: 5 },
+    'vanguard-bravo': { plane: 'floor', x: 3, y: 5 },
+  });
+
+const baselineCore: AIPolicy = buildAntPolicy(
   'baseline-staging',
   (state: GameState) => {
     const stageTarget = nextStageTarget(state);
@@ -209,3 +224,5 @@ export const baselinePlayer: AIPolicy = buildAntPolicy(
   },
   queenGuardOrders,
 );
+
+export const baselinePlayer: AIPolicy = { ...baselineCore, placement: baselinePlacement };

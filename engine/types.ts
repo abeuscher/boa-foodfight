@@ -306,6 +306,15 @@ export type ReplayEvent =
       /** Per-seed obstacle tile coords (kind === 'obstacle'). Lets the
        * viewer render the random obstacle clusters. */
       readonly obstacles?: readonly TileCoord[];
+      /** Final party positions after pre-game placement (round 7
+       * feature 2). Optional: omitted means the parties spawned at
+       * roster default positions. The viewer reads this to draw the
+       * initial board correctly when an AI policy used the placement
+       * hook. */
+      readonly partyPositions?: readonly {
+        readonly partyId: PartyId;
+        readonly location: TileCoord;
+      }[];
     })
   | (ReplayEventCommon & { readonly kind: 'turn-start' })
   | (ReplayEventCommon & {

@@ -72,6 +72,7 @@ import type {
   UnitTemplateId,
 } from '../engine/types.ts';
 
+import { spiderPlacement } from './placement-helpers.ts';
 import {
   getSpiderVisibleAntTrail,
   postsOfType,
@@ -543,9 +544,28 @@ const decideRaiderTarget = (state: GameState): TileCoord => {
   return RAIDER_FLOOR_DOOR;
 };
 
+/**
+ * Round-7 feature 2 placement (spider side). With 5 spider parties the
+ * engine cap is ⌊5/2⌋ = 2 movable. We commit:
+ *   - deep-raider at floor (8, 5): forward of its east-wall home,
+ *     closer to the storm-drain column. Still inside spider territory
+ *     by movement, but skips ~3 turns of patrol toward the door.
+ *   - silk-line at ceiling (7, 7): forward of (9, 8), toward the
+ *     storm-drain column on the ceiling — the silk-line variant
+ *     already pushes toward storm-drain on turn 2, so the placement
+ *     saves a turn of approach without changing the per-turn logic.
+ * web-guard intentionally stays at the spider-web (queen).
+ */
+const spiderL1Placement = (state: GameState): GameState =>
+  spiderPlacement(state, {
+    'deep-raider': { plane: 'floor', x: 8, y: 5 },
+    'silk-line': { plane: 'ceiling', x: 7, y: 7 },
+  });
+
 export const spiderL1: AIPolicy = {
   name: 'spider-l1',
   faction: 'spider',
+  placement: spiderL1Placement,
   decide(state: GameState, _scenario: ScenarioData, rng: Rng): GameState {
     // Fork an unused stream so future tiebreak randomness can plug in without
     // shifting other subsystems' entropy. (Currently all tiebreaks are by id.)

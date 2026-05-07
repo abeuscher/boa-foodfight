@@ -57,6 +57,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   closestFieldPartyId,
@@ -100,7 +101,15 @@ const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[]
   return [order];
 };
 
-export const divePlayer: AIPolicy = buildAntPolicy(
+/** Round-7 feature 2 placement: push pathfinders to (5, 5) — the
+ * tile that maps via plane-switch directly to the ceiling near the
+ * spider-web. Saves several turns of floor travel on the dive line. */
+const divePlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    pathfinders: { plane: 'floor', x: 5, y: 5 },
+  });
+
+const diveCore = buildAntPolicy(
   'dive',
   (state: GameState) => {
     const webLoc = postLocation(state, SPIDER_WEB);
@@ -116,3 +125,5 @@ export const divePlayer: AIPolicy = buildAntPolicy(
   },
   queenGuardOrders,
 );
+
+export const divePlayer: AIPolicy = { ...diveCore, placement: divePlacement };

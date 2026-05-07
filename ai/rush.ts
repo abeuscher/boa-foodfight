@@ -17,13 +17,26 @@
 
 import type { GameState } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import { buildAntPolicy, moveToOrHold, postLocation, SPIDER_WEB } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
-export const rushPlayer: AIPolicy = buildAntPolicy('rush', (state: GameState) => {
+/** Round-7 feature 2 placement: rush pushes all field parties forward
+ * toward (5, 5), saving 2+ turns of travel. Saves the canonical chain
+ * for movement after turn 1. */
+const rushPlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    'vanguard-alpha': { plane: 'floor', x: 5, y: 5 },
+    'vanguard-bravo': { plane: 'floor', x: 5, y: 4 },
+    pathfinders: { plane: 'floor', x: 4, y: 5 },
+  });
+
+const rushCore = buildAntPolicy('rush', (state: GameState) => {
   const target = postLocation(state, SPIDER_WEB);
   return (party) => {
     if (target === undefined) return { orders: [], posture: 'fight' };
     return { orders: moveToOrHold(party, target), posture: 'fight' };
   };
 });
+
+export const rushPlayer: AIPolicy = { ...rushCore, placement: rushPlacement };

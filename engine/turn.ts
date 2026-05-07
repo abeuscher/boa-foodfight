@@ -15,9 +15,10 @@ import { distance } from './coord.ts';
 import { endOfTurn } from './end-of-turn.ts';
 import { resolveMovement } from './movement.ts';
 import { containsQueen } from './parties.ts';
+import { applyPlacement } from './placement.ts';
 import { postAt, resolveCaptures } from './posts.ts';
 import type { ScenarioData } from './state.ts';
-import type { GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
+import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
 export interface TurnOutcome {
   readonly state: GameState;
@@ -175,10 +176,19 @@ export const runTurn = (
  * import from `ai/` (preserving the engine→ai one-way dependency in
  * CONTRACTS.md). The runScenario harness extracts `.decide` from each
  * policy and passes it here.
+ *
+ * Round-7 feature 2: an optional `placement` hook fires once before
+ * turn 1. The driver passes the just-built initial state plus a
+ * dedicated rng fork; the hook returns a state with that policy's
+ * faction's parties at chosen tiles. The driver then validates each
+ * move against per-faction rules (see engine/placement.ts) and silently
+ * reverts invalid placements.
  */
 export interface PolicyHandle {
   readonly name: string;
+  readonly faction: Faction;
   readonly decide: (state: GameState, scenario: ScenarioData, rng: Rng) => GameState;
+  readonly placement?: (state: GameState, scenario: ScenarioData, rng: Rng) => GameState;
 }
 
 export interface RunScenarioOptions {
@@ -208,18 +218,41 @@ export const runScenario = (
   scenarioName = 'level-1',
 ): ScenarioOutcome => {
   const events: ReplayEvent[] = [];
+  const policies = options.policies ?? [];
+
+  // Round-7 feature 2: pre-game placement. Each policy with a
+  // `placement` hook runs once before turn 1; the engine validates
+  // each requested move and silently reverts invalid ones. Faction
+  // order is fixed (ant first, then spider) but the operations are
+  // independent — each policy can only diff its own faction's parties.
+  let working = initial;
+  for (const policy of policies) {
+    if (!policy.placement) continue;
+    const proposed = policy.placement(working, scenario, rng.fork(`placement-${policy.name}`));
+    working = applyPlacement(policy.faction, working, proposed, scenario);
+  }
+
   // Snapshot the initial POST layout and obstacle tiles so the viewer
   // can render per-seed map randomization. (Without this, the viewer
   // would fall back to the canonical layout and per-seed POSTs would
   // appear identical across all replays.)
-  const postsSnapshot = [...initial.posts.values()].map((p) => ({
+  const postsSnapshot = [...working.posts.values()].map((p) => ({
     id: p.id,
     location: p.location,
     owner: p.owner,
   }));
   const obstaclesSnapshot: TileCoord[] = [];
-  for (const tile of initial.tiles.values()) {
+  for (const tile of working.tiles.values()) {
     if (tile.terrain.kind === 'obstacle') obstaclesSnapshot.push(tile.coord);
+  }
+  // Snapshot the FINAL party positions (post-placement) so replays are
+  // self-contained — old replays without this field still work because
+  // the field is optional.
+  const partyPositionsSnapshot: { partyId: PartyId; location: TileCoord }[] = [];
+  for (const id of [...working.parties.keys()].sort()) {
+    const party = working.parties.get(id);
+    if (!party) continue;
+    partyPositionsSnapshot.push({ partyId: id, location: party.location });
   }
   events.push({
     kind: 'scenario-start',
@@ -228,12 +261,11 @@ export const runScenario = (
     scenario: scenarioName,
     posts: postsSnapshot,
     obstacles: obstaclesSnapshot,
+    partyPositions: partyPositionsSnapshot,
   });
   events.push({ kind: 'turn-start', turn: 1, tick: tick() });
 
-  let working = initial;
   let turnsPlayed = 0;
-  const policies = options.policies ?? [];
   while (working.winner === null && turnsPlayed < options.maxTurns) {
     for (const policy of policies) {
       working = policy.decide(

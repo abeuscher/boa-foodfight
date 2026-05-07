@@ -26,6 +26,7 @@
 import type { GameState } from '../engine/types.ts';
 import type { AbilityId, AbilityOrder, Order, Party } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   closestFieldPartyId,
@@ -44,7 +45,17 @@ const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[]
   return [order];
 };
 
-export const jellyRushPlayer: AIPolicy = buildAntPolicy(
+/** Round-7 feature 2 placement: all field parties forward to (4, 4)
+ * — ready to plane-switch on the very first turn. Tight clustering
+ * keeps the jelly-supply line short. */
+const jellyRushPlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    'vanguard-alpha': { plane: 'floor', x: 4, y: 4 },
+    'vanguard-bravo': { plane: 'floor', x: 5, y: 4 },
+    pathfinders: { plane: 'floor', x: 4, y: 5 },
+  });
+
+const jellyRushCore = buildAntPolicy(
   'jelly-rush',
   (state: GameState) => {
     const webLoc = postLocation(state, SPIDER_WEB);
@@ -55,3 +66,5 @@ export const jellyRushPlayer: AIPolicy = buildAntPolicy(
   },
   queenGuardOrders,
 );
+
+export const jellyRushPlayer: AIPolicy = { ...jellyRushCore, placement: jellyRushPlacement };
