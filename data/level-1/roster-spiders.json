@@ -93,6 +93,32 @@
         "y": 8
       },
       "posture": "fight"
+    },
+    {
+      "id": "deep-raider",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-elite",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 2
+        },
+        {
+          "templateId": "spider-spinner",
+          "count": 1
+        }
+      ],
+      "startingLocation": {
+        "plane": "east-wall",
+        "x": 5,
+        "y": 5
+      },
+      "posture": "fight"
     }
   ]
 }
