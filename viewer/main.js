@@ -526,6 +526,53 @@ function renderLog(events, currentTick) {
 }
 
 // ---------------------------------------------------------------------------
+// POSTs side-panel.
+//
+// Lists every POST on the board with its location, defensive bonus, and
+// live owner (which advances as `post-captured` events fire — already
+// tracked by the reducer in `state.posts`). Static info comes from
+// `data/level-1/map.json`; the values are inlined here to avoid an
+// extra fetch in the in-browser viewer.
+// ---------------------------------------------------------------------------
+
+// Defensive-bonus per POST type prefix. Per-seed map-gen suffixes the
+// id with an instance number (e.g., `soap-dish-2`); the lookup falls
+// back to the prefix match so duplicates inherit the type's bonus.
+const POST_DEFENSIVE_BONUS = {
+  'storm-drain': 4,
+  'soap-dish': 2,
+  'towel-rack': 2,
+  'wall-crack': 2,
+  'spider-web': 2,
+};
+
+function postDefensiveBonus(id) {
+  if (POST_DEFENSIVE_BONUS[id] !== undefined) return POST_DEFENSIVE_BONUS[id];
+  const m = id.match(/^([a-z-]+)-(\d+)$/);
+  if (m && POST_DEFENSIVE_BONUS[m[1]] !== undefined) return POST_DEFENSIVE_BONUS[m[1]];
+  return 0;
+}
+
+function renderPostsPanel(state) {
+  const sources = postSource(state.initialPosts);
+  document.getElementById('posts-count').textContent = String(sources.length);
+  const rows = sources.map((def) => {
+    const live = state.posts.get(def.id);
+    const owner = live?.owner ?? def.owner;
+    const bonus = postDefensiveBonus(def.id);
+    return (
+      `<div class="post-row">` +
+      `<span class="post-id">${escapeHtml(def.id)}</span>` +
+      `<span class="post-loc">${escapeHtml(def.plane)} (${String(def.x)},${String(def.y)})</span>` +
+      `<span class="post-bonus">+${String(bonus)}</span>` +
+      `<span class="post-owner ${owner}">${owner}</span>` +
+      `</div>`
+    );
+  });
+  document.getElementById('posts-content').innerHTML = rows.join('');
+}
+
+// ---------------------------------------------------------------------------
 // Click-to-inspect: map a canvas click to (plane, x, y), show details for
 // any parties + post at that tile.
 // ---------------------------------------------------------------------------
@@ -1063,6 +1110,7 @@ function setTick(tick) {
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
+  renderPostsPanel(state);
   maybeUpdateBattlePanelForTick(CURRENT_EVENTS, t);
   const winnerText = state.winner ? (state.winner === 'ant' ? ' — ANTS WIN' : ' — ANTS LOSE') : '';
   document.getElementById('tick-label').textContent =
