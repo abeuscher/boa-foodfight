@@ -86,6 +86,84 @@ describe('abilities schema', () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it('accepts the hypnotize ability with at-will uses', () => {
+    const result = abilitiesFileSchema.safeParse({
+      version: 1,
+      abilities: [
+        {
+          id: 'hypnotize',
+          name: 'Hypnotize',
+          category: 'special-attack',
+          target: 'party',
+          uses: null,
+          cooldown: 0,
+          params: {
+            successRate: 0.8,
+            minControlTurns: 5,
+            maxControlTurns: 10,
+            reboundImmunityTurns: 10,
+          },
+          description: 'Spider hypnosis on a neutral party.',
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('neutral unit templates', () => {
+  const baseTmpl = {
+    abilities: [],
+    tags: [],
+    planeAffinity: {
+      floor: { attack: 0, armor: 0 },
+      ceiling: { attack: 0, armor: 0 },
+      wall: { attack: 0, armor: 0 },
+    },
+  };
+
+  it('parses the mouse / cockroach / stinkbug templates', () => {
+    const result = unitsFileSchema.safeParse({
+      version: 1,
+      templates: [
+        {
+          ...baseTmpl,
+          id: 'mouse',
+          name: 'Mouse',
+          faction: 'neutral',
+          size: 'medium',
+          slotCost: 2,
+          movement: 'ground',
+          baseStats: { hp: 14, attack: 5, agility: 4, armor: 1, intelligence: 2, constitution: 7 },
+          tags: ['large', 'mercenary'],
+        },
+        {
+          ...baseTmpl,
+          id: 'cockroach',
+          name: 'Cockroach',
+          faction: 'neutral',
+          size: 'small',
+          slotCost: 1,
+          movement: 'ground',
+          baseStats: { hp: 6, attack: 6, agility: 7, armor: 0, intelligence: 1, constitution: 5 },
+          tags: ['swarm', 'ferocious'],
+        },
+        {
+          ...baseTmpl,
+          id: 'stinkbug',
+          name: 'Stinkbug',
+          faction: 'neutral',
+          size: 'small',
+          slotCost: 1,
+          movement: 'ground',
+          baseStats: { hp: 8, attack: 3, agility: 3, armor: 1, intelligence: 2, constitution: 6 },
+          tags: ['damage-zone'],
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('map schema', () => {

@@ -216,6 +216,21 @@
       "description": "A mage charges an arrow with phero-magic and an archer fires it. Single target, ranged, hits hard. Requires at least 1 mage and 1 archer in the party."
     },
     {
+      "id": "hypnotize",
+      "name": "Hypnotize",
+      "category": "special-attack",
+      "target": "party",
+      "uses": null,
+      "cooldown": 0,
+      "params": {
+        "successRate": 0.8,
+        "minControlTurns": 5,
+        "maxControlTurns": 10,
+        "reboundImmunityTurns": 10
+      },
+      "description": "Any spider unit may attempt to hypnotize a neutral party at the same tile. Costs the caster half its current HP (rounded down). 80% chance to seize control of the neutral party for 5-10 turns; on failure a stinkbug target leaves a damage zone."
+    },
+    {
       "id": "phalanx-charge",
       "name": "Phalanx Charge",
       "category": "special-attack",
