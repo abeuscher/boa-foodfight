@@ -296,6 +296,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     pheroTrails: new Map(),
     neutralStatus,
     damageZones: [],
+    playerGold: { ant: 0, spider: 0 },
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({
