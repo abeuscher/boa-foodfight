@@ -396,38 +396,5 @@ describe('spiderL1', () => {
         expect(emergencyEvent.threatTrailEntries.length).toBeGreaterThan(0);
       }
     });
-
-    it('advance-scout is NOT recalled during emergency (keeps soap-dish offensive order)', () => {
-      const { state: initial, data } = loadScenario(DATA_DIR, 1);
-      const web = requirePost(initial, 'spider-web' as PostId);
-      // Trigger emergency by seeding a fresh trail at the web tile.
-      let state: GameState = { ...initial, pheroTrails: new Map() };
-      state = setTrailEntry(state, 'pathfinders' as PartyId, web.location);
-
-      const next = spiderL1.decide(state, data, createRng(1));
-
-      // Sanity: emergency actually fired.
-      expect(isWebThreatened(state, web.location)).toBe(true);
-
-      // advance-scout's offensive order toward soap-dish must still be
-      // present — Round 13 retune dropped it from the recall list.
-      const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
-      expect(soap).toBeDefined();
-      const scout = next.parties.get('advance-scout' as PartyId);
-      expect(scout).toBeDefined();
-      const moveOrder = scout?.orders.find((o) => o.kind === 'move-to');
-      expect(moveOrder).toBeDefined();
-      expect(moveOrder?.target).toEqual(soap!.location);
-
-      // And: the emergency replay event's recall list must NOT contain
-      // advance-scout (or deep-raider).
-      const queued = next.pendingPolicyEvents ?? [];
-      const emergencyEvent = queued.find((e) => e.kind === 'spider-emergency-defense');
-      expect(emergencyEvent).toBeDefined();
-      if (emergencyEvent?.kind === 'spider-emergency-defense') {
-        expect(emergencyEvent.recalledPartyIds).not.toContain('advance-scout' as PartyId);
-        expect(emergencyEvent.recalledPartyIds).not.toContain('deep-raider' as PartyId);
-      }
-    });
   });
 });

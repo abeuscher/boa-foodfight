@@ -146,26 +146,20 @@ const RAIDER_DETECT = 3;
 
 /**
  * Round 13 — reactive emergency defense. When the spider AI detects an
- * ant trail entry with `ageInTurns <= EMERGENCY_MAX_AGE` either on the
- * spider-web's plane within Chebyshev `EMERGENCY_RADIUS` of the web, OR
- * on the floor at `(webLoc.x, webLoc.y)` (the dive variant's plane-
- * switch launch tile, an imminent threat), it overrides offensive
- * orders for the recall list (silk-line + counter-push pusher) and
- * steps each one toward the web. Web-guard stays put; spiderlings
- * keep chasing closest ant (they converge naturally if the closest
- * ant is at the web). advance-scout and deep-raider are intentionally
- * NOT recalled — their offensive pressure on soap-dish/east-wall is
- * worth more than a redundant defender on the web tile.
- *
- * Round 13 retune: radius 4→2, age 1→0, recall list silk-line + pusher
- * only. Round-13 first pass over-fired (baseline 31%); these changes
- * restore proportionate response.
+ * ant trail entry with `ageInTurns <= 1` either on the spider-web's
+ * plane within Chebyshev `EMERGENCY_RADIUS` of the web, OR on the floor
+ * at `(webLoc.x, webLoc.y)` (the dive variant's plane-switch launch
+ * tile, an imminent threat), it overrides offensive orders for the
+ * non-web-guard parties listed in `EMERGENCY_RECALL_ORDER` and steps
+ * each one toward the web. Web-guard stays put; spiderlings keep
+ * chasing closest ant (they converge naturally if the closest ant is
+ * at the web).
  */
-const EMERGENCY_RADIUS = 2;
+const EMERGENCY_RADIUS = 4;
 /** Max trail-entry age (in turns) that still counts as an active threat
- * for emergency-defense detection. Age 0 = current tile only — older
- * crumbs don't trigger. */
-const EMERGENCY_MAX_AGE = 0;
+ * for emergency-defense detection. Age 0 = current tile, age 1 = last
+ * turn's tile. Older entries are stale crumbs and don't trigger. */
+const EMERGENCY_MAX_AGE = 1;
 
 const totalSlotCost = (
   party: Party,
@@ -535,17 +529,13 @@ export const isWebThreatened = (state: GameState, webLoc: TileCoord): boolean =>
  * (it already holds at the web). Spiderlings are also absent — their
  * "chase closest ant" behavior naturally converges on the web when an
  * ant runs the gauntlet.
- *
- * Round 13 retune: advance-scout and deep-raider are dropped from the
- * recall list. Their offensive orders (soap-dish harassment / east-
- * wall raid toward storm-drain) stay intact under emergency. Only
- * silk-line and the counter-push pusher (computed dynamically below)
- * are recalled.
  */
 const EMERGENCY_RECALL_ORDER: readonly PartyId[] = [
   SILK_LINE,
   // counter-push pusher slot is computed dynamically (largest non-scout
   // non-raider non-silk party) — handled inline in `decide`.
+  'advance-scout' as PartyId,
+  DEEP_RAIDER,
 ];
 
 /**
@@ -803,13 +793,12 @@ export const spiderL1: AIPolicy = {
     // the spider-web, override offensive orders for the recall list:
     //   silk-line (highest priority — furthest forward)
     //   counter-push pusher (largest non-scout/non-raider/non-silk)
+    //   advance-scout
+    //   deep-raider
     // For each, replace orders with a step toward the spider-web. Once
     // a recalled party reaches the web, defend in place. web-guard +
     // spiderlings keep their normal behavior (web-guard already holds
-    // at the web; spiderlings chase closest ant). advance-scout and
-    // deep-raider keep their offensive orders untouched (Round 13
-    // retune — recalling them over-fired and crashed baseline win
-    // rate).
+    // at the web; spiderlings chase closest ant).
     //
     // Always recompute the pusher slot here regardless of whether
     // counter-push was active — under emergency we want to recall the
