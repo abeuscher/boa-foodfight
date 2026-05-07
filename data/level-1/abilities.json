@@ -153,6 +153,56 @@
         "durationTurns": 1
       },
       "description": "When the silk runs thin and her wounds won't close, the Spider Queen flings the last strand as a snare. One attacker is bound for a single beat — long enough, if the timing is right."
+    },
+    {
+      "id": "spin-web",
+      "name": "Spin Web",
+      "category": "debuff",
+      "target": "tile",
+      "uses": 1,
+      "cooldown": 0,
+      "params": { "delayTurns": 1 },
+      "description": "The spinner spends a turn weaving silk across the current tile. Any ant party that steps on it must pause for a turn while it tears free; the web breaks afterward."
+    },
+    {
+      "id": "recruit",
+      "name": "Recruit",
+      "category": "special-attack",
+      "target": "party",
+      "uses": null,
+      "cooldown": 2,
+      "params": { "successRate": 0.25 },
+      "description": "An ant mage attempts pheromone-mediated diplomacy on a single isolated foe. 25% of the time the target switches sides; otherwise nothing happens (mage doesn't attack this turn)."
+    },
+    {
+      "id": "spawn-spiderlings",
+      "name": "Spawn Spiderlings",
+      "category": "special-attack",
+      "target": "self",
+      "uses": 1,
+      "cooldown": 0,
+      "params": { "count": 10 },
+      "description": "Spider-queen disgorges a brood — 10 tiny spiderlings scatter from her tile as independent parties. Once per scenario; they're fragile but a real distraction."
+    },
+    {
+      "id": "magic-arrow",
+      "name": "Magic Arrow",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 1,
+      "params": { "damage": 18, "minMages": 1, "minArchers": 1 },
+      "description": "A mage charges an arrow with phero-magic and an archer fires it. Single target, ranged, hits hard. Requires at least 1 mage and 1 archer in the party."
+    },
+    {
+      "id": "phalanx-charge",
+      "name": "Phalanx Charge",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 1,
+      "params": { "damage": 6, "aoe": 1, "minFootmen": 3 },
+      "description": "Three or more footmen lock shields and barrel forward as one. Hits every enemy in the target party for moderate damage."
     }
   ]
 }

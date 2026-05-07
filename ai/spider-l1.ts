@@ -26,6 +26,7 @@
 import { distance, sameCoord } from '../engine/coord.ts';
 import type { ScenarioData } from '../engine/state.ts';
 import type {
+  AbilityId,
   GameState,
   Order,
   Party,
@@ -301,6 +302,15 @@ export const spiderL1: AIPolicy = {
     const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
     const pusher = counterPushActive ? pickPusher(state, scout?.id ?? null) : null;
 
+    // Phase-2 ability triggers — emit once on a specific turn so the
+    // engine's `uses: 1` envelopes are respected without per-unit
+    // bookkeeping in the AI:
+    //   turn 2 — silk-line spins a web on its current wall tile.
+    //   turn 3 — web-guard spawns 10 spiderlings as separate parties.
+    const spiderlingsAlreadySpawned = [...state.parties.keys()].some((pid) =>
+      pid.startsWith('spiderling-'),
+    );
+
     const nextParties = new Map<PartyId, Party>();
     for (const [id, party] of state.parties) {
       if (party.faction !== 'spider') {
@@ -317,11 +327,27 @@ export const spiderL1: AIPolicy = {
       }
 
       let nextOrders: readonly Order[];
+      // Spiderling wander: tiny randomized hops, no battle-seeking. Just
+      // adds visual life. Using the ai-tiebreak rng keeps deterministic.
+      if (id.startsWith('spiderling-')) {
+        const dx = rng.int(3) - 1;
+        const dy = rng.int(3) - 1;
+        const tx = Math.max(0, Math.min(9, party.location.x + dx));
+        const ty = Math.max(0, Math.min(9, party.location.y + dy));
+        const target: TileCoord = { plane: party.location.plane, x: tx, y: ty };
+        nextOrders = sameCoord(party.location, target) ? [] : [moveTo(target)];
+        nextParties.set(id, { ...party, orders: nextOrders });
+        continue;
+      }
       // Priority order: web-guard always holds (queen is sacred). Counter-push
       // wins next — it's the whole point of the rule, so even a party that
       // happens to be on the web tile gets pulled off when ants dominate.
       // Otherwise on-the-web means hold; then scout; then patrol/threat.
-      if (id === ('web-guard' as PartyId)) {
+      if (id === ('web-guard' as PartyId) && state.turn === 3 && !spiderlingsAlreadySpawned) {
+        nextOrders = [{ kind: 'use-ability', abilityId: 'spawn-spiderlings' as AbilityId }];
+      } else if (id === ('silk-line' as PartyId) && state.turn === 2) {
+        nextOrders = [{ kind: 'use-ability', abilityId: 'spin-web' as AbilityId }];
+      } else if (id === ('web-guard' as PartyId)) {
         nextOrders = [];
       } else if (pusher !== null && id === pusher.id) {
         nextOrders = sameCoord(party.location, counterPushTargetLoc)

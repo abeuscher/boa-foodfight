@@ -234,6 +234,7 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
     fog,
     queenUltimateCharge: 0,
     queenUltimatesUsed: 0,
+    webbedTiles: new Map(),
     buttons: 0,
     winner: null,
   };

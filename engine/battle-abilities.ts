@@ -26,6 +26,11 @@ import type { AbilityId, Party, ReplayEvent, Unit, UnitTemplate, UnitTemplateId 
 
 const VOLLEY: AbilityId = 'volley' as AbilityId;
 const MEND: AbilityId = 'mend' as AbilityId;
+const MAGIC_ARROW: AbilityId = 'magic-arrow' as AbilityId;
+const PHALANX_CHARGE: AbilityId = 'phalanx-charge' as AbilityId;
+const FOOTMAN_TEMPLATE = 'ant-footman';
+const ARCHER_TEMPLATE = 'ant-archer';
+const MAGE_TEMPLATE = 'ant-mage';
 
 export interface OpeningAbilityResult {
   readonly attacker: Party;
@@ -174,6 +179,142 @@ const fireMends = (
   return { party: { ...party, units: workingUnits }, events };
 };
 
+/** True iff at least one living unit's templateId === target. */
+const hasLivingTemplate = (party: Party, target: string): boolean =>
+  party.units.some((u) => isLiving(u) && u.templateId === target);
+
+const countLivingTemplate = (party: Party, target: string): number =>
+  party.units.filter((u) => isLiving(u) && u.templateId === target).length;
+
+interface OpeningArgs {
+  shooter: Party;
+  target: Party;
+  abilities: AbilitiesFile;
+  turn: number;
+  tick: () => number;
+}
+interface OpeningResult {
+  shooter: Party;
+  target: Party;
+  events: readonly ReplayEvent[];
+}
+
+/**
+ * Magic arrow: a mage charges and an archer fires. Single ranged
+ * shot at a high-HP enemy. Once per scenario per archer-and-mage
+ * pair (we just consume one of each via usedAbilities). Requires
+ * `minMages` mages and `minArchers` archers in the shooter party.
+ */
+const fireMagicArrows = (args: OpeningArgs): OpeningResult => {
+  const { shooter, target, abilities, turn, tick } = args;
+  const def = findAbility(abilities, MAGIC_ARROW);
+  if (!def) return { shooter, target, events: [] };
+  const damage = def.params.damage ?? 0;
+  const minMages = def.params.minMages ?? 1;
+  const minArchers = def.params.minArchers ?? 1;
+  if (damage <= 0) return { shooter, target, events: [] };
+  if (countLivingTemplate(shooter, MAGE_TEMPLATE) < minMages)
+    return { shooter, target, events: [] };
+  if (countLivingTemplate(shooter, ARCHER_TEMPLATE) < minArchers)
+    return { shooter, target, events: [] };
+  // Pick the highest-HP living target (focus fire on a tank).
+  let highest: Unit | undefined;
+  for (const t of target.units) {
+    if (!isLiving(t)) continue;
+    if (highest === undefined || t.currentHp > highest.currentHp) highest = t;
+  }
+  if (!highest) return { shooter, target, events: [] };
+  // Mark one mage and one archer as used. (If they re-fire later it's
+  // capped by the `uses: 1` ability budget — but we don't enforce
+  // per-unit uses elsewhere yet, so this is the budget.)
+  let consumedMage = false;
+  let consumedArcher = false;
+  const newShooterUnits = shooter.units.map((u) => {
+    if (!isLiving(u)) return u;
+    if (!consumedMage && u.templateId === MAGE_TEMPLATE && !hasUsed(u, MAGIC_ARROW)) {
+      consumedMage = true;
+      return markUsed(u, MAGIC_ARROW);
+    }
+    if (!consumedArcher && u.templateId === ARCHER_TEMPLATE && !hasUsed(u, MAGIC_ARROW)) {
+      consumedArcher = true;
+      return markUsed(u, MAGIC_ARROW);
+    }
+    return u;
+  });
+  if (!consumedMage || !consumedArcher) return { shooter, target, events: [] };
+  // Apply damage.
+  const newTargetUnits = target.units.map((u) =>
+    u.id === highest.id ? { ...u, currentHp: Math.max(0, u.currentHp - damage) } : u,
+  );
+  const events: ReplayEvent[] = [
+    {
+      kind: 'ability-used',
+      turn,
+      tick: tick(),
+      partyId: shooter.id,
+      abilityId: MAGIC_ARROW,
+    },
+  ];
+  if (highest.currentHp > 0 && highest.currentHp - damage <= 0) {
+    events.push({ kind: 'unit-died', turn, tick: tick(), unitId: highest.id });
+  }
+  return {
+    shooter: { ...shooter, units: newShooterUnits },
+    target: { ...target, units: newTargetUnits },
+    events,
+  };
+};
+
+/**
+ * Phalanx Charge: 3+ footmen lock shields and barrel forward. AoE
+ * damage on every living enemy. Once per scenario per footman.
+ */
+const firePhalanxCharge = (args: OpeningArgs): OpeningResult => {
+  const { shooter, target, abilities, turn, tick } = args;
+  const def = findAbility(abilities, PHALANX_CHARGE);
+  if (!def) return { shooter, target, events: [] };
+  const damage = def.params.damage ?? 0;
+  const minFootmen = def.params.minFootmen ?? 3;
+  if (damage <= 0) return { shooter, target, events: [] };
+  if (countLivingTemplate(shooter, FOOTMAN_TEMPLATE) < minFootmen)
+    return { shooter, target, events: [] };
+  // Mark the first `minFootmen` unused footmen.
+  let consumed = 0;
+  const newShooterUnits = shooter.units.map((u) => {
+    if (consumed >= minFootmen) return u;
+    if (!isLiving(u)) return u;
+    if (u.templateId !== FOOTMAN_TEMPLATE) return u;
+    if (hasUsed(u, PHALANX_CHARGE)) return u;
+    consumed += 1;
+    return markUsed(u, PHALANX_CHARGE);
+  });
+  if (consumed < minFootmen) return { shooter, target, events: [] };
+  // AoE: every living target unit takes `damage`.
+  const events: ReplayEvent[] = [
+    {
+      kind: 'ability-used',
+      turn,
+      tick: tick(),
+      partyId: shooter.id,
+      abilityId: PHALANX_CHARGE,
+    },
+  ];
+  const newTargetUnits = target.units.map((u) => {
+    if (!isLiving(u)) return u;
+    const newHp = Math.max(0, u.currentHp - damage);
+    if (newHp <= 0 && u.currentHp > 0) {
+      events.push({ kind: 'unit-died', turn, tick: tick(), unitId: u.id });
+    }
+    return { ...u, currentHp: newHp };
+  });
+  void hasLivingTemplate; // keep helper exported-by-side-effect for symmetry
+  return {
+    shooter: { ...shooter, units: newShooterUnits },
+    target: { ...target, units: newTargetUnits },
+    events,
+  };
+};
+
 export const applyOpeningAbilities = (
   attacker: Party,
   defender: Party,
@@ -196,10 +337,34 @@ export const applyOpeningAbilities = (
   );
   events.push(...defVolley.events);
 
-  const atkMend = fireMends(defVolley.target, templates, abilities, turn, tick);
+  // Group attacks: magic-arrow (mage+archer) and phalanx-charge (3+
+  // footmen) fire after volley and before mend, so they soften the
+  // defender further or pre-empt the kill battle. Only the attacker
+  // side fires group attacks — they're spec'd as offensive group
+  // moves, not defensive reactions.
+  const atkArrow = fireMagicArrows({
+    shooter: defVolley.target,
+    target: defVolley.shooter,
+    abilities,
+    turn,
+    tick,
+  });
+  events.push(...atkArrow.events);
+  const atkPhalanx = firePhalanxCharge({
+    shooter: atkArrow.shooter,
+    target: atkArrow.target,
+    abilities,
+    turn,
+    tick,
+  });
+  events.push(...atkPhalanx.events);
+
+  const atkMend = fireMends(atkPhalanx.shooter, templates, abilities, turn, tick);
   events.push(...atkMend.events);
-  const defMend = fireMends(defVolley.shooter, templates, abilities, turn, tick);
+  const defMend = fireMends(atkPhalanx.target, templates, abilities, turn, tick);
   events.push(...defMend.events);
 
+  // The attacker is whichever party's units we threaded through the
+  // mage/archer/phalanx pipeline; defender is the other.
   return { attacker: atkMend.party, defender: defMend.party, events };
 };

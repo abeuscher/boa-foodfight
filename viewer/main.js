@@ -34,6 +34,7 @@ function guessFaction(partyId) {
   if (partyId.startsWith('web')) return 'spider';
   if (partyId.startsWith('silk')) return 'spider';
   if (partyId.startsWith('advance')) return 'spider';
+  if (partyId.startsWith('spiderling-')) return 'spider';
   return 'neutral';
 }
 
@@ -67,6 +68,10 @@ function reduceWithInitial(events, targetTick) {
   // if the replay is older and doesn't carry the snapshot.
   let initialPosts = null;
   let obstacles = [];
+  // Webbed tiles overlay. Keys are `${plane}:${x},${y}`. Web-spun
+  // adds; web-broken removes. Spider-spawned spider parties (id
+  // starting with `spiderling-`) appear via party-moved events.
+  const webs = new Map();
   let turn = 0;
   let queenCharge = 0;
   let winner = null;
@@ -109,6 +114,16 @@ function reduceWithInitial(events, targetTick) {
       case 'queen-ultimate-charged':
         queenCharge = e.charge;
         break;
+      case 'web-spun':
+        webs.set(`${e.coord.plane}:${e.coord.x},${e.coord.y}`, {
+          plane: e.coord.plane,
+          x: e.coord.x,
+          y: e.coord.y,
+        });
+        break;
+      case 'web-broken':
+        webs.delete(`${e.coord.plane}:${e.coord.x},${e.coord.y}`);
+        break;
       case 'scenario-end':
         winner = e.winner;
         break;
@@ -116,7 +131,7 @@ function reduceWithInitial(events, targetTick) {
         break;
     }
   }
-  return { parties, posts, initialPosts, obstacles, turn, queenCharge, winner };
+  return { parties, posts, initialPosts, obstacles, webs, turn, queenCharge, winner };
 }
 
 // ---------------------------------------------------------------------------
@@ -205,6 +220,31 @@ function drawObstacles(ctx, plane, obstacles) {
   }
 }
 
+function drawWebs(ctx, plane, webs) {
+  if (!webs || webs.size === 0) return;
+  const { ox, oy } = planeOrigin(plane);
+  // Light translucent spider-purple square with a small "X" so the web
+  // reads at a glance against both open and obstacle backgrounds.
+  ctx.save();
+  ctx.fillStyle = 'rgba(192, 38, 211, 0.25)';
+  ctx.strokeStyle = '#c026d3';
+  ctx.lineWidth = 1;
+  for (const w of webs.values()) {
+    if (w.plane !== plane) continue;
+    const x = ox + w.x * CELL;
+    const y = oy + w.y * CELL;
+    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+    // Diagonal silk strands.
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 4);
+    ctx.lineTo(x + CELL - 4, y + CELL - 4);
+    ctx.moveTo(x + CELL - 4, y + 4);
+    ctx.lineTo(x + 4, y + CELL - 4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawPosts(ctx, plane, postsState, initialPosts) {
   const { ox, oy } = planeOrigin(plane);
   for (const def of postSource(initialPosts)) {
@@ -283,6 +323,7 @@ function render(canvas, state) {
   for (const plane of PLANES) {
     drawPlane(ctx, plane);
     drawObstacles(ctx, plane, state.obstacles);
+    drawWebs(ctx, plane, state.webs);
     drawPosts(ctx, plane, state.posts, state.initialPosts);
     drawParties(ctx, plane, state.parties);
   }
