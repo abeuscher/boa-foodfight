@@ -163,7 +163,14 @@ export const runTurn = (
   events.push(...captureOutcome.events);
 
   // 4. End of turn (heal / charge / produce / win-check / turn++).
-  const eotOutcome = endOfTurn(working, { queen: scenario.queen, jelly: scenario.jelly }, tick);
+  //    Round 14: scenario.items + a forked rng power the item-
+  //    discovery tick inside endOfTurn.
+  const eotOutcome = endOfTurn(
+    working,
+    { queen: scenario.queen, jelly: scenario.jelly, items: scenario.items },
+    tick,
+    rng.fork('end-of-turn'),
+  );
   working = eotOutcome.state;
   events.push(...eotOutcome.events);
 

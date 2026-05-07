@@ -14,8 +14,9 @@
  */
 
 import { distance, sameCoord } from './coord.ts';
+import { discoverItems } from './items.ts';
 import { PHASE_LENGTH } from './phase.ts';
-import type { JellyFile, QueenFile } from './schemas/index.ts';
+import type { ItemsFile, JellyFile, QueenFile } from './schemas/index.ts';
 import type {
   DamageZone,
   DayNightPhase,
@@ -28,6 +29,7 @@ import type {
   Post,
   PostId,
   ReplayEvent,
+  Rng,
   TileCoord,
   Unit,
   UnitId,
@@ -50,6 +52,11 @@ export interface EndOfTurnInput {
   /** Tuning data, sourced from data/level-1/queen.json and jelly.json. */
   readonly queen: QueenFile;
   readonly jelly: JellyFile;
+  /** Round 14 — items.json content. Used by the discovery tick to
+   * categorize spawned items (persistent vs consumable) and apply
+   * consumable effects on pickup. Optional for backwards compat with
+   * pre-round-14 callers (in which case discovery is skipped). */
+  readonly items?: ItemsFile;
 }
 
 export interface EndOfTurnOutcome {
@@ -463,6 +470,7 @@ export const endOfTurn = (
   state: GameState,
   input: EndOfTurnInput,
   tick: () => number,
+  rng?: Rng,
 ): EndOfTurnOutcome => {
   const events: ReplayEvent[] = [];
   const currentTurn = state.turn;
@@ -601,6 +609,25 @@ export const endOfTurn = (
   const zoneTickResult = applyDamageZoneTicks(working, currentTurn, tick);
   working = zoneTickResult.state;
   events.push(...zoneTickResult.events);
+
+  // 5e. Round 14 — item discovery. Eligible (ant/spider, non-queen-
+  //     guard, leadered, alive) parties roll 25% per adjacent
+  //     undiscovered item. Consumables fire on pickup; persistents
+  //     occupy `Party.item` (with a swap heuristic when slots are
+  //     full). Skipped when the caller doesn't supply items + rng so
+  //     pre-round-14 callers / unit tests stay deterministic.
+  if (input.items && rng) {
+    const itemRng = rng.fork('item-discovery');
+    const discoveryResult = discoverItems(
+      working,
+      { itemsFile: input.items, jelly: input.jelly },
+      itemRng,
+      currentTurn,
+      tick,
+    );
+    working = discoveryResult.state;
+    events.push(...discoveryResult.events);
+  }
 
   // 6. Day/night phase advance. Decrement remaining-in-phase; if it
   //    hits 0, flip the phase and reset the counter to PHASE_LENGTH.
