@@ -60,6 +60,25 @@ export interface Stats {
   readonly constitution: number;
 }
 
+/**
+ * Per-plane offset to a unit's combat math. The attacker's plane
+ * (the battle tile's plane) selects the row applied to both sides:
+ * the `attack` of the attacker's affinity row stacks onto its
+ * effective attack, the `armor` of the defender's affinity row stacks
+ * onto its effective armor. Wall planes (north/south/east/west) all
+ * use the same `wall` row.
+ */
+export interface PlaneAffinityRow {
+  readonly attack: number;
+  readonly armor: number;
+}
+
+export interface PlaneAffinity {
+  readonly floor: PlaneAffinityRow;
+  readonly ceiling: PlaneAffinityRow;
+  readonly wall: PlaneAffinityRow;
+}
+
 export interface UnitTemplate {
   readonly id: UnitTemplateId;
   readonly name: string;
@@ -70,6 +89,7 @@ export interface UnitTemplate {
   readonly baseStats: Stats;
   readonly abilities: readonly AbilityId[];
   readonly tags: readonly string[];
+  readonly planeAffinity: PlaneAffinity;
 }
 
 export interface Unit {
@@ -204,6 +224,30 @@ export interface FogTile {
 // Game state
 // ---------------------------------------------------------------------------
 
+/**
+ * Day/night cycle state (rec 1.2). Phase flips on a fixed cadence
+ * (4 turns each: day 1-4, night 5-8, day 9-12, ...). Combat math
+ * applies a +1 attack / +1 agility bonus to spiders at night and a
+ * -1 attack penalty to ant-archers at night; abilities can be gated
+ * (scout-ping is suppressed at night). Bonuses are flat and stack
+ * with plane affinity (rec 1.3) before the multiplicative posture/
+ * jelly/queen stack.
+ */
+export type DayNightPhase = 'day' | 'night';
+
+/**
+ * One pheromone breadcrumb left behind by an ant party (rec 1.5).
+ * Spiders see the trail of (plane, x, y, age) entries — they don't
+ * see live positions; ants see everything. Decay is age-based: an
+ * entry older than 3 turns is dropped from the trail at end-of-turn.
+ */
+export interface PheroTrailEntry {
+  readonly plane: Plane;
+  readonly x: number;
+  readonly y: number;
+  readonly ageInTurns: number;
+}
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -222,6 +266,20 @@ export interface GameState {
    * freely. */
   readonly webbedTiles: ReadonlyMap<string, TileCoord>;
   readonly buttons: number;
+  /** Current day/night phase. Starts at `'day'`; flips every
+   * `PHASE_LENGTH` turns at the top of the turn loop. */
+  readonly phase: DayNightPhase;
+  /** Turns left in the current phase. Decremented at turn-start;
+   * when it would hit 0, the phase flips and the counter resets to
+   * `PHASE_LENGTH`. */
+  readonly phaseTurnsRemaining: number;
+  /** Per-ant-party pheromone trails (rec 1.5). Each entry is a
+   * decaying breadcrumb of the party's recent location. End-of-turn
+   * appends the current location with `ageInTurns: 0` and ages all
+   * existing entries; entries older than 3 turns are dropped. The
+   * spider AI consumes this as the *only* visibility into ant
+   * positions. Ants see the world directly. */
+  readonly pheroTrails: ReadonlyMap<PartyId, readonly PheroTrailEntry[]>;
   readonly winner: Faction | null;
 }
 
@@ -305,6 +363,22 @@ export type ReplayEvent =
       readonly kind: 'spiderlings-spawned';
       readonly fromPartyId: PartyId;
       readonly newPartyIds: readonly PartyId[];
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'corner-crossed';
+      readonly partyId: PartyId;
+      readonly from: TileCoord;
+      readonly to: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'phase-changed';
+      readonly phase: DayNightPhase;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'ability-blocked-by-phase';
+      readonly partyId: PartyId;
+      readonly abilityId: AbilityId;
+      readonly phase: DayNightPhase;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 

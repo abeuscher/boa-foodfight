@@ -457,6 +457,132 @@ describe('resolveBattle: targeting policy', () => {
   });
 });
 
+describe('resolveBattle: plane affinity', () => {
+  // Spider templates: +1 attack/+1 armor on ceiling, -1 attack on floor.
+  // Ant templates (most): +1/+1 on floor, -1 attack on ceiling.
+  // The combat formula folds affinity additively before the multiplicative
+  // stack, so a battle on the spider's home plane should let it deal more
+  // damage and absorb more — and vice versa for ants.
+  const tilesByPlane = {
+    floor: { plane: 'floor' as const, x: 4, y: 4 },
+    ceiling: { plane: 'ceiling' as const, x: 4, y: 4 },
+  };
+  const SAMPLE_SEEDS = 60;
+
+  const winRateOnPlane = (
+    plane: 'floor' | 'ceiling',
+    aTemplate: string,
+    dTemplate: string,
+  ): { winRate: number; sampleSize: number } => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const tile = tilesByPlane[plane];
+    const aUnit = mkUnit(base, aTemplate, `aff-a-${plane}`);
+    const dUnit = mkUnit(base, dTemplate, `aff-d-${plane}`);
+    const atk = baseAntParty('aff-atk', [aUnit], aUnit.id, tile);
+    // Faction inferred from template; for spider attackers reuse the
+    // baseSpiderParty helper. The helper just sets faction='spider'.
+    const isSpiderAttacker =
+      base.unitTemplates.get(aTemplate as UnitTemplateId)?.faction === 'spider';
+    const atkParty = isSpiderAttacker ? baseSpiderParty('aff-atk', [aUnit], aUnit.id, tile) : atk;
+    const isSpiderDefender =
+      base.unitTemplates.get(dTemplate as UnitTemplateId)?.faction === 'spider';
+    const defParty = isSpiderDefender
+      ? baseSpiderParty('aff-def', [dUnit], dUnit.id, tile)
+      : baseAntParty('aff-def', [dUnit], dUnit.id, tile);
+    const state = installParties(base, [atkParty, defParty]);
+    let wins = 0;
+    for (let s = 0; s < SAMPLE_SEEDS; s++) {
+      const out = resolveBattle(
+        state,
+        neutralInput(atkParty, defParty),
+        createRng(s * 1009 + 7),
+        makeTickClock(),
+      );
+      if (out.result.winner === atkParty.id) wins += 1;
+    }
+    return { winRate: wins / SAMPLE_SEEDS, sampleSize: SAMPLE_SEEDS };
+  };
+
+  it('spider-soldier wins more often vs ant-footman on the ceiling than on the floor', () => {
+    const onCeiling = winRateOnPlane('ceiling', 'spider-soldier', 'ant-footman');
+    const onFloor = winRateOnPlane('floor', 'spider-soldier', 'ant-footman');
+    // Both plane-affinity rows favor the spider on ceiling (+1/+1) and
+    // hurt it on floor (-1 attack, plus the ant gets +1/+1 on floor).
+    // The win-rate gap is large enough to clear seed noise.
+    expect(onCeiling.winRate).toBeGreaterThan(onFloor.winRate);
+  });
+
+  it('ant-footman wins more often vs spider-soldier on the floor than on the ceiling', () => {
+    const onFloor = winRateOnPlane('floor', 'ant-footman', 'spider-soldier');
+    const onCeiling = winRateOnPlane('ceiling', 'ant-footman', 'spider-soldier');
+    expect(onFloor.winRate).toBeGreaterThan(onCeiling.winRate);
+  });
+});
+
+describe('resolveBattle: day/night phase modifiers (rec 1.2)', () => {
+  it('spider win-rate vs ant on the same plane is higher at night than at day', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    // Use a wall plane so plane-affinity (rec 1.3) is neutral and the
+    // observed delta is purely the night bonus.
+    const tile: TileCoord = { plane: 'east-wall', x: 5, y: 5 };
+    const a = mkUnit(base, 'spider-soldier', 'phn-a');
+    const d = mkUnit(base, 'ant-footman', 'phn-d');
+    const atk = baseSpiderParty('phn-atk', [a], a.id, tile);
+    const def = baseAntParty('phn-def', [d], d.id, tile);
+    const dayState = installParties(base, [atk, def]);
+    const nightState: GameState = { ...dayState, phase: 'night' };
+    const SAMPLE = 60;
+    let dayWins = 0;
+    let nightWins = 0;
+    for (let s = 0; s < SAMPLE; s++) {
+      const seed = s * 1009 + 17;
+      if (
+        resolveBattle(dayState, neutralInput(atk, def), createRng(seed), makeTickClock()).result
+          .winner === atk.id
+      )
+        dayWins += 1;
+      if (
+        resolveBattle(nightState, neutralInput(atk, def), createRng(seed), makeTickClock()).result
+          .winner === atk.id
+      )
+        nightWins += 1;
+    }
+    expect(nightWins).toBeGreaterThan(dayWins);
+  });
+
+  it('ant-archer deals less damage at night (-1 attack penalty)', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    // Battle on east-wall so plane-affinity is neutral on both sides.
+    // ant-archer (atk 5) -> spider-soldier (armor 3): day damage roll
+    // is around max(1, 5-3+v). At night the archer's attack is 4 so
+    // the average per-action damage drops by ~1.
+    const tile: TileCoord = { plane: 'east-wall', x: 5, y: 5 };
+    const archer = mkUnit(base, 'ant-archer', 'arch-a');
+    const sold = mkUnit(base, 'spider-soldier', 'arch-d');
+    const atk = baseAntParty('arch-atk', [archer], archer.id, tile);
+    const def = baseSpiderParty('arch-def', [sold], sold.id, tile);
+    const dayState = installParties(base, [atk, def]);
+    const nightState: GameState = { ...dayState, phase: 'night' };
+    const sumArcherDamage = (state: GameState, seed: number): number => {
+      const out = resolveBattle(state, neutralInput(atk, def), createRng(seed), makeTickClock());
+      let total = 0;
+      for (const round of out.result.rounds) {
+        for (const a of round.actions) if (a.attackerId === archer.id) total += a.damage;
+      }
+      return total;
+    };
+    let dayTotal = 0;
+    let nightTotal = 0;
+    const SAMPLE = 40;
+    for (let s = 0; s < SAMPLE; s++) {
+      const seed = s * 4099 + 31;
+      dayTotal += sumArcherDamage(dayState, seed);
+      nightTotal += sumArcherDamage(nightState, seed);
+    }
+    expect(nightTotal).toBeLessThan(dayTotal);
+  });
+});
+
 describe('resolveBattle: jelly and queen modifiers wired through', () => {
   it('a strong jelly buff on the attacker boosts win rate vs a neutral baseline', () => {
     const { state: base } = loadScenario(DATA_DIR, 1);

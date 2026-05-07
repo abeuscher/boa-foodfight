@@ -11,6 +11,7 @@ import type {
   Post,
   PostId,
   ReplayEvent,
+  TileCoord,
   Unit,
   UnitTemplateId,
 } from './types.ts';
@@ -299,5 +300,134 @@ describe('endOfTurn', () => {
     const found = after.units.find((u) => String(u.id) === expectedId);
     expect(found).toBeDefined();
     expect(found?.templateId).toBe(producedId as UnitTemplateId);
+  });
+});
+
+describe('endOfTurn: day/night phase cycle (rec 1.2)', () => {
+  it('phase flips to night after PHASE_LENGTH end-of-turns', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    expect(state.phase).toBe('day');
+    expect(state.phaseTurnsRemaining).toBe(4);
+    // Walk forward 4 end-of-turns. The 4th end-of-turn brings the
+    // counter to 0, flips the phase to night, and emits a phase-
+    // changed event for the now-active phase. The runTurn calls that
+    // follow run with state.phase === 'night'.
+    let working = state;
+    let phaseChanges: ReplayEvent[] = [];
+    for (let i = 0; i < 4; i++) {
+      const out = endOfTurn(working, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+      working = out.state;
+      phaseChanges = [...phaseChanges, ...out.events.filter((e) => e.kind === 'phase-changed')];
+    }
+    expect(working.turn).toBe(4);
+    expect(working.phase).toBe('night');
+    expect(working.phaseTurnsRemaining).toBe(4);
+    expect(phaseChanges).toHaveLength(1);
+    const ev = phaseChanges[0];
+    expect(ev?.kind).toBe('phase-changed');
+    if (ev?.kind === 'phase-changed') {
+      expect(ev.phase).toBe('night');
+    }
+  });
+
+  it('phaseTurnsRemaining decrements each turn during a phase', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const after1 = endOfTurn(
+      state,
+      { queen: data.queen, jelly: data.jelly },
+      makeTickClock(),
+    ).state;
+    expect(after1.phaseTurnsRemaining).toBe(3);
+    expect(after1.phase).toBe('day');
+    const after2 = endOfTurn(
+      after1,
+      { queen: data.queen, jelly: data.jelly },
+      makeTickClock(),
+    ).state;
+    expect(after2.phaseTurnsRemaining).toBe(2);
+    expect(after2.phase).toBe('day');
+  });
+});
+
+describe('endOfTurn: pheromone trails (rec 1.5)', () => {
+  const partyId = 'pathfinders' as PartyId;
+
+  it('builds up trail entries over consecutive turns and ages them in lock-step', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    expect(state.pheroTrails.size).toBe(0);
+    const out1 = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const t1 = out1.state.pheroTrails.get(partyId);
+    expect(t1).toBeDefined();
+    expect(t1?.length).toBe(1);
+    expect(t1?.[0]?.ageInTurns).toBe(0);
+    const out2 = endOfTurn(out1.state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const t2 = out2.state.pheroTrails.get(partyId);
+    // Two entries: one fresh (age 0), one aged (age 1).
+    expect(t2?.length).toBe(2);
+    const ages2 = (t2 ?? []).map((e) => e.ageInTurns).sort();
+    expect(ages2).toEqual([0, 1]);
+    const out3 = endOfTurn(out2.state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const t3 = out3.state.pheroTrails.get(partyId);
+    expect(t3?.length).toBe(3);
+    const ages3 = (t3 ?? []).map((e) => e.ageInTurns).sort();
+    expect(ages3).toEqual([0, 1, 2]);
+  });
+
+  it('drops entries older than 3 turns (3-turn decay)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    let working = state;
+    // Run 5 endOfTurns. The trail should top out at 4 entries (ages
+    // 0..3). The age-4 entry from the very first append is dropped.
+    for (let i = 0; i < 5; i++) {
+      const out = endOfTurn(working, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+      working = out.state;
+    }
+    const trail = working.pheroTrails.get(partyId);
+    expect(trail?.length).toBe(4);
+    const ages = (trail ?? []).map((e) => e.ageInTurns).sort();
+    expect(ages).toEqual([0, 1, 2, 3]);
+  });
+
+  it('spider visibility helper reads trail position (not the live position)', async () => {
+    // Setup: the pheromone trail records "old" position; the ant has
+    // since moved to a new location. The spider AI's trail-based scan
+    // (rec 1.5) should resolve to the trail (older) location, not the
+    // live one — confirming the AI consumes only sanctioned visibility.
+    const { state } = loadScenario(DATA_DIR, 1);
+    const { getSpiderVisibleAntTrail } = await import('../ai/policy-helpers.ts');
+    const oldTile: TileCoord = { plane: 'floor', x: 4, y: 0 };
+    const liveTile: TileCoord = { plane: 'floor', x: 8, y: 8 };
+    const ant = state.parties.get('vanguard-alpha' as PartyId);
+    if (!ant) throw new Error('test fixture: vanguard-alpha missing');
+    const parties = new Map(state.parties);
+    parties.set('vanguard-alpha' as PartyId, { ...ant, location: liveTile });
+    const trails = new Map<
+      PartyId,
+      readonly { plane: TileCoord['plane']; x: number; y: number; ageInTurns: number }[]
+    >();
+    trails.set('vanguard-alpha' as PartyId, [
+      { plane: oldTile.plane, x: oldTile.x, y: oldTile.y, ageInTurns: 1 },
+    ]);
+    const customState: GameState = {
+      ...state,
+      parties,
+      pheroTrails: trails,
+    };
+    const visible = getSpiderVisibleAntTrail(customState);
+    // The trail helper exposes the OLD tile coords (rec 1.5 information
+    // asymmetry: spiders see breadcrumbs, not live positions).
+    expect(visible).toContainEqual({
+      partyId: 'vanguard-alpha' as PartyId,
+      plane: oldTile.plane,
+      x: oldTile.x,
+      y: oldTile.y,
+      ageInTurns: 1,
+    });
+    // Sanity: the live tile is not in the trail (we synthesized only
+    // the old breadcrumb).
+    const matchesLive = visible.some(
+      (v) => v.plane === liveTile.plane && v.x === liveTile.x && v.y === liveTile.y,
+    );
+    expect(matchesLive).toBe(false);
   });
 });

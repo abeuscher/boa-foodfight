@@ -24,6 +24,11 @@ export const abilityDefinitionSchema = z.object({
   cooldown: z.number().int().nonnegative(),
   /** Free-form numeric parameters keyed by name; the engine reads what each ability needs. */
   params: z.record(z.string(), z.number()).default({}),
+  /** Day/night gating (rec 1.2). `'day'` means usable only by day,
+   * `'night'` only by night, omitted/`null` means usable in either
+   * phase. The engine emits `ability-blocked-by-phase` (no-op + drop
+   * order) when a use lands in the wrong phase. */
+  phaseRestriction: z.enum(['day', 'night']).nullable().optional(),
   description: z.string().min(1),
 });
 

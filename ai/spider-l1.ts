@@ -10,55 +10,50 @@
  * The AI is a read-only consumer of engine state. It mutates only the
  * `orders` of spider parties; ant parties are returned unchanged.
  *
- * Phase-4 round-3 aggressive retune (current revision):
- *  - Round 2's diagnosis: spiders sat at the web waiting and timed out
- *    55% of baseline games while losing 0/100 against 5/6 strategy
- *    variants. The fix is *more* aggression, not less — push spiders
- *    forward to force decisive battles instead of stalled timeouts.
- *  - ANT_DOMINANCE_THRESHOLD lowered from 3 to 1: the largest non-scout
- *    spider party breaks formation as soon as ants own a single POST,
- *    rather than waiting for the floor to be lost. Earlier counter-push
- *    creates collision opportunities ants can exploit (or be crushed
- *    by) instead of two factions stalling on opposite ends of the map.
- *  - Early raid: silk-line marches toward the ant queen base
- *    (storm-drain, floor (0,0)) starting turn 2, regardless of POST
- *    count. A direct queen-base assault on the canonical ant supply
- *    line, taking advantage of the storm-drain tag `home-base` as a
- *    fixed strategic target. Independent of `pickPusher` / silk
- *    early-push so silk-line always has somewhere to go from turn 2.
- *  - Counter-push pusher now steps toward the storm-drain along the
- *    Chebyshev gradient, rather than emitting a single `move-to`
- *    wall-crack order. The engine's per-turn movement budget
- *    advances the pusher one tile per call, so this is functionally
- *    equivalent to `move-to storm-drain` but uses the same
- *    `stepToward` helper as spiderlings for code reuse.
- *  - spawn-spiderlings reverted from turn 5 back to turn 3: bring the
- *    swarm online earlier so the early raid + pusher have flanking
- *    pressure on turns 4-6 instead of waiting until turn 6+.
- *  - Spiderlings step toward the closest ant party (Chebyshev) every
- *    turn instead of wandering randomly. A 10-strong cloud of
- *    drifting tiles wasn't accomplishing anything; pointed at ants
- *    the cloud becomes a real harassment threat.
+ * Phase-4 round-4 deep-raider integration (current revision):
+ *  - A fifth spider party `deep-raider` spawns on east-wall (5, 5) with
+ *    2 spider-elite + 2 spider-soldier + 1 spider-spinner. Round-3 left
+ *    it idle (no AI logic referenced its id), so it sat in the middle of
+ *    the east-wall and contributed nothing. This revision wires it in
+ *    as a **wall-plane interceptor + proactive second front**.
+ *  - Role: patrol east-wall, then plane-jump down to the floor (via the
+ *    floor↔east-wall edge at floor x=9 / east-wall y=9) or up to the
+ *    ceiling (via ceiling↔east-wall at ceiling x=9 / east-wall y=0)
+ *    when an ant party comes within Chebyshev radius 3 on the touching
+ *    plane. From turn 1 onward, with no proximate threat the raider
+ *    proactively descends toward the floor door — converting it from a
+ *    passive interceptor into a permanent second front so the counter-
+ *    push pusher and the raider hit the storm-drain column from two
+ *    planes at once.
+ *  - Movement is stepped along the Chebyshev gradient using the same
+ *    `stepToward` helper as the counter-push pusher and the spiderling
+ *    swarm; the engine's spider-on-wall allowance of 3 tiles/turn lets
+ *    the raider close the 4-tile gap to (5, 9) in 2 turns. Once at the
+ *    door, a move-to with an off-plane target lets the engine resolve
+ *    the edge-adjacency transition in a single tile of allowance.
+ *  - Spin-web fire: turn 3, on whatever east-wall tile the raider
+ *    occupies. The order list contains BOTH the use-ability and the
+ *    move-to step, since the engine resolves abilities before movement
+ *    and the spinner's `uses: 1` cap means subsequent turns just drop
+ *    the order silently. The result is a delay-1 web on the wall the
+ *    raider just left, slowing any ant pursuing across the corner.
+ *  - The raider's posture stays `fight` (set in roster-spiders.json),
+ *    so engine collision rules let it engage the moment it arrives.
  *
- * Round-3 removals (round-2 over-corrections that made spiders sticky
- * without making them lethal):
- *  - Removed `web-watch active reposition` (Chebyshev step toward the
- *    closest ant on its plane). Web-watch now follows the standard
- *    responder/patrol path.
- *  - Removed `web-guard queen-ult AoE dodge` (the slide-off-web-tile
- *    when queenUltimateCharge >= 80). Web-guard simply holds at the
- *    web tile when it has no higher-priority assignment.
- *
- * Preserved from round 2:
- *  - silk-line single-POST counter-push when ants own >=1 POST AND
- *    turn >= 3. This cooperates with the new turn-2 early raid: turn
- *    2 silk-line walks toward storm-drain unconditionally; from turn
- *    3 onward, if any POST has fallen the silk push lever picks the
- *    closer wall-crack target rather than the deep storm-drain.
- *  - Pursuit POST-ownership gate at >= 2 (didn't matter much, kept
- *    for consistency with round-2 chipping logic).
- *  - advance-scout floor harassment chain (soap-dish -> towel-rack).
- *  - Wall-crack threat-radius widening when towel-racks all owned.
+ * Other round-4 strategy elements (preserved across the rewrite):
+ *  - ANT_DOMINANCE_THRESHOLD stays at 1 (round-3 setting): largest
+ *    non-scout/non-raider spider counter-pushes toward storm-drain on
+ *    the first POST flip. With the deep-raider as a permanent second
+ *    forward party, the counter-push and the raider can pincer the
+ *    same ant column from two planes.
+ *  - silk-line keeps its turn-2 spin-web + turn-2 raid toward
+ *    storm-drain (round-3); turn-3 silk-line wall-crack push when
+ *    >=1 POST has flipped.
+ *  - Spiderling swarm stepping toward closest same-plane ant.
+ *  - advance-scout floor harassment (soap-dish -> towel-rack chain).
+ *  - Queen-guard holds at the web. Queen-ultimate is engine-driven
+ *    (end-of-turn fires it automatically once charged); the AI does
+ *    not need to issue an order for it.
  */
 
 import { distance, sameCoord } from '../engine/coord.ts';
@@ -78,35 +73,52 @@ import type {
 } from '../engine/types.ts';
 
 import {
+  getSpiderVisibleAntTrail,
   postsOfType,
   SPIDER_WEB,
   STORM_DRAIN,
   SOAP_DISH_TYPE,
   TOWEL_RACK_TYPE,
   WALL_CRACK_TYPE,
+  type SpiderVisibleTrailEntry,
 } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
 const THREAT_RADIUS = 2;
 /**
  * When ants control this many non-home POSTs or more, the spiders are
- * clearly losing the floor war. The largest non-scout spider party
- * then breaks formation and counter-pushes toward the ant home base
- * (storm-drain).
- *
- * Round-3 lowered from 3 to 1: round-2 diagnostics showed spiders
- * timing out 55% of baseline games because the dominance gate fired
- * too late. Triggering on the first non-home POST flip turns the
- * spider AI aggressive immediately — by turn 2-3 in most games —
- * forcing a decisive midboard battle instead of a timeout slog.
- * The home-base storm-drain is excluded from the count so the
- * trigger fires on actual ant *progress* rather than on the always-
- * owned starting POST.
+ * clearly losing the floor war. The largest non-scout/non-raider spider
+ * party then breaks formation and counter-pushes toward the ant home
+ * base (storm-drain).
  */
 const ANT_DOMINANCE_THRESHOLD = 1;
 
 const SILK_LINE: PartyId = 'silk-line' as PartyId;
 const WEB_GUARD: PartyId = 'web-guard' as PartyId;
+const DEEP_RAIDER: PartyId = 'deep-raider' as PartyId;
+
+/**
+ * Deep-raider home tile on east-wall and the two corner-approach tiles.
+ * The raider patrols between these; corners are where it can plane-jump
+ * to floor (y=9 corner) or ceiling (y=0 corner) via edge adjacency.
+ *
+ * `engine/edges.ts` documents these mappings precisely:
+ *   - east-wall (x, y=9) ↔ floor (x=9, y=x).
+ *     So east-wall (5, 9) ↔ floor (9, 5) — one tile away from the
+ *     storm-drain column.
+ *   - east-wall (x, y=0) ↔ ceiling (x=9, y=x).
+ *     So east-wall (5, 0) ↔ ceiling (9, 5) — adjacent to the spider-web.
+ */
+const RAIDER_HOME: TileCoord = { plane: 'east-wall', x: 5, y: 5 };
+const RAIDER_FLOOR_DOOR: TileCoord = { plane: 'east-wall', x: 5, y: 9 };
+const RAIDER_CEILING_DOOR: TileCoord = { plane: 'east-wall', x: 5, y: 0 };
+/**
+ * Detection radius for cross-plane threats reaching the east-wall. If
+ * an ant is within Chebyshev `RAIDER_DETECT` on the floor or ceiling,
+ * the raider commits to that door. Radius 3 gives the raider a 1-2
+ * turn head start before the ant could hop to the wall.
+ */
+const RAIDER_DETECT = 3;
 
 const totalSlotCost = (
   party: Party,
@@ -145,16 +157,33 @@ const allPostsOfTypeOwnedByAnt = (state: GameState, type: string): boolean => {
 const moveTo = (target: TileCoord): Order => ({ kind: 'move-to', target });
 
 /**
- * Closest Chebyshev distance from any threat-eligible ant to the given coord.
- * Cross-plane distances are Infinity (engine/coord.ts), which is what we
- * want: a wall-plane ant cannot directly threaten a floor POST.
+ * Stale-entry weight for the spider's trail-based scans (rec 1.5).
+ * The trail carries entries aged 0..3. The spider AI trusts the most
+ * recent observation fully and adds 1 phantom tile of distance per
+ * turn of staleness; an age-3 entry is treated as 3 tiles farther
+ * than its raw Chebyshev distance suggests. This keeps the AI honest
+ * (it can't read minds) without making old breadcrumbs useless.
+ */
+const STALE_PENALTY_PER_TURN = 1;
+
+const trailDistance = (target: TileCoord, entry: SpiderVisibleTrailEntry): number => {
+  if (entry.plane !== target.plane) return Number.POSITIVE_INFINITY;
+  const dx = Math.abs(entry.x - target.x);
+  const dy = Math.abs(entry.y - target.y);
+  return Math.max(dx, dy) + STALE_PENALTY_PER_TURN * entry.ageInTurns;
+};
+
+/**
+ * Closest weighted Chebyshev distance from any ant trail entry to the
+ * given coord. Cross-plane is Infinity. Uses pheromone trails (rec
+ * 1.5) instead of live ant positions — the spider AI's only sanctioned
+ * window into ant locations.
  */
 const closestAntDistance = (state: GameState, target: TileCoord): number => {
+  const trail = getSpiderVisibleAntTrail(state);
   let best = Number.POSITIVE_INFINITY;
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (party.units.length === 0) continue;
-    const d = distance(party.location, target);
+  for (const entry of trail) {
+    const d = trailDistance(target, entry);
     if (d < best) best = d;
   }
   return best;
@@ -208,6 +237,8 @@ const isOnWeb = (party: Party, webLoc: TileCoord): boolean => sameCoord(party.lo
 /**
  * Iterate over spider parties eligible to be assigned an order: friendly,
  * has living units, has a leader, and is not the queen-bearing `web-guard`.
+ * Round-4: also exclude `deep-raider`, which has its own dedicated logic
+ * (interceptor/raider role, not threat-responder/scout).
  */
 function* eligibleSpiders(state: GameState): IterableIterator<Party> {
   for (const party of state.parties.values()) {
@@ -215,6 +246,7 @@ function* eligibleSpiders(state: GameState): IterableIterator<Party> {
     if (party.leaderless) continue;
     if (party.units.length === 0) continue;
     if (party.id === WEB_GUARD) continue;
+    if (party.id === DEEP_RAIDER) continue;
     yield party;
   }
 }
@@ -232,11 +264,7 @@ const pickScout = (state: GameState): Party | null => {
 
 /**
  * Count of ant-controlled POSTs that represent ant *progress*. Excludes
- * the home-base storm-drain, which starts ant-owned every game (per the
- * `home-base` tag in map.json). Without this exclusion, the ANT_DOMINANCE
- * trigger would fire on turn 0 in every game and the aggressive
- * counter-push would short-circuit the threat-response slot before any
- * captures had actually happened.
+ * the home-base storm-drain, which starts ant-owned every game.
  */
 const antControlledPostCount = (state: GameState): number => {
   let n = 0;
@@ -248,9 +276,9 @@ const antControlledPostCount = (state: GameState): number => {
 };
 
 /**
- * Largest non-scout, non-web-guard spider party by total slot cost.
- * Deterministic tiebreak by lexical PartyId. Used as the counter-push
- * party when ants dominate the floor.
+ * Largest non-scout, non-web-guard, non-raider spider party by total
+ * slot cost. Deterministic tiebreak by lexical PartyId. Used as the
+ * counter-push party when ants dominate the floor.
  */
 const pickPusher = (state: GameState, scoutId: PartyId | null): Party | null => {
   let best: { party: Party; cost: number } | null = null;
@@ -287,8 +315,8 @@ const eligibleResponders = function* (state: GameState, scoutId: PartyId | null)
 };
 
 /**
- * Closest non-scout, non-web-guard spider responder to `target`. Deterministic
- * tiebreak by lexical PartyId.
+ * Closest non-scout, non-web-guard, non-raider spider responder to
+ * `target`. Deterministic tiebreak by lexical PartyId.
  */
 const pickResponder = (
   state: GameState,
@@ -296,31 +324,107 @@ const pickResponder = (
   target: TileCoord,
 ): Party | null => closestPartyTo(eligibleResponders(state, scoutId), target);
 
-const samePlaneAntParties = function* (
+/**
+ * Pick the lowest-weighted-distance trail entry on the same plane as
+ * `from`. Returns null if no entry exists on that plane. Used as the
+ * trail-driven analogue of "closest same-plane ant party". Tiebreak
+ * is by lexical PartyId so the choice is deterministic across seed
+ * replays.
+ */
+const closestTrailEntryOnPlane = (
   state: GameState,
   plane: TileCoord['plane'],
-): Iterable<Party> {
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (party.units.length === 0) continue;
-    if (party.location.plane !== plane) continue;
-    yield party;
+  from: TileCoord,
+): SpiderVisibleTrailEntry | null => {
+  const trail = getSpiderVisibleAntTrail(state);
+  let best: { entry: SpiderVisibleTrailEntry; d: number } | null = null;
+  for (const entry of trail) {
+    if (entry.plane !== plane) continue;
+    const d = trailDistance(from, entry);
+    if (best === null || d < best.d || (d === best.d && entry.partyId < best.entry.partyId)) {
+      best = { entry, d };
+    }
   }
+  return best?.entry ?? null;
 };
 
 /**
- * Closest threat-eligible ant party to `from` (Chebyshev, same-plane only).
- * Returns null if no eligible ant is on the same plane.
+ * Closest *trail-derived* ant location to `from` on the same plane.
+ * Returns null if no entry exists on that plane. The shape mirrors
+ * the live-position helper this replaced (rec 1.5): callers see a
+ * Party-shaped result built from the trail's reported partyId/loc, so
+ * the existing `chase the closest ant` logic continues to compile.
  */
-const closestAntPartyOnPlane = (state: GameState, from: TileCoord): Party | null =>
-  closestPartyTo(samePlaneAntParties(state, from.plane), from);
+const closestAntPartyOnPlane = (state: GameState, from: TileCoord): Party | null => {
+  const entry = closestTrailEntryOnPlane(state, from.plane, from);
+  if (!entry) return null;
+  // The spider AI doesn't actually consume the Party-level structure
+  // beyond `id` and `location`. We synthesize a stub from the trail —
+  // note this *does not* leak live HP/units; the spider AI must treat
+  // the trail as a position-only signal.
+  const stub: Party = {
+    id: entry.partyId,
+    faction: 'ant',
+    units: [],
+    leaderId: '' as Party['leaderId'],
+    location: { plane: entry.plane, x: entry.x, y: entry.y },
+    orders: [],
+    posture: 'fight',
+    strategyModifiers: [],
+    jellyDoses: 0,
+    leaderless: false,
+  };
+  return stub;
+};
+
+/**
+ * Closest trail entry on a specific plane, returned with its derived
+ * location. Used by the deep-raider's interceptor logic — it needs
+ * to pick the door tile on the touching plane.
+ */
+const closestAntOnPlane = (
+  state: GameState,
+  plane: TileCoord['plane'],
+): { party: Party; loc: TileCoord } | null => {
+  // Pick the freshest entry on the plane (age 0 first, then by lex
+  // partyId). Distance from "any reference" doesn't matter here — the
+  // raider just wants to know if there's *anyone* recently sighted.
+  const trail = getSpiderVisibleAntTrail(state);
+  let best: SpiderVisibleTrailEntry | null = null;
+  for (const entry of trail) {
+    if (entry.plane !== plane) continue;
+    if (
+      best === null ||
+      entry.ageInTurns < best.ageInTurns ||
+      (entry.ageInTurns === best.ageInTurns && entry.partyId < best.partyId)
+    ) {
+      best = entry;
+    }
+  }
+  if (!best) return null;
+  const loc: TileCoord = { plane: best.plane, x: best.x, y: best.y };
+  const stub: Party = {
+    id: best.partyId,
+    faction: 'ant',
+    units: [],
+    leaderId: '' as Party['leaderId'],
+    location: loc,
+    orders: [],
+    posture: 'fight',
+    strategyModifiers: [],
+    jellyDoses: 0,
+    leaderless: false,
+  };
+  return { party: stub, loc };
+};
 
 /**
  * Take one step from `from` toward `target` along the larger axis (Chebyshev
  * step), clamped to the 0-9 board. Stays on the same plane — callers that
  * need plane-jumping should use a higher-level pathfinder. Used by the
- * counter-push pusher (step toward storm-drain) and spiderling chase
- * (step toward closest ant) so the same helper drives both kinds of
+ * counter-push pusher (step toward storm-drain), the spiderling chase
+ * (step toward closest ant), and the deep-raider patrol (step toward
+ * door tile or chase target) so the same helper drives every kind of
  * forward-pressure motion.
  */
 const stepToward = (from: TileCoord, target: TileCoord): TileCoord => {
@@ -375,6 +479,70 @@ const ordersForPatrolOrThreat = (
   return [];
 };
 
+/**
+ * Decide where the deep-raider should head this turn.
+ *
+ * Priority:
+ *   1. Already off-wall (descended to floor or ceiling) → drive at the
+ *      closest same-plane ant. Once committed, the raider engages
+ *      whatever it can reach; if no ants on the current plane, drive
+ *      to the storm-drain (floor) or back to home (ceiling).
+ *   2. Same-plane (east-wall) ant within Chebyshev 3 → chase it.
+ *   3. Floor ant within Chebyshev 3 of the floor door (9, 5) → step
+ *      toward east-wall (5, 9), then through the edge to the floor.
+ *   4. Ceiling ant within Chebyshev 3 of the ceiling door (9, 5) → step
+ *      toward east-wall (5, 0), then through the edge to the ceiling.
+ *   5. Otherwise: proactive descent. Drive on the floor door so the
+ *      raider becomes a permanent second front pressuring the storm-
+ *      drain column from the wall.
+ *
+ * Note: once the raider is at a door tile (5, 9) or (5, 0), issuing a
+ * move-to order targeted at the off-plane ant tile triggers the
+ * engine's `tryPlaneTransition` → edge-adjacency path and the raider
+ * steps across in a single tile of allowance.
+ */
+const decideRaiderTarget = (state: GameState): TileCoord => {
+  const here = state.parties.get(DEEP_RAIDER)?.location ?? RAIDER_HOME;
+
+  // 1. Already descended off the east-wall → engage closest same-plane ant.
+  if (here.plane !== 'east-wall') {
+    const sameAnt = closestAntPartyOnPlane(state, here);
+    if (sameAnt !== null) return sameAnt.location;
+    // No ants here; drive toward storm-drain (floor) or home (ceiling).
+    if (here.plane === 'floor') return { plane: 'floor', x: 0, y: 0 };
+    return RAIDER_HOME;
+  }
+
+  // 2. Same-plane chase: any ant on east-wall within Chebyshev 3.
+  const wallAnt = closestAntPartyOnPlane(state, here);
+  if (wallAnt !== null && distance(here, wallAnt.location) <= RAIDER_DETECT) {
+    return wallAnt.location;
+  }
+
+  // 3. Floor approach: ant within radius 3 of floor (9, 5) — the tile
+  //    that maps to east-wall (5, 9) via edge adjacency.
+  const floorDoorTarget: TileCoord = { plane: 'floor', x: 9, y: 5 };
+  const floorAnt = closestAntOnPlane(state, 'floor');
+  if (floorAnt !== null && distance(floorDoorTarget, floorAnt.loc) <= RAIDER_DETECT) {
+    if (sameCoord(here, RAIDER_FLOOR_DOOR)) return floorAnt.loc;
+    return RAIDER_FLOOR_DOOR;
+  }
+
+  // 4. Ceiling approach: ant within radius 3 of ceiling (9, 5) — the
+  //    tile that maps to east-wall (5, 0) via edge adjacency.
+  const ceilingDoorTarget: TileCoord = { plane: 'ceiling', x: 9, y: 5 };
+  const ceilingAnt = closestAntOnPlane(state, 'ceiling');
+  if (ceilingAnt !== null && distance(ceilingDoorTarget, ceilingAnt.loc) <= RAIDER_DETECT) {
+    if (sameCoord(here, RAIDER_CEILING_DOOR)) return ceilingAnt.loc;
+    return RAIDER_CEILING_DOOR;
+  }
+
+  // 5. Proactive descent: walk the raider to the floor door from turn 1
+  //    onward to drop into the storm-drain column. This forces the
+  //    raider onto the field as a permanent second front.
+  return RAIDER_FLOOR_DOOR;
+};
+
 export const spiderL1: AIPolicy = {
   name: 'spider-l1',
   faction: 'spider',
@@ -386,13 +554,7 @@ export const spiderL1: AIPolicy = {
     const webLoc = requirePost(state, SPIDER_WEB);
     const stormDrainLoc = requirePost(state, STORM_DRAIN);
     const soapLoc = requireFirstPostOfType(state, SOAP_DISH_TYPE);
-    // Counter-push deep target: the ant queen base (storm-drain). The
-    // pusher steps toward this each turn so over a multi-turn arc it
-    // crosses the entire map and arrives at the ant supply line.
     const counterPushTargetLoc = stormDrainLoc;
-    // Silk-line early-push target stays at wall-crack: catches ants on
-    // the canonical soap-dish -> towel-rack -> wall-crack climb without
-    // committing to a deep storm-drain march.
     const silkPushTargetLoc = requireFirstPostOfType(state, WALL_CRACK_TYPE);
     const threat = decideThreat(state);
 
@@ -402,11 +564,23 @@ export const spiderL1: AIPolicy = {
 
     // Phase-3 pursuit: once we're past the early rush window, look for
     // an ant party at < 50% effective HP. If found, the closest non-
-    // queen-bearing non-scout spider is redirected to pursue it. The
-    // POST-ownership gate is >= 2: hunting wounded ants the moment a
-    // single POST flips one-shot baseline (round-2 diagnosis).
+    // queen-bearing non-scout/non-raider spider is redirected to pursue
+    // it. The POST-ownership gate is >= 2.
+    //
+    // Position lookup uses the pheromone trail (rec 1.5) — the ant
+    // party's *most recent* breadcrumb (lowest `ageInTurns`) stands in
+    // for live position. HP fraction stays as the trigger because the
+    // spider AI's "is this party hurt?" signal is preserved by spec
+    // (rec 1.5 only constrains *position* visibility, not full state).
     let pursueTarget: { antPartyId: PartyId; loc: TileCoord } | null = null;
     if (state.turn >= 4 && antControlledPostCount(state) >= 2) {
+      const trail = getSpiderVisibleAntTrail(state);
+      const freshestByParty = new Map<PartyId, SpiderVisibleTrailEntry>();
+      for (const entry of trail) {
+        const prior = freshestByParty.get(entry.partyId);
+        if (!prior || entry.ageInTurns < prior.ageInTurns)
+          freshestByParty.set(entry.partyId, entry);
+      }
       let weakest: { partyId: PartyId; hpFrac: number; loc: TileCoord } | null = null;
       for (const party of state.parties.values()) {
         if (party.faction !== 'ant') continue;
@@ -419,8 +593,11 @@ export const spiderL1: AIPolicy = {
         if (maxHp <= 0) continue;
         const frac = livingHp / maxHp;
         if (frac >= 0.5) continue;
+        const fresh = freshestByParty.get(party.id);
+        if (!fresh) continue; // No trail yet (turn 0); skip pursuit.
+        const trailLoc: TileCoord = { plane: fresh.plane, x: fresh.x, y: fresh.y };
         if (!weakest || frac < weakest.hpFrac) {
-          weakest = { partyId: party.id, hpFrac: frac, loc: party.location };
+          weakest = { partyId: party.id, hpFrac: frac, loc: trailLoc };
         }
       }
       if (weakest) pursueTarget = { antPartyId: weakest.partyId, loc: weakest.loc };
@@ -428,43 +605,29 @@ export const spiderL1: AIPolicy = {
     const pursuer =
       pursueTarget !== null ? pickResponder(state, scout?.id ?? null, pursueTarget.loc) : null;
 
-    // Counter-push: aggressive 1-POST gate (round-3). The largest non-scout
-    // spider breaks formation toward the ant queen base as soon as the
-    // first POST flips. Steps along the Chebyshev gradient toward
-    // storm-drain so the pusher closes distance every turn.
+    // Counter-push: aggressive 1-POST gate (round-3). The largest non-
+    // scout/non-raider spider breaks formation toward storm-drain on
+    // the first POST flip.
     const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
     const pusher = counterPushActive ? pickPusher(state, scout?.id ?? null) : null;
 
     // Silk-line early counter-push: when ants own >=1 POST AND turn >= 3,
-    // silk-line pushes wall-crack. Catches the rush/turtle/jelly-rush
-    // variants on the floor->wall->ceiling climb. Independent of
-    // `pickPusher` so the larger formation can still fire the deep
-    // storm-drain push above. Cooperates with the unconditional
-    // turn-2 silk-line raid: turn 2 always heads for storm-drain;
-    // turn >=3 (with a POST flipped) prefers wall-crack as the
-    // closer engagement target.
+    // silk-line pushes wall-crack.
     const silkEarlyPushActive =
       !counterPushActive && state.turn >= 3 && antControlledPostCount(state) >= 1;
 
     // Silk-line turn-2 raid: walk toward storm-drain unconditionally.
-    // The single-POST `counterPushActive` gate may have already picked
-    // silk-line as the pusher — in that case the pusher branch handles
-    // it and this trigger is bypassed. From turn 2 onward, silk-line
-    // is never idle: either raiding (turn 2), early-push (turn >= 3
-    // with a POST flipped), pusher (counter-push active), or otherwise
-    // continuing the silk-line raid drift.
     const silkRaidActive = state.turn >= 2;
+
+    // Round-4 deep-raider target.
+    const raiderTargetLoc = decideRaiderTarget(state);
 
     // Phase-2 ability triggers — emit once on a specific turn so the
     // engine's `uses: 1` envelopes are respected without per-unit
     // bookkeeping in the AI:
     //   turn 2 — silk-line spins a web on its current wall tile.
-    //   turn 3 — web-guard spawns 10 spiderlings as separate parties.
-    //
-    // Round-3 reverted spawn-spiderlings from turn 5 back to turn 3:
-    // earlier spawn means the swarm is online while the early raid
-    // and counter-push are still in motion, multiplying flanking
-    // pressure rather than arriving after the battle is decided.
+    //   turn 3 — web-guard spawns spiderlings as separate parties.
+    //   turn 3 — deep-raider spins a web on east-wall (combined with move).
     const spiderlingsAlreadySpawned = [...state.parties.keys()].some((pid) =>
       pid.startsWith('spiderling-'),
     );
@@ -486,10 +649,7 @@ export const spiderL1: AIPolicy = {
 
       let nextOrders: readonly Order[];
       // Spiderling chase: step toward the closest same-plane ant party
-      // every turn. A pointed swarm is a real flanking threat; the
-      // round-2 random wander wasn't actually contributing pressure.
-      // Falls back to a small random hop if no same-plane ant is
-      // reachable (keeps the visual life and the determinism contract).
+      // every turn. A pointed swarm is a real flanking threat.
       if (id.startsWith('spiderling-')) {
         const chaseTarget = closestAntPartyOnPlane(state, party.location);
         let target: TileCoord;
@@ -506,11 +666,35 @@ export const spiderL1: AIPolicy = {
         nextParties.set(id, { ...party, orders: nextOrders });
         continue;
       }
-      // Priority order: web-guard ability fire (turn 3); silk-line ability
-      // fire (turn 2); web-guard hold; counter-push pusher; silk-line
-      // early-push (wall-crack); silk-line turn-2 raid (storm-drain);
-      // pursuit; on-web hold; scout; patrol/threat.
-      if (id === WEB_GUARD && state.turn === 3 && !spiderlingsAlreadySpawned) {
+      // Priority order: deep-raider (with optional turn-3 spin-web combo);
+      // web-guard ability fire (turn 3); silk-line ability fire (turn 2);
+      // web-guard hold; counter-push pusher; silk-line early-push (wall-
+      // crack); silk-line turn-2 raid (storm-drain); pursuit; on-web
+      // hold; scout; patrol/threat.
+      if (id === DEEP_RAIDER) {
+        // Compute move step toward the chosen target.
+        const moveOrders: Order[] = [];
+        if (party.location.plane === raiderTargetLoc.plane) {
+          if (!sameCoord(party.location, raiderTargetLoc)) {
+            const stepped = stepToward(party.location, raiderTargetLoc);
+            if (!sameCoord(party.location, stepped)) moveOrders.push(moveTo(stepped));
+          }
+        } else {
+          // Cross-plane: emit the off-plane target directly; engine's
+          // edge-adjacency path resolves it.
+          moveOrders.push(moveTo(raiderTargetLoc));
+        }
+        // Turn-3 combo: spin-web on the current east-wall tile + move.
+        // The engine resolves abilities before movement, so the web
+        // lands on the tile we're leaving and the step still fires.
+        // The spinner has uses:1, so emitting in subsequent turns is
+        // a no-op — the order list just drops the unused ability.
+        if (state.turn === 3 && party.location.plane === 'east-wall') {
+          nextOrders = [{ kind: 'use-ability', abilityId: 'spin-web' as AbilityId }, ...moveOrders];
+        } else {
+          nextOrders = moveOrders;
+        }
+      } else if (id === WEB_GUARD && state.turn === 3 && !spiderlingsAlreadySpawned) {
         nextOrders = [{ kind: 'use-ability', abilityId: 'spawn-spiderlings' as AbilityId }];
       } else if (id === SILK_LINE && state.turn === 2) {
         nextOrders = [{ kind: 'use-ability', abilityId: 'spin-web' as AbilityId }];
@@ -522,7 +706,6 @@ export const spiderL1: AIPolicy = {
       } else if (
         silkEarlyPushActive &&
         id === SILK_LINE &&
-        // Don't override the scout slot or the threat-response slot.
         id !== scout?.id &&
         !(responder !== null && responder.id === SILK_LINE && threat.defend !== null)
       ) {
@@ -535,15 +718,9 @@ export const spiderL1: AIPolicy = {
         id !== scout?.id &&
         !(responder !== null && responder.id === SILK_LINE && threat.defend !== null)
       ) {
-        // Turn-2+ raid: step toward the ant queen base. The spin-web
-        // ability fires on turn 2 and is handled above; from turn 3
-        // onward (with no POSTs flipped) silk-line keeps walking
-        // toward storm-drain.
         const stepped = stepToward(party.location, stormDrainLoc);
         nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
       } else if (pursuer !== null && id === pursuer.id && pursueTarget !== null) {
-        // Pursue the weakened ant party. If we're already on its tile,
-        // hold (engine collision triggers a battle).
         nextOrders = sameCoord(party.location, pursueTarget.loc) ? [] : [moveTo(pursueTarget.loc)];
       } else if (isOnWeb(party, webLoc)) {
         nextOrders = [];

@@ -14,12 +14,15 @@
  */
 
 import { distance, sameCoord } from './coord.ts';
+import { PHASE_LENGTH } from './phase.ts';
 import type { JellyFile, QueenFile } from './schemas/index.ts';
 import type {
+  DayNightPhase,
   Faction,
   GameState,
   Party,
   PartyId,
+  PheroTrailEntry,
   Post,
   PostId,
   ReplayEvent,
@@ -29,6 +32,14 @@ import type {
   UnitTemplate,
   UnitTemplateId,
 } from './types.ts';
+
+/**
+ * Maximum age (in turns) a pheromone trail entry survives before being
+ * dropped at end-of-turn. With 3, an ant party's trail at end-of-turn
+ * holds 4 entries: the current location at age 0 and the previous
+ * three at ages 1..3.
+ */
+const PHERO_MAX_AGE = 3;
 
 export interface EndOfTurnInput {
   /** Tuning data, sourced from data/level-1/queen.json and jelly.json. */
@@ -330,8 +341,58 @@ export const endOfTurn = (
     });
   }
 
-  // 6. Increment turn counter; emit turn-start for the new turn.
-  working = { ...working, turn: nextTurn };
+  // 5b. Pheromone trail update (rec 1.5). For each living ant party,
+  //     age existing entries by 1 turn, drop any older than
+  //     PHERO_MAX_AGE, then prepend the current location at age 0.
+  //     Spider parties don't carry trails (asymmetric visibility).
+  const newTrails = new Map<PartyId, readonly PheroTrailEntry[]>();
+  for (const [id, party] of working.parties) {
+    if (party.faction !== 'ant') continue;
+    const alive = party.units.some((u) => u.currentHp > 0);
+    if (!alive) continue;
+    const previous = working.pheroTrails.get(id) ?? [];
+    const aged: PheroTrailEntry[] = [];
+    for (const entry of previous) {
+      const next = entry.ageInTurns + 1;
+      if (next > PHERO_MAX_AGE) continue;
+      aged.push({ plane: entry.plane, x: entry.x, y: entry.y, ageInTurns: next });
+    }
+    const fresh: PheroTrailEntry = {
+      plane: party.location.plane,
+      x: party.location.x,
+      y: party.location.y,
+      ageInTurns: 0,
+    };
+    newTrails.set(id, [fresh, ...aged]);
+  }
+  working = { ...working, pheroTrails: newTrails };
+
+  // 6. Day/night phase advance. Decrement remaining-in-phase; if it
+  //    hits 0, flip the phase and reset the counter to PHASE_LENGTH.
+  //    Emit phase-changed *for* the upcoming turn (nextTurn) when the
+  //    flip occurs so consumers (combat / AI policies) can read the
+  //    new phase off state.
+  const decremented = working.phaseTurnsRemaining - 1;
+  let newPhase: DayNightPhase = working.phase;
+  let newPhaseTurnsRemaining = decremented;
+  if (decremented <= 0) {
+    newPhase = working.phase === 'day' ? 'night' : 'day';
+    newPhaseTurnsRemaining = PHASE_LENGTH;
+    events.push({
+      kind: 'phase-changed',
+      turn: nextTurn,
+      tick: tick(),
+      phase: newPhase,
+    });
+  }
+
+  // 7. Increment turn counter; emit turn-start for the new turn.
+  working = {
+    ...working,
+    turn: nextTurn,
+    phase: newPhase,
+    phaseTurnsRemaining: newPhaseTurnsRemaining,
+  };
   events.push({ kind: 'turn-start', turn: nextTurn, tick: tick() });
 
   return { state: working, events };

@@ -32,6 +32,21 @@ const firstPostOfType = (state: GameState, type: string): Post => {
 };
 
 /**
+ * Forces the round-3 `deep-raider` spider party into a leaderless
+ * state so the baseline's east-wall awareness branch (vanguard-bravo
+ * detours via the wall-crack ladder while deep-raider lives) is
+ * disabled. Tests that assert the canonical commit-phase pathing for
+ * ALL field parties use this helper to neutralize the detour gate.
+ */
+const neutralizeDeepRaider = (state: GameState): GameState => {
+  const dr = state.parties.get('deep-raider' as PartyId);
+  if (!dr) return state;
+  const parties = new Map(state.parties);
+  parties.set(dr.id, { ...dr, leaderless: true });
+  return { ...state, parties };
+};
+
+/**
  * Most tests below want to assert *movement* targets, which the
  * ceiling-capable parties don't issue on turn 0 (they fire a turn-0
  * `jelly-apply` self-buff). Bumping `state.turn` to 1 sidesteps that
@@ -113,12 +128,13 @@ describe('baselinePlayer', () => {
     expect(order.target).toEqual(crack.location);
   });
 
-  it('after all foothold POSTs are owned, every field party commits to spider-web', () => {
+  it('after all foothold POSTs are owned and deep-raider is neutralized, every field party commits to spider-web', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
     state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
+    state = neutralizeDeepRaider(state);
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const spiderWeb = state.posts.get('spider-web' as PostId)!;
     let fieldOrdersIssued = 0;
@@ -132,6 +148,36 @@ describe('baselinePlayer', () => {
       fieldOrdersIssued += 1;
     }
     expect(fieldOrdersIssued).toBeGreaterThan(0);
+  });
+
+  it('east-wall awareness: vanguard-bravo detours through a captured wall-crack while deep-raider is alive', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
+    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
+    state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
+    // deep-raider untouched: alive on east-wall (5,5).
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const bravo = next.parties.get('vanguard-bravo' as PartyId);
+    expect(bravo?.orders).toHaveLength(1);
+    const order = bravo?.orders[0] as MoveOrder;
+    expect(order.kind).toBe('move-to');
+    const crack = firstPostOfType(state, WALL_CRACK_TYPE);
+    expect(order.target).toEqual(crack.location);
+  });
+
+  it('east-wall awareness clears: once deep-raider is leaderless, vanguard-bravo commits direct to spider-web', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
+    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
+    state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
+    state = neutralizeDeepRaider(state);
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const bravo = next.parties.get('vanguard-bravo' as PartyId);
+    const order = bravo?.orders[0] as MoveOrder;
+    const web = state.posts.get('spider-web' as PostId)!;
+    expect(order.target).toEqual(web.location);
   });
 
   it('does not modify spider parties', () => {

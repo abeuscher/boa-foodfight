@@ -10,6 +10,7 @@ import type {
   MoveOrder,
   Party,
   PartyId,
+  PheroTrailEntry,
   Post,
   PostId,
   TileCoord,
@@ -35,7 +36,22 @@ const replaceParty = (state: GameState, party: Party): GameState => {
 const moveAntPartyTo = (state: GameState, partyId: PartyId, location: TileCoord): GameState => {
   const party = state.parties.get(partyId);
   if (!party) throw new Error(`unknown party ${String(partyId)}`);
-  return replaceParty(state, { ...party, location });
+  let next = replaceParty(state, { ...party, location });
+  // Seed a fresh pheromone trail at the new location so the spider
+  // AI's trail-based scans (rec 1.5) can see this party. Without
+  // this, tests that bypass end-of-turn would leave the trail empty.
+  if (party.faction === 'ant') {
+    const fresh: PheroTrailEntry = {
+      plane: location.plane,
+      x: location.x,
+      y: location.y,
+      ageInTurns: 0,
+    };
+    const trails = new Map(next.pheroTrails);
+    trails.set(partyId, [fresh]);
+    next = { ...next, pheroTrails: trails };
+  }
+  return next;
 };
 
 /** Move every ant party far from any plane-transition POST so no threat triggers. */
@@ -133,13 +149,18 @@ describe('spiderL1', () => {
     const next = spiderL1.decide(state, data, createRng(1));
     const scout = next.parties.get('advance-scout' as PartyId);
 
-    // Each non-web-guard, non-scout spider party should hold position
-    // when there's no threat (the 6-plane geometry made spider-web
-    // pile-ups overwhelming, so default patrol is to anchor in place).
+    // Each non-web-guard, non-scout, non-deep-raider spider party should
+    // hold position when there's no threat (the 6-plane geometry made
+    // spider-web pile-ups overwhelming, so default patrol is to anchor
+    // in place). The deep-raider is excluded because it has its own
+    // dedicated logic (proactive descent toward the floor door /
+    // storm-drain column) that intentionally moves every turn — it's
+    // a forward-pressure party, not a patrol party.
     let patrolCount = 0;
     for (const party of next.parties.values()) {
       if (party.faction !== 'spider') continue;
       if (party.id === ('web-guard' as PartyId)) continue;
+      if (party.id === ('deep-raider' as PartyId)) continue;
       if (party.id === scout?.id) continue;
       patrolCount += 1;
       expect(party.orders).toEqual([]);

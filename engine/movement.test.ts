@@ -218,3 +218,77 @@ describe('resolveMovement', () => {
     expect(someId).toBeDefined();
   });
 });
+
+describe('resolveMovement: spider-corner-cross + ant-plane-switch (rec 1.4)', () => {
+  it('a spider party at a wall-to-wall corner crosses in one step and emits corner-crossed', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    // Pick advance-scout (spider). Place it at the NE corner of north-wall
+    // (x=9, y=5) and order it to east-wall (9, 5). The engine should
+    // resolve the corner adjacency on a single tile of allowance.
+    const partyId = 'advance-scout' as PartyId;
+    const start: TileCoord = { plane: 'north-wall', x: 9, y: 5 };
+    const target: TileCoord = { plane: 'east-wall', x: 9, y: 5 };
+    let s = setLocation(state, partyId, start);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target }]);
+
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.location.plane).toBe('east-wall');
+    const cornerEvents = out.events.filter(
+      (e): e is Extract<ReplayEvent, { kind: 'corner-crossed' }> => e.kind === 'corner-crossed',
+    );
+    const myCornerEvents = cornerEvents.filter((e) => e.partyId === partyId);
+    expect(myCornerEvents.length).toBeGreaterThanOrEqual(1);
+    expect(myCornerEvents[0]?.from.plane).toBe('north-wall');
+    expect(myCornerEvents[0]?.to.plane).toBe('east-wall');
+  });
+
+  it('an ant party at a wall-to-wall corner does NOT auto-cross', () => {
+    // Build an ant party WITHOUT ant-plane-switch (no ant-mage), drop it
+    // at the same NE corner, and confirm the engine refuses the corner
+    // cross (ant must walk floor/ceiling or use ant-plane-switch).
+    const { state } = loadScenario(DATA_DIR, 1);
+    // vanguard-alpha contains no ant-mage in the locked roster, but to
+    // be safe we use the queen-guard variant: just test using a roster
+    // party we *know* lacks the mage. Use 'vanguard-alpha' (footmen +
+    // archers + scout, no mage).
+    const partyId = 'vanguard-alpha' as PartyId;
+    const start: TileCoord = { plane: 'north-wall', x: 9, y: 5 };
+    const target: TileCoord = { plane: 'east-wall', x: 9, y: 5 };
+    let s = setLocation(state, partyId, start);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target }]);
+
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    // Without an ant-plane-switch ability, no corner cross is allowed —
+    // the move stalls and the party stays on north-wall.
+    expect(after?.location.plane).toBe('north-wall');
+    const cornerEvents = out.events.filter(
+      (e) => e.kind === 'corner-crossed' && e.partyId === partyId,
+    );
+    expect(cornerEvents).toHaveLength(0);
+  });
+
+  it('an ant party with ant-plane-switch teleports cross-plane (existing semantics)', () => {
+    // pathfinders contains an ant-mage with ant-plane-switch. Order it
+    // from floor (1, 1) to ceiling (1, 1) — the engine's
+    // `tryPlaneTransition` should fire ant-plane-switch and land the
+    // party on the same (x, y) of the ceiling.
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = 'pathfinders' as PartyId;
+    const start: TileCoord = { plane: 'floor', x: 1, y: 1 };
+    const target: TileCoord = { plane: 'ceiling', x: 1, y: 1 };
+    let s = setLocation(state, partyId, start);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target }]);
+
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.location).toEqual(target);
+    // The teleport is NOT a corner cross — corner-crossed only fires
+    // for wall-to-wall edges.
+    const cornerEvents = out.events.filter(
+      (e) => e.kind === 'corner-crossed' && e.partyId === partyId,
+    );
+    expect(cornerEvents).toHaveLength(0);
+  });
+});

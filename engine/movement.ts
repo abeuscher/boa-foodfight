@@ -34,7 +34,7 @@
  */
 
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
-import { edgeAnchor, edgeNeighbor } from './edges.ts';
+import { edgeAnchor, edgeNeighbor, isCornerCross } from './edges.ts';
 import { baseMovementAllowance } from './parties.ts';
 import type {
   AbilityId,
@@ -51,7 +51,13 @@ import type {
   UnitTemplateId,
 } from './types.ts';
 
-const PLANE_SWITCH: AbilityId = 'plane-switch' as AbilityId;
+/**
+ * Ant-only one-shot teleport. Ant parties carrying an ant-mage spend
+ * the order to land on the same (x, y) of any plane. Replaces the old
+ * shared `plane-switch` per rec 1.4 — spiders no longer need (or have)
+ * an ability for plane-switching; their corner-cross is automatic.
+ */
+const ANT_PLANE_SWITCH: AbilityId = 'ant-plane-switch' as AbilityId;
 
 const WALL_PLANES = new Set<string>(['north-wall', 'south-wall', 'east-wall', 'west-wall']);
 const isWallPlane = (plane: string): boolean => WALL_PLANES.has(plane);
@@ -82,12 +88,12 @@ const partyHasPlaneSwitch = (
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
 ): boolean => {
   // A no-fly unit anchors the whole party to the ground; even a mage
-  // carrying plane-switch can't teleport everyone up.
+  // carrying ant-plane-switch can't teleport everyone up.
   if (partyHasNoFly(party, templates)) return false;
   for (const u of party.units) {
     if (u.currentHp <= 0) continue;
     const tmpl = templates.get(u.templateId);
-    if (tmpl?.abilities.includes(PLANE_SWITCH)) return true;
+    if (tmpl?.abilities.includes(ANT_PLANE_SWITCH)) return true;
   }
   return false;
 };
@@ -193,11 +199,14 @@ const pickGreedyStep = (
  * Decide where a party should land when stepping toward a target tile
  * on a different plane. Three mechanisms in order:
  *
- * 1. Plane-switch passive (ant-mage). Teleport to the same (x,y) on the
- *    target plane. Works any plane-to-any plane.
+ * 1. ant-plane-switch (ant-mage). Teleport to the same (x,y) on the
+ *    target plane. Works any plane-to-any plane. Ants only — see
+ *    rec 1.4 (asymmetric plane-switch costs).
  * 2. Edge adjacency (geometric). The bathroom is a cube; a tile on a
  *    plane's boundary maps to a single tile on the adjacent plane via
- *    `engine/edges.ts`. Anyone can use this.
+ *    `engine/edges.ts`. Anyone can use floor↔wall and ceiling↔wall
+ *    edges. Wall-to-wall *corner* crosses are spider-only — the
+ *    `spider-corner-cross` faction passive (no use cap, no order).
  * 3. Paired POST shortcut. If the party stands on a POST that is
  *    `pairedWith` another POST on the target plane, and the partner
  *    is not enemy-held, the party "steps through" — useful for
@@ -211,14 +220,19 @@ const tryPlaneTransition = (
 ): TileCoord | undefined => {
   if (party.location.plane === target.plane) return undefined;
 
-  // 1. Plane-switch ability: teleport same (x,y).
+  // 1. ant-plane-switch ability: teleport same (x,y).
   if (partyHasPlaneSwitch(party, templates)) {
     return { plane: target.plane, x: party.location.x, y: party.location.y };
   }
 
   // 2. Edge adjacency: party is on a shared edge with the target plane.
   const adj = edgeNeighbor(party.location, target.plane);
-  if (adj !== undefined) return adj;
+  if (adj !== undefined) {
+    // Wall-to-wall corner crosses are spider-only. Ants must walk via
+    // floor/ceiling or use ant-plane-switch.
+    if (isCornerCross(party.location, adj) && party.faction !== 'spider') return undefined;
+    return adj;
+  }
 
   // 3. Paired POST traversal.
   const here = postAt(party.location, posts);
@@ -400,6 +414,19 @@ export const resolveMovement = (
         from: step.from,
         to: step.to,
       });
+      // Emit corner-crossed for spider parties traversing a wall-to-wall
+      // corner edge (the spider-corner-cross faction passive — rec 1.4).
+      // Engine-side detection only; no order or use cap is consumed.
+      if (partyIn.faction === 'spider' && isCornerCross(step.from, step.to)) {
+        events.push({
+          kind: 'corner-crossed',
+          turn: state.turn,
+          tick: tick(),
+          partyId: step.partyId,
+          from: step.from,
+          to: step.to,
+        });
+      }
     }
     for (const broken of brokenWebs) {
       events.push({

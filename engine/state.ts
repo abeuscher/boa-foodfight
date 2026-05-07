@@ -11,6 +11,7 @@ import path from 'node:path';
 
 import { coordKey } from './coord.ts';
 import { generateRandomMap } from './map-gen.ts';
+import { PHASE_LENGTH } from './phase.ts';
 import {
   abilitiesFileSchema,
   dialogueFileSchema,
@@ -105,6 +106,7 @@ const buildUnitTemplates = (units: UnitsFile): ReadonlyMap<UnitTemplateId, UnitT
       baseStats: t.baseStats,
       abilities: t.abilities.map((a) => a as AbilityId),
       tags: t.tags,
+      planeAffinity: t.planeAffinity,
     });
   }
   return map;
@@ -236,6 +238,9 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
     queenUltimatesUsed: 0,
     webbedTiles: new Map(),
     buttons: 0,
+    phase: 'day',
+    phaseTurnsRemaining: PHASE_LENGTH,
+    pheroTrails: new Map(),
     winner: null,
   };
 };

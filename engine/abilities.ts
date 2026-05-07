@@ -39,6 +39,7 @@ const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
 const SPIN_WEB: AbilityId = 'spin-web' as AbilityId;
 const RECRUIT: AbilityId = 'recruit' as AbilityId;
 const SPAWN_SPIDERLINGS: AbilityId = 'spawn-spiderlings' as AbilityId;
+const SCOUT_PING: AbilityId = 'scout-ping' as AbilityId;
 
 export const partyHasAbility = (
   party: Party,
@@ -253,6 +254,36 @@ const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
   return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
 };
 
+/**
+ * Scout-ping handler. The ability is reveal-only and has no live
+ * scouting consequence in the engine yet, so resolution is just an
+ * event emission. The night-phase gate (rec 1.2) suppresses it: at
+ * night we emit `ability-blocked-by-phase` instead of `ability-used`.
+ */
+const handleScoutPing = (args: HandlerArgs): HandlerResult => {
+  const { party, slot, state, parties, webbedTiles, tick } = args;
+  const events: ReplayEvent[] = [];
+  if (!partyHasAbility(party, SCOUT_PING, state.unitTemplates)) {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  if (state.phase === 'night') {
+    consumeOrder(party, slot, parties);
+    events.push({
+      kind: 'ability-blocked-by-phase',
+      turn: state.turn,
+      tick: tick(),
+      partyId: party.id,
+      abilityId: SCOUT_PING,
+      phase: state.phase,
+    });
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  consumeOrder(party, slot, parties);
+  events.push(abilityUsedEvent(state, party.id, SCOUT_PING, tick));
+  return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+};
+
 const handleSpawnSpiderlings = (args: HandlerArgs): HandlerResult => {
   const { party, slot, state, parties, webbedTiles, tick } = args;
   const events: ReplayEvent[] = [];
@@ -350,6 +381,9 @@ export const resolveAbilityOrders = (
         break;
       case SPAWN_SPIDERLINGS:
         r = handleSpawnSpiderlings(baseArgs);
+        break;
+      case SCOUT_PING:
+        r = handleScoutPing(baseArgs);
         break;
       default:
         break;

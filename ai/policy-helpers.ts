@@ -12,6 +12,7 @@ import type {
   Order,
   Party,
   PartyId,
+  Plane,
   Posture,
   Post,
   PostId,
@@ -82,6 +83,39 @@ export const postLocation = (state: GameState, id: PostId): TileCoord | undefine
 
 /** True iff `party` has at least one living unit. */
 export const partyAlive = (party: Party): boolean => party.units.some((u) => u.currentHp > 0);
+
+// ---------------------------------------------------------------------------
+// Pheromone trail (rec 1.5) — spider-only ant visibility.
+// ---------------------------------------------------------------------------
+
+/** A single trail observation from the spider's vantage. Carries the
+ * source ant party id (so the AI can group entries by party) plus the
+ * decayed location and age bucket. Age 0 = the ant's current tile;
+ * age 3 = stale (3 turns old). */
+export interface SpiderVisibleTrailEntry {
+  readonly partyId: PartyId;
+  readonly plane: Plane;
+  readonly x: number;
+  readonly y: number;
+  readonly ageInTurns: number;
+}
+
+/**
+ * The spider AI's *only* legitimate window into ant positions: a flat
+ * array of all ant pheromone trail entries. Built from
+ * `state.pheroTrails`. Per rec 1.5 the spider AI must NOT scan
+ * `state.parties` for ant locations — that would defeat the point of
+ * the asymmetric information layer.
+ */
+export const getSpiderVisibleAntTrail = (state: GameState): readonly SpiderVisibleTrailEntry[] => {
+  const out: SpiderVisibleTrailEntry[] = [];
+  for (const [partyId, entries] of state.pheroTrails) {
+    for (const e of entries) {
+      out.push({ partyId, plane: e.plane, x: e.x, y: e.y, ageInTurns: e.ageInTurns });
+    }
+  }
+  return out;
+};
 
 /** Closest living non-self ant field party id (skips queen-guard implicitly
  * via the caller-supplied `from`, leaderless parties, and dead parties).

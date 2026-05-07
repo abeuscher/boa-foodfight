@@ -153,6 +153,24 @@ export const isOnPlaneEdge = (coord: TileCoord): boolean =>
   coord.x === 0 || coord.x === LAST || coord.y === 0 || coord.y === LAST;
 
 /**
+ * True iff the move `from -> to` traverses a wall-to-wall corner
+ * (NW/NE/SW/SE in this engine's geometry). Floor↔wall and ceiling↔wall
+ * edges are NOT corners — those are open to both factions. The
+ * `spider-corner-cross` passive (rec 1.4) keys off this predicate so
+ * only ant parties pay the `ant-plane-switch` cost when crossing
+ * corners.
+ */
+const WALL_PLANE_NAMES: ReadonlySet<Plane> = new Set<Plane>([
+  'north-wall',
+  'south-wall',
+  'east-wall',
+  'west-wall',
+]);
+
+export const isCornerCross = (from: TileCoord, to: TileCoord): boolean =>
+  from.plane !== to.plane && WALL_PLANE_NAMES.has(from.plane) && WALL_PLANE_NAMES.has(to.plane);
+
+/**
  * Returns the boundary tile on `from.plane` closest (Manhattan) to
  * `from` from which a party can step to `targetPlane`. If no edge of
  * `from.plane` borders `targetPlane`, returns undefined and the
