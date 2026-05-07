@@ -266,8 +266,12 @@ const handleSpawnSpiderlings = (args: HandlerArgs): HandlerResult => {
     return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
   }
   const newPartyIds: PartyId[] = [];
-  // Spawn 10 one-unit spiderling parties at the queen's tile.
-  for (let i = 0; i < 10; i++) {
+  // Spawn N one-unit spiderling parties at the queen's tile. The
+  // count is hard-coded here to match the data-file `count` param so
+  // the AI behavior stays aligned with the value the firepower
+  // designer tunes. Coevo round 1 dropped this from 10 to 5.
+  const SPIDERLING_COUNT = 5;
+  for (let i = 0; i < SPIDERLING_COUNT; i++) {
     const partyId = `spiderling-${String(state.turn)}-${String(i)}` as PartyId;
     if (parties.has(partyId)) continue;
     const unitId = `${partyId}-u` as UnitId;
