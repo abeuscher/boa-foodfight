@@ -451,6 +451,34 @@ function drawParties(ctx, plane, parties, neutralHypno) {
   }
 }
 
+/**
+ * While the battle play-by-play panel is open, draw a 4-px yellow
+ * outline on the attacker's tile (the battle tile) so the user can
+ * locate the action on the canvas at a glance. Disappears when the
+ * battle panel closes (BATTLE_STATE = null).
+ */
+function drawBattleHighlight(ctx, plane, state) {
+  if (!BATTLE_STATE) return;
+  const attackerId = BATTLE_STATE.event.result.attackerPartyId;
+  const attacker = state.parties.get(attackerId);
+  if (!attacker || attacker.plane !== plane) return;
+  const { ox, oy } = planeOrigin(plane);
+  // Place the outline 2px outside the cell so it doesn't blend with
+  // the grid lines or any party circle stroked in the same tile.
+  const x = ox + attacker.x * CELL - 2;
+  const y = oy + attacker.y * CELL - 2;
+  const size = CELL + 4;
+  ctx.save();
+  // Drop-shadow behind the stroke gives extra pop against the dark bg
+  // and the orange-red ant circles.
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+  ctx.shadowBlur = 6;
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(x, y, size, size);
+  ctx.restore();
+}
+
 function render(canvas, state) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -461,6 +489,7 @@ function render(canvas, state) {
     drawWebs(ctx, plane, state.webs);
     drawPosts(ctx, plane, state.posts, state.initialPosts);
     drawParties(ctx, plane, state.parties, state.neutralHypno);
+    drawBattleHighlight(ctx, plane, state);
   }
   // HUD: queen charge, turn, winner banner.
   ctx.fillStyle = '#888';
