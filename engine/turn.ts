@@ -393,6 +393,20 @@ export const runScenario = (
         rng.fork(`policy-${policy.name}-${String(turnsPlayed)}`),
       );
     }
+    // Round 16 — drain any policy-emitted replay events (e.g.,
+    // `flee-queued`) into the main stream and reset the sidecar
+    // before the engine begins resolving this turn. Run before
+    // `runTurn` so the events sort ahead of movement / battle
+    // events on the same turn. The driver stamps each event's
+    // `tick` field here (policies set it to 0 as a placeholder)
+    // so tick ordering stays under engine control.
+    const pending = working.pendingPolicyEvents ?? [];
+    if (pending.length > 0) {
+      for (const ev of pending) {
+        events.push({ ...ev, tick: tick() });
+      }
+      working = { ...working, pendingPolicyEvents: [] };
+    }
     const outcome = runTurn(working, scenario, rng, tick);
     working = outcome.state;
     events.push(...outcome.events);

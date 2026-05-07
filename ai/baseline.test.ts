@@ -468,4 +468,169 @@ describe('baselinePlayer', () => {
     const fleeOrders = (after?.orders ?? []).filter((o) => o.kind === 'flee');
     expect(fleeOrders.length).toBe(0);
   });
+
+  describe('round-16 pre-battle threat assessment', () => {
+    /**
+     * Move the ant pathfinders to one tile away from web-guard, drain
+     * pathfinders to a thin sliver, and pump web-guard up. The next move
+     * tile is web-guard's tile, so the threat-flee branch fires.
+     */
+    const placeWeakAntNextToStrongSpider = (state: GameState): GameState => {
+      const guard = state.parties.get('web-guard' as PartyId);
+      if (!guard) throw new Error('no web-guard');
+      const pf = state.parties.get(PATHFINDERS);
+      if (!pf) throw new Error('no pathfinders');
+      // Park pathfinders one tile north of web-guard (same plane) so
+      // its move-to-web step lands on web-guard.
+      const here: TileCoord = {
+        plane: guard.location.plane,
+        x: guard.location.x,
+        y: Math.max(0, guard.location.y - 1),
+      };
+      // Knock pathfinders down to ~50% HP per unit so its power vs
+      // web-guard's full power is heavily lopsided but the round-15 HP
+      // trigger does NOT fire (so we know it's the threat trigger).
+      const weakPf: Party = {
+        ...pf,
+        location: here,
+        units: pf.units.map((u) => ({ ...u, currentHp: Math.max(2, Math.floor(u.currentHp / 2)) })),
+      };
+      const parties = new Map(state.parties);
+      parties.set(pf.id, weakPf);
+      return { ...state, parties };
+    };
+
+    it('weak ant party stepping into strong spider party queues a flee (deterministic seed)', () => {
+      const { state, data } = loadScenario(DATA_DIR, 1);
+      // Advance past turn 0 so the kill-dive line fires. Pathfinders
+      // will then issue a move-to toward the web tile (one tile away
+      // → that tile becomes the next-step destination).
+      const advanced = advancePastOpening(state);
+      const arranged = placeWeakAntNextToStrongSpider(advanced);
+      // Try several seeds — the threat-flee fork rolls per turn, so at
+      // least one seed must land below the ~64% flee chance for a 90%
+      // loss-prob matchup. We assert that AT LEAST ONE of the first 8
+      // seeds queues a flee (the trigger is probabilistic).
+      let fleeSeen = false;
+      let eventSeen = false;
+      for (let seed = 1; seed <= 8; seed++) {
+        const next = baselinePlayer.decide(arranged, data, createRng(seed));
+        const pf = next.parties.get(PATHFINDERS);
+        if (pf?.orders.some((o) => o.kind === 'flee')) fleeSeen = true;
+        const events = next.pendingPolicyEvents ?? [];
+        if (
+          events.some(
+            (e) =>
+              e.kind === 'flee-queued' &&
+              e.reason === 'threat-prediction' &&
+              e.partyId === PATHFINDERS,
+          )
+        ) {
+          eventSeen = true;
+        }
+      }
+      expect(fleeSeen).toBe(true);
+      expect(eventSeen).toBe(true);
+    });
+
+    it('even-match collision does NOT queue a threat-flee', () => {
+      const { state, data } = loadScenario(DATA_DIR, 1);
+      const advanced = advancePastOpening(state);
+      // Place pathfinders next to web-guard (so it would step onto it),
+      // but leave both parties at full HP. Lanchester gives roughly a
+      // close-to-50% loss-prob, so fleeChanceFromLossProb is near 0.
+      const guard = advanced.parties.get('web-guard' as PartyId)!;
+      const pf = advanced.parties.get(PATHFINDERS)!;
+      const here: TileCoord = {
+        plane: guard.location.plane,
+        x: guard.location.x,
+        y: Math.max(0, guard.location.y - 1),
+      };
+      // Make the two parties' powers exactly equal: clone the web-
+      // guard's units onto pathfinders so estimateLossProbability
+      // returns 0.5 → fleeChanceFromLossProb = 0 → never flees.
+      const equalPf: Party = {
+        ...pf,
+        location: here,
+        units: guard.units.map((u, idx) => ({
+          ...u,
+          id: `pf-clone-${String(idx)}` as Party['units'][number]['id'],
+        })),
+        leaderId: `pf-clone-0` as Party['leaderId'],
+      };
+      const parties = new Map(advanced.parties);
+      parties.set(pf.id, equalPf);
+      const arranged: GameState = { ...advanced, parties };
+      // Try several seeds — none should queue a flee for an even
+      // match.
+      for (let seed = 1; seed <= 16; seed++) {
+        const next = baselinePlayer.decide(arranged, data, createRng(seed));
+        const after = next.parties.get(PATHFINDERS);
+        const fleeCount = (after?.orders ?? []).filter((o) => o.kind === 'flee').length;
+        expect(fleeCount).toBe(0);
+      }
+    });
+
+    it('queen-guard never queues a threat-flee, even when about to be overwhelmed', () => {
+      const { state, data } = loadScenario(DATA_DIR, 1);
+      // Co-locate the strong spider web-guard onto queen-guard's tile
+      // so even a hypothetical "next tile" lookup hits an enemy. The
+      // queen-guard runs the framework's queenGuardOrders hook (which
+      // never reaches the threat-flee branch).
+      const queenId = 'queen-guard' as PartyId;
+      const queen = state.parties.get(queenId)!;
+      const guard = state.parties.get('web-guard' as PartyId)!;
+      const parties = new Map(state.parties);
+      parties.set(guard.id, { ...guard, location: queen.location });
+      const arranged: GameState = { ...state, parties };
+      for (let seed = 1; seed <= 8; seed++) {
+        const next = baselinePlayer.decide(arranged, data, createRng(seed));
+        const after = next.parties.get(queenId);
+        const fleeOrders = (after?.orders ?? []).filter((o) => o.kind === 'flee');
+        expect(fleeOrders.length).toBe(0);
+      }
+    });
+
+    it('flee-queued event payload carries the predicted enemy and loss probability', () => {
+      const { state, data } = loadScenario(DATA_DIR, 1);
+      const advanced = advancePastOpening(state);
+      const arranged = placeWeakAntNextToStrongSpider(advanced);
+      // Find a seed that fires the threat trigger so we can inspect
+      // the event payload. Loop through seeds 1..32; at least one
+      // should land.
+      let event: ReturnType<typeof getThreatEvent> = undefined;
+      for (let seed = 1; seed <= 32; seed++) {
+        const next = baselinePlayer.decide(arranged, data, createRng(seed));
+        event = getThreatEvent(next);
+        if (event) break;
+      }
+      expect(event).toBeDefined();
+      if (!event) return;
+      expect(event.partyId).toBe(PATHFINDERS);
+      expect(event.reason).toBe('threat-prediction');
+      expect(event.enemyPartyId).toBe('web-guard' as PartyId);
+      expect(event.lossProbability).toBeGreaterThan(0.5);
+    });
+  });
 });
+
+// Test helper hoisted outside the describe so it doesn't reset between
+// `it` calls; pulls the threat-prediction `flee-queued` event out of
+// the round-16 sidecar buffer for assertion.
+const getThreatEvent = (
+  state: GameState,
+):
+  | undefined
+  | {
+      readonly kind: 'flee-queued';
+      readonly partyId: PartyId;
+      readonly reason: 'low-hp' | 'threat-prediction';
+      readonly enemyPartyId?: PartyId;
+      readonly lossProbability?: number;
+    } => {
+  const events = state.pendingPolicyEvents ?? [];
+  for (const e of events) {
+    if (e.kind === 'flee-queued' && e.reason === 'threat-prediction') return e;
+  }
+  return undefined;
+};

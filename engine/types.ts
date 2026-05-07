@@ -411,6 +411,18 @@ export interface GameState {
    * provenance but no longer eligible for pickup.
    */
   readonly itemSpawns: readonly ItemSpawn[];
+  /**
+   * Round 16 — sidecar buffer for replay events emitted by AI
+   * policies during their `decide()` pass. The turn driver drains
+   * this list each turn (after policies run, before movement) and
+   * folds the entries into the main replay-event stream, then resets
+   * the field to `[]` on the working state. Policies push events
+   * here instead of being given a direct event sink so the
+   * `AIPolicy.decide` signature (state -> state) stays unchanged.
+   * Optional for backwards compatibility: a missing field is
+   * equivalent to `[]`.
+   */
+  readonly pendingPolicyEvents?: readonly ReplayEvent[];
   readonly winner: Faction | null;
 }
 
@@ -694,6 +706,31 @@ export type ReplayEvent =
        */
       readonly kind: 'battle-flee-failed';
       readonly partyId: PartyId;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 16 — emitted by an AI policy when it prepends a flee
+       * order onto a party's order list, BEFORE battle resolution.
+       * Captures the AI's prior intent to flee. The existing
+       * `battle-flee-attempted` event still fires later when battle
+       * resolution actually rolls; this event captures the upstream
+       * decision with its rationale.
+       *
+       * `reason: 'low-hp'` is the round-15 HP-fraction trigger
+       * (livingHpFraction < 0.30). `reason: 'threat-prediction'` is
+       * the round-16 trigger: the party computed a Lanchester loss
+       * probability against an enemy at the next-tile collision and
+       * the seeded RNG draw fell under
+       * `fleeChanceFromLossProb(lossProbability)`. For threat-
+       * prediction emits, `enemyPartyId` and `lossProbability` are
+       * filled in; for `'low-hp'` emits, both are omitted (no
+       * specific enemy).
+       */
+      readonly kind: 'flee-queued';
+      readonly partyId: PartyId;
+      readonly reason: 'low-hp' | 'threat-prediction';
+      readonly enemyPartyId?: PartyId;
+      readonly lossProbability?: number;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 

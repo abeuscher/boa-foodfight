@@ -70,6 +70,7 @@ import type {
   Order,
   Party,
   PartyId,
+  ReplayEvent,
   Rng,
   TileCoord,
   UnitTemplate,
@@ -95,11 +96,13 @@ import {
   PATHFINDERS,
   postLocation,
   postsOfType,
+  QUEEN_PARTY,
   SOAP_DISH_TYPE,
   SPIDER_WEB,
   VANGUARD_BRAVO,
   WALL_CRACK_TYPE,
 } from './policy-helpers.ts';
+import { appendPolicyEvents, computeThreatFlee, lowHpFleeEvent } from './threat-flee.ts';
 import type { AIPolicy } from './types.ts';
 
 const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
@@ -272,17 +275,42 @@ const mainStrategyOrders = (party: Party, ctx: MainStrategyContext): PartyDecisi
  * (engine consumes it during battle resolution; it's harmless when no
  * battle fires this turn). Queen-guard never reaches this helper —
  * the framework's queen-guard hook handles that party separately.
+ *
+ * Round 16 — also returns a `flee-queued` telemetry event when the
+ * trigger fires (caller appends it to `state.pendingPolicyEvents`).
  */
 const withFleeIfLowHp = (
+  state: GameState,
   party: Party,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
   decision: PartyDecision,
-): PartyDecision => {
-  if (!partyShouldFlee(party, templates)) return decision;
-  return { ...decision, orders: [FLEE_ORDER, ...decision.orders] };
+): { decision: PartyDecision; event?: ReplayEvent } => {
+  if (!partyShouldFlee(party, templates)) return { decision };
+  return {
+    decision: { ...decision, orders: [FLEE_ORDER, ...decision.orders] },
+    event: lowHpFleeEvent(state, party),
+  };
 };
 
-const baselineCore: AIPolicy = buildAntPolicyWithRng(
+/**
+ * Round 16 — set of ant party ids that never queue a threat-flee
+ * regardless of matchup. Queen-guard is filtered already by the
+ * framework's queen-guard hook (it follows a separate code path), but
+ * including it here is defensive. No other ant party is exempt.
+ */
+const ANT_FLEE_EXEMPT: ReadonlySet<PartyId> = new Set<PartyId>([QUEEN_PARTY]);
+
+/**
+ * Round 16 — closure-scoped event buffer. The per-party decision
+ * closure pushes flee-queued events here (one per party that fires a
+ * low-HP or threat-prediction trigger); after the framework's
+ * decide loop completes, the outer wrapper folds the buffer onto
+ * `state.pendingPolicyEvents` so the turn driver can drain it.
+ * Cleared at the top of every `decide` call via reassignment.
+ */
+let baselinePendingEvents: ReplayEvent[] = [];
+
+const baselineInner: AIPolicy = buildAntPolicyWithRng(
   'baseline-staging',
   (state: GameState, rng: Rng) => {
     const ctx: MainStrategyContext = {
@@ -296,6 +324,10 @@ const baselineCore: AIPolicy = buildAntPolicyWithRng(
     // rng) so the per-party rolls are deterministic and don't share
     // entropy with battle/movement subsystems.
     const decisionRng = rng.fork('neutral-decision');
+    // Round 16 — separate fork for the threat-flee dice so the rolls
+    // are isolated from neutral-decision entropy and replays remain
+    // deterministic.
+    const threatRng = rng.fork('threat-flee');
     const inner = (party: Party): PartyDecision | null => {
       // Turn-0 freebie: ceiling-capable parties self-buff with jelly-
       // apply. Costs nothing (no movement yet) and the multiplier
@@ -384,10 +416,38 @@ const baselineCore: AIPolicy = buildAntPolicyWithRng(
       // Round 15 — prepend a flee order when the party's HP fraction
       // is below 30%. Variants don't get this branch (the wrapper
       // lives only on the baseline closure).
-      return withFleeIfLowHp(party, state.unitTemplates, decision);
+      const lowHpResult = withFleeIfLowHp(state, party, state.unitTemplates, decision);
+      if (lowHpResult.event) baselinePendingEvents.push(lowHpResult.event);
+      // Round 16 — pre-battle threat assessment. Predict whether the
+      // party is about to walk into an unwinnable battle this turn
+      // and prepend a flee order with probability scaled to the
+      // matchup. The trigger fires AFTER the round-15 HP-threshold
+      // check so a low-HP party doesn't roll twice; the helper
+      // bails when a flee order is already in the list.
+      const threat = computeThreatFlee(state, party, lowHpResult.decision.orders, threatRng, {
+        exempt: ANT_FLEE_EXEMPT,
+      });
+      if (threat.event) baselinePendingEvents.push(threat.event);
+      return { ...lowHpResult.decision, orders: threat.orders };
     };
   },
   queenGuardOrders,
 );
+
+/**
+ * Round 16 — outer wrapper that flushes the per-turn flee-queued
+ * events buffer onto `state.pendingPolicyEvents` so the turn driver
+ * can drain it. Reset the buffer at the top of every call so a fresh
+ * decide pass starts from an empty slate (deterministic + leak-free).
+ */
+const baselineCore: AIPolicy = {
+  name: baselineInner.name,
+  faction: baselineInner.faction,
+  decide(state, scenario, rng) {
+    baselinePendingEvents = [];
+    const next = baselineInner.decide(state, scenario, rng);
+    return appendPolicyEvents(next, baselinePendingEvents);
+  },
+};
 
 export const baselinePlayer: AIPolicy = { ...baselineCore, placement: baselinePlacement };

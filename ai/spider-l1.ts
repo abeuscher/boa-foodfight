@@ -67,6 +67,7 @@ import type {
   PartyId,
   Post,
   PostId,
+  ReplayEvent,
   Rng,
   TileCoord,
   UnitTemplate,
@@ -84,6 +85,7 @@ import {
   WALL_CRACK_TYPE,
   type SpiderVisibleTrailEntry,
 } from './policy-helpers.ts';
+import { appendPolicyEvents, computeThreatFlee, lowHpFleeEvent } from './threat-flee.ts';
 import type { AIPolicy } from './types.ts';
 
 const THREAT_RADIUS = 2;
@@ -660,6 +662,15 @@ const spiderL1Placement = (state: GameState): GameState =>
     'silk-line': { plane: 'ceiling', x: 7, y: 7 },
   });
 
+/**
+ * Round 16 — set of spider party ids that never queue a threat-flee.
+ * web-guard carries the queen and must hold ground; deep-raider's
+ * interceptor role outranks self-preservation (its placement is the
+ * tactical commitment). All other spider parties (silk-line, advance-
+ * scout, pursuer, spiderlings) are eligible.
+ */
+const SPIDER_FLEE_EXEMPT: ReadonlySet<PartyId> = new Set<PartyId>([WEB_GUARD, DEEP_RAIDER]);
+
 export const spiderL1: AIPolicy = {
   name: 'spider-l1',
   faction: 'spider',
@@ -668,6 +679,11 @@ export const spiderL1: AIPolicy = {
     // Fork an unused stream so future tiebreak randomness can plug in without
     // shifting other subsystems' entropy. (Currently all tiebreaks are by id.)
     rng.fork('spider-l1-tiebreak');
+    // Round 16 — separate fork for the threat-flee dice. Independent
+    // of every other subsystem's entropy so replays remain
+    // deterministic when other features grow.
+    const threatRng = rng.fork('threat-flee');
+    const pendingEvents: ReplayEvent[] = [];
 
     const webLoc = requirePost(state, SPIDER_WEB);
     const stormDrainLoc = requirePost(state, STORM_DRAIN);
@@ -873,12 +889,23 @@ export const spiderL1: AIPolicy = {
       // it during battle resolution.
       const wantsFlee =
         id !== WEB_GUARD && id !== DEEP_RAIDER && spiderShouldFlee(party, state.unitTemplates);
-      const ordersWithFlee: readonly Order[] = wantsFlee
+      const ordersAfterLowHp: readonly Order[] = wantsFlee
         ? [FLEE_ORDER, ...ordersWithHypno]
         : ordersWithHypno;
-      nextParties.set(id, { ...party, orders: ordersWithFlee });
+      if (wantsFlee) pendingEvents.push(lowHpFleeEvent(state, party));
+      // Round 16 — pre-battle threat assessment. Predict an unwinnable
+      // collision this turn and prepend a flee order with probability
+      // scaled to the matchup. Skipped for SPIDER_FLEE_EXEMPT (web-
+      // guard, deep-raider) and when a flee order is already in the
+      // list (the round-15 trigger fired above, or some other path).
+      const threatFlee = computeThreatFlee(state, party, ordersAfterLowHp, threatRng, {
+        exempt: SPIDER_FLEE_EXEMPT,
+      });
+      if (threatFlee.event) pendingEvents.push(threatFlee.event);
+      nextParties.set(id, { ...party, orders: threatFlee.orders });
     }
 
-    return { ...state, parties: nextParties };
+    const next: GameState = { ...state, parties: nextParties };
+    return appendPolicyEvents(next, pendingEvents);
   },
 };
