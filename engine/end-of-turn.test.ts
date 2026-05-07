@@ -301,3 +301,49 @@ describe('endOfTurn', () => {
     expect(found?.templateId).toBe(producedId as UnitTemplateId);
   });
 });
+
+describe('endOfTurn: day/night phase cycle (rec 1.2)', () => {
+  it('phase flips to night after PHASE_LENGTH end-of-turns', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    expect(state.phase).toBe('day');
+    expect(state.phaseTurnsRemaining).toBe(4);
+    // Walk forward 4 end-of-turns. The 4th end-of-turn brings the
+    // counter to 0, flips the phase to night, and emits a phase-
+    // changed event for the now-active phase. The runTurn calls that
+    // follow run with state.phase === 'night'.
+    let working = state;
+    let phaseChanges: ReplayEvent[] = [];
+    for (let i = 0; i < 4; i++) {
+      const out = endOfTurn(working, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+      working = out.state;
+      phaseChanges = [...phaseChanges, ...out.events.filter((e) => e.kind === 'phase-changed')];
+    }
+    expect(working.turn).toBe(4);
+    expect(working.phase).toBe('night');
+    expect(working.phaseTurnsRemaining).toBe(4);
+    expect(phaseChanges).toHaveLength(1);
+    const ev = phaseChanges[0];
+    expect(ev?.kind).toBe('phase-changed');
+    if (ev?.kind === 'phase-changed') {
+      expect(ev.phase).toBe('night');
+    }
+  });
+
+  it('phaseTurnsRemaining decrements each turn during a phase', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const after1 = endOfTurn(
+      state,
+      { queen: data.queen, jelly: data.jelly },
+      makeTickClock(),
+    ).state;
+    expect(after1.phaseTurnsRemaining).toBe(3);
+    expect(after1.phase).toBe('day');
+    const after2 = endOfTurn(
+      after1,
+      { queen: data.queen, jelly: data.jelly },
+      makeTickClock(),
+    ).state;
+    expect(after2.phaseTurnsRemaining).toBe(2);
+    expect(after2.phase).toBe('day');
+  });
+});

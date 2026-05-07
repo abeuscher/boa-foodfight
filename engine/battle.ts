@@ -18,12 +18,14 @@ import {
   type StrategyMultipliers,
 } from './combat.ts';
 import { inPlaneNeighbors } from './coord.ts';
+import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
   BattleParticipant,
   BattleResult,
   BattleRound,
+  DayNightPhase,
   Faction,
   GameState,
   Party,
@@ -124,14 +126,21 @@ const buildLiveUnits = (
   side: Side,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
   battlePlane: Plane,
+  phase: DayNightPhase,
 ): LiveUnit[] =>
   party.units.map((u) => {
     const tmpl = templates.get(u.templateId);
     if (!tmpl) throw new Error(`battle: unknown templateId '${u.templateId}' for unit '${u.id}'`);
+    // Phase offset applies to stats so the agility-order step (which
+    // reads `stats.agility`) and damage-roll attack both pick it up.
+    // Plane affinity is a separate flat add — it stacks atop this so a
+    // night spider on the ceiling gets its full +2 attack reach.
+    const phaseOffset = phaseStatOffsetFor(tmpl, phase);
+    const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
     return {
       id: u.id,
       side,
-      stats: tmpl.baseStats,
+      stats: phaseAdjusted,
       abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
       affinity: planeAffinityForPlane(tmpl, battlePlane),
@@ -413,9 +422,10 @@ export const resolveBattle = (
   // rows are picked off that plane (so a spider attacking onto the
   // floor uses its floor row, not its ceiling row).
   const battlePlane: Plane = defender.location.plane;
+  const phase: DayNightPhase = state.phase;
   const live: LiveUnit[] = [
-    ...buildLiveUnits(attacker, 'attacker', state.unitTemplates, battlePlane),
-    ...buildLiveUnits(defender, 'defender', state.unitTemplates, battlePlane),
+    ...buildLiveUnits(attacker, 'attacker', state.unitTemplates, battlePlane, phase),
+    ...buildLiveUnits(defender, 'defender', state.unitTemplates, battlePlane, phase),
   ];
 
   // Snapshot every participant's HP at battle start (post-opening, since

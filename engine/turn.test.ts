@@ -9,7 +9,7 @@ import { createTickClock } from './replay.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
 import { runScenario, runTurn } from './turn.ts';
-import type { ReplayEvent } from './types.ts';
+import type { AbilityId, PartyId, ReplayEvent } from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -175,5 +175,55 @@ describe('runScenario with AI policies (Phase 3 integration)', () => {
       policies: [baselinePlayer, spiderL1],
     });
     expect(JSON.stringify(oa.events)).toBe(JSON.stringify(ob.events));
+  });
+});
+
+describe('day/night ability gating (rec 1.2)', () => {
+  const PATHFINDERS = 'pathfinders' as PartyId;
+  const SCOUT_PING = 'scout-ping' as AbilityId;
+
+  it('scout-ping is suppressed at night and emits ability-blocked-by-phase', async () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const { resolveAbilityOrders } = await import('./abilities.ts');
+    // pathfinders contains an ant-scout (template ant-scout) which
+    // owns scout-ping. Issue the ability during night and confirm
+    // suppression.
+    const party = state.parties.get(PATHFINDERS);
+    expect(party).toBeDefined();
+    if (!party) return;
+    const parties = new Map(state.parties);
+    parties.set(PATHFINDERS, {
+      ...party,
+      orders: [{ kind: 'use-ability', abilityId: SCOUT_PING }],
+    });
+    const nightState = { ...state, parties, phase: 'night' as const };
+    const out = resolveAbilityOrders(nightState, data.jelly, createRng(1), createTickClock().next);
+    const blocked = out.events.filter((e) => e.kind === 'ability-blocked-by-phase');
+    expect(blocked.length).toBeGreaterThan(0);
+    if (blocked[0]?.kind === 'ability-blocked-by-phase') {
+      expect(blocked[0].abilityId).toBe(SCOUT_PING);
+      expect(blocked[0].phase).toBe('night');
+    }
+    // No ability-used for scout-ping fired this turn.
+    const used = out.events.filter((e) => e.kind === 'ability-used' && e.abilityId === SCOUT_PING);
+    expect(used).toHaveLength(0);
+  });
+
+  it('scout-ping fires normally during day (no block event)', async () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const { resolveAbilityOrders } = await import('./abilities.ts');
+    const party = state.parties.get(PATHFINDERS);
+    if (!party) return;
+    const parties = new Map(state.parties);
+    parties.set(PATHFINDERS, {
+      ...party,
+      orders: [{ kind: 'use-ability', abilityId: SCOUT_PING }],
+    });
+    const dayState = { ...state, parties, phase: 'day' as const };
+    const out = resolveAbilityOrders(dayState, data.jelly, createRng(1), createTickClock().next);
+    const blocked = out.events.filter((e) => e.kind === 'ability-blocked-by-phase');
+    expect(blocked).toHaveLength(0);
+    const used = out.events.filter((e) => e.kind === 'ability-used' && e.abilityId === SCOUT_PING);
+    expect(used.length).toBeGreaterThan(0);
   });
 });

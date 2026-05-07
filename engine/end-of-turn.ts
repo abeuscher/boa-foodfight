@@ -14,8 +14,10 @@
  */
 
 import { distance, sameCoord } from './coord.ts';
+import { PHASE_LENGTH } from './phase.ts';
 import type { JellyFile, QueenFile } from './schemas/index.ts';
 import type {
+  DayNightPhase,
   Faction,
   GameState,
   Party,
@@ -330,8 +332,32 @@ export const endOfTurn = (
     });
   }
 
-  // 6. Increment turn counter; emit turn-start for the new turn.
-  working = { ...working, turn: nextTurn };
+  // 6. Day/night phase advance. Decrement remaining-in-phase; if it
+  //    hits 0, flip the phase and reset the counter to PHASE_LENGTH.
+  //    Emit phase-changed *for* the upcoming turn (nextTurn) when the
+  //    flip occurs so consumers (combat / AI policies) can read the
+  //    new phase off state.
+  const decremented = working.phaseTurnsRemaining - 1;
+  let newPhase: DayNightPhase = working.phase;
+  let newPhaseTurnsRemaining = decremented;
+  if (decremented <= 0) {
+    newPhase = working.phase === 'day' ? 'night' : 'day';
+    newPhaseTurnsRemaining = PHASE_LENGTH;
+    events.push({
+      kind: 'phase-changed',
+      turn: nextTurn,
+      tick: tick(),
+      phase: newPhase,
+    });
+  }
+
+  // 7. Increment turn counter; emit turn-start for the new turn.
+  working = {
+    ...working,
+    turn: nextTurn,
+    phase: newPhase,
+    phaseTurnsRemaining: newPhaseTurnsRemaining,
+  };
   events.push({ kind: 'turn-start', turn: nextTurn, tick: tick() });
 
   return { state: working, events };

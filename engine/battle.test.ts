@@ -519,6 +519,70 @@ describe('resolveBattle: plane affinity', () => {
   });
 });
 
+describe('resolveBattle: day/night phase modifiers (rec 1.2)', () => {
+  it('spider win-rate vs ant on the same plane is higher at night than at day', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    // Use a wall plane so plane-affinity (rec 1.3) is neutral and the
+    // observed delta is purely the night bonus.
+    const tile: TileCoord = { plane: 'east-wall', x: 5, y: 5 };
+    const a = mkUnit(base, 'spider-soldier', 'phn-a');
+    const d = mkUnit(base, 'ant-footman', 'phn-d');
+    const atk = baseSpiderParty('phn-atk', [a], a.id, tile);
+    const def = baseAntParty('phn-def', [d], d.id, tile);
+    const dayState = installParties(base, [atk, def]);
+    const nightState: GameState = { ...dayState, phase: 'night' };
+    const SAMPLE = 60;
+    let dayWins = 0;
+    let nightWins = 0;
+    for (let s = 0; s < SAMPLE; s++) {
+      const seed = s * 1009 + 17;
+      if (
+        resolveBattle(dayState, neutralInput(atk, def), createRng(seed), makeTickClock()).result
+          .winner === atk.id
+      )
+        dayWins += 1;
+      if (
+        resolveBattle(nightState, neutralInput(atk, def), createRng(seed), makeTickClock()).result
+          .winner === atk.id
+      )
+        nightWins += 1;
+    }
+    expect(nightWins).toBeGreaterThan(dayWins);
+  });
+
+  it('ant-archer deals less damage at night (-1 attack penalty)', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    // Battle on east-wall so plane-affinity is neutral on both sides.
+    // ant-archer (atk 5) -> spider-soldier (armor 3): day damage roll
+    // is around max(1, 5-3+v). At night the archer's attack is 4 so
+    // the average per-action damage drops by ~1.
+    const tile: TileCoord = { plane: 'east-wall', x: 5, y: 5 };
+    const archer = mkUnit(base, 'ant-archer', 'arch-a');
+    const sold = mkUnit(base, 'spider-soldier', 'arch-d');
+    const atk = baseAntParty('arch-atk', [archer], archer.id, tile);
+    const def = baseSpiderParty('arch-def', [sold], sold.id, tile);
+    const dayState = installParties(base, [atk, def]);
+    const nightState: GameState = { ...dayState, phase: 'night' };
+    const sumArcherDamage = (state: GameState, seed: number): number => {
+      const out = resolveBattle(state, neutralInput(atk, def), createRng(seed), makeTickClock());
+      let total = 0;
+      for (const round of out.result.rounds) {
+        for (const a of round.actions) if (a.attackerId === archer.id) total += a.damage;
+      }
+      return total;
+    };
+    let dayTotal = 0;
+    let nightTotal = 0;
+    const SAMPLE = 40;
+    for (let s = 0; s < SAMPLE; s++) {
+      const seed = s * 4099 + 31;
+      dayTotal += sumArcherDamage(dayState, seed);
+      nightTotal += sumArcherDamage(nightState, seed);
+    }
+    expect(nightTotal).toBeLessThan(dayTotal);
+  });
+});
+
 describe('resolveBattle: jelly and queen modifiers wired through', () => {
   it('a strong jelly buff on the attacker boosts win rate vs a neutral baseline', () => {
     const { state: base } = loadScenario(DATA_DIR, 1);

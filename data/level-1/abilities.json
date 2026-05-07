@@ -121,7 +121,8 @@
       "params": {
         "radius": 1
       },
-      "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap."
+      "phaseRestriction": "day",
+      "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap. (Suppressed at night.)"
     },
     {
       "id": "web-tangle",

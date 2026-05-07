@@ -224,6 +224,17 @@ export interface FogTile {
 // Game state
 // ---------------------------------------------------------------------------
 
+/**
+ * Day/night cycle state (rec 1.2). Phase flips on a fixed cadence
+ * (4 turns each: day 1-4, night 5-8, day 9-12, ...). Combat math
+ * applies a +1 attack / +1 agility bonus to spiders at night and a
+ * -1 attack penalty to ant-archers at night; abilities can be gated
+ * (scout-ping is suppressed at night). Bonuses are flat and stack
+ * with plane affinity (rec 1.3) before the multiplicative posture/
+ * jelly/queen stack.
+ */
+export type DayNightPhase = 'day' | 'night';
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -242,6 +253,13 @@ export interface GameState {
    * freely. */
   readonly webbedTiles: ReadonlyMap<string, TileCoord>;
   readonly buttons: number;
+  /** Current day/night phase. Starts at `'day'`; flips every
+   * `PHASE_LENGTH` turns at the top of the turn loop. */
+  readonly phase: DayNightPhase;
+  /** Turns left in the current phase. Decremented at turn-start;
+   * when it would hit 0, the phase flips and the counter resets to
+   * `PHASE_LENGTH`. */
+  readonly phaseTurnsRemaining: number;
   readonly winner: Faction | null;
 }
 
@@ -331,6 +349,16 @@ export type ReplayEvent =
       readonly partyId: PartyId;
       readonly from: TileCoord;
       readonly to: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'phase-changed';
+      readonly phase: DayNightPhase;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'ability-blocked-by-phase';
+      readonly partyId: PartyId;
+      readonly abilityId: AbilityId;
+      readonly phase: DayNightPhase;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 
