@@ -94,3 +94,26 @@ export const containsQueen = (
   }
   return false;
 };
+
+/**
+ * Sum of living-unit currentHp divided by sum of those same units'
+ * baseStats.hp. Empty / fully-dead parties return 0. Used by the
+ * round-15 HP-threshold flee trigger on both factions; centralizing
+ * here keeps the math identical across baseline and spider AI.
+ */
+export const livingHpFraction = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  let livingHp = 0;
+  let maxHp = 0;
+  for (const unit of party.units) {
+    if (unit.currentHp <= 0) continue;
+    const tmpl = templates.get(unit.templateId);
+    if (!tmpl) continue;
+    livingHp += unit.currentHp;
+    maxHp += tmpl.baseStats.hp;
+  }
+  if (maxHp <= 0) return 0;
+  return livingHp / maxHp;
+};

@@ -61,15 +61,19 @@
 
 import { partyHasAbility } from '../engine/abilities.ts';
 import { sameCoord } from '../engine/coord.ts';
+import { livingHpFraction } from '../engine/parties.ts';
 import type {
   AbilityId,
   AbilityOrder,
+  FleeOrder,
   GameState,
   Order,
   Party,
   PartyId,
   Rng,
   TileCoord,
+  UnitTemplate,
+  UnitTemplateId,
 } from '../engine/types.ts';
 
 import {
@@ -99,6 +103,24 @@ import {
 import type { AIPolicy } from './types.ts';
 
 const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
+
+/** Round 15 — HP-fraction threshold below which a party prepends a
+ * flee order. 30% mirrors the spec's "low HP" triggering criterion;
+ * the engine then rolls success based on average agility. */
+const FLEE_HP_THRESHOLD = 0.3;
+const FLEE_ORDER: FleeOrder = { kind: 'flee' };
+
+/**
+ * True iff the party's living-HP / max-HP fraction is below
+ * `FLEE_HP_THRESHOLD`. Empty parties return false — there is nothing
+ * left to flee. Queen-guard is filtered upstream by the framework's
+ * queen-guard hook so we don't gate on the queen tag here.
+ */
+const partyShouldFlee = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean =>
+  livingHpFraction(party, templates) > 0 && livingHpFraction(party, templates) < FLEE_HP_THRESHOLD;
 
 /** True iff every wall-crack POST is ant-owned. After that, vanguard-
  * alpha (the only field party not on the dive line) commits to the
@@ -244,6 +266,22 @@ const mainStrategyOrders = (party: Party, ctx: MainStrategyContext): PartyDecisi
   return { orders: [], posture: 'fight' };
 };
 
+/**
+ * Round 15 — wrap a `PartyDecision` with a leading flee order when the
+ * party's living-HP fraction is below 30%. The flee order is prepended
+ * (engine consumes it during battle resolution; it's harmless when no
+ * battle fires this turn). Queen-guard never reaches this helper —
+ * the framework's queen-guard hook handles that party separately.
+ */
+const withFleeIfLowHp = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  decision: PartyDecision,
+): PartyDecision => {
+  if (!partyShouldFlee(party, templates)) return decision;
+  return { ...decision, orders: [FLEE_ORDER, ...decision.orders] };
+};
+
 const baselineCore: AIPolicy = buildAntPolicyWithRng(
   'baseline-staging',
   (state: GameState, rng: Rng) => {
@@ -258,7 +296,7 @@ const baselineCore: AIPolicy = buildAntPolicyWithRng(
     // rng) so the per-party rolls are deterministic and don't share
     // entropy with battle/movement subsystems.
     const decisionRng = rng.fork('neutral-decision');
-    return (party) => {
+    const inner = (party: Party): PartyDecision | null => {
       // Turn-0 freebie: ceiling-capable parties self-buff with jelly-
       // apply. Costs nothing (no movement yet) and the multiplier
       // persists into the kill battle.
@@ -339,6 +377,14 @@ const baselineCore: AIPolicy = buildAntPolicyWithRng(
       }
 
       return mainStrategyOrders(party, ctx);
+    };
+    return (party: Party) => {
+      const decision = inner(party);
+      if (decision === null) return null;
+      // Round 15 — prepend a flee order when the party's HP fraction
+      // is below 30%. Variants don't get this branch (the wrapper
+      // lives only on the baseline closure).
+      return withFleeIfLowHp(party, state.unitTemplates, decision);
     };
   },
   queenGuardOrders,

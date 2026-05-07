@@ -57,6 +57,7 @@
  */
 
 import { distance, sameCoord } from '../engine/coord.ts';
+import { livingHpFraction } from '../engine/parties.ts';
 import type { ScenarioData } from '../engine/state.ts';
 import type {
   AbilityId,
@@ -99,6 +100,24 @@ const WEB_GUARD: PartyId = 'web-guard' as PartyId;
 const DEEP_RAIDER: PartyId = 'deep-raider' as PartyId;
 
 const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+
+/** Round 15 — HP-fraction threshold for the flee trigger. Mirrors the
+ * baseline value so the asymmetry is purely strategic, not numeric. */
+const FLEE_HP_THRESHOLD = 0.3;
+const FLEE_ORDER: Order = { kind: 'flee' };
+
+/**
+ * True iff the spider party's living-HP / max-HP fraction is below
+ * `FLEE_HP_THRESHOLD`. Web-guard (queen-bearer) and deep-raider are
+ * filtered at the call site.
+ */
+const spiderShouldFlee = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  const frac = livingHpFraction(party, templates);
+  return frac > 0 && frac < FLEE_HP_THRESHOLD;
+};
 /** Round 8 — minimum caster currentHp before issuing a hypnotize.
  * The cast halves currentHp so we want the leader to survive at >=
  * half the spider-soldier 13-HP baseline. 5 keeps a 9-10 HP unit
@@ -846,7 +865,18 @@ export const spiderL1: AIPolicy = {
       // Prepend any opportunistic hypnotize order so the engine fires
       // it (resolveAbilityOrders runs before movement).
       const ordersWithHypno: readonly Order[] = [...hypnoOrders, ...nextOrders];
-      nextParties.set(id, { ...party, orders: ordersWithHypno });
+      // Round 15 — HP-threshold flee. Queen-guard (web-guard) and
+      // deep-raider stay put; web-guard never flees (queen), and
+      // deep-raider's interceptor role outranks self-preservation.
+      // Spiderlings and silk-line / advance-scout / pursuit lines all
+      // can flee. The flee order is prepended so the engine handles
+      // it during battle resolution.
+      const wantsFlee =
+        id !== WEB_GUARD && id !== DEEP_RAIDER && spiderShouldFlee(party, state.unitTemplates);
+      const ordersWithFlee: readonly Order[] = wantsFlee
+        ? [FLEE_ORDER, ...ordersWithHypno]
+        : ordersWithHypno;
+      nextParties.set(id, { ...party, orders: ordersWithFlee });
     }
 
     return { ...state, parties: nextParties };

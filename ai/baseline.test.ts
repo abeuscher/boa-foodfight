@@ -405,4 +405,44 @@ describe('baselinePlayer', () => {
       expect(partyB?.orders).toEqual(partyA.orders);
     }
   });
+
+  it('round-15 HP-threshold flee: a low-HP field party prepends a flee order', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const advanced = advancePastOpening(state);
+    // Wound pathfinders down to ~10% HP per unit so the party's HP
+    // fraction sinks below the 30% trigger.
+    const pf = advanced.parties.get(PATHFINDERS);
+    expect(pf).toBeDefined();
+    const hurt: Party = {
+      ...pf!,
+      units: pf!.units.map((u) => ({ ...u, currentHp: 1 })),
+    };
+    const parties = new Map(advanced.parties);
+    parties.set(PATHFINDERS, hurt);
+    const wounded: GameState = { ...advanced, parties };
+    const next = baselinePlayer.decide(wounded, data, createRng(1));
+    const after = next.parties.get(PATHFINDERS);
+    expect(after?.orders[0]?.kind).toBe('flee');
+  });
+
+  it('round-15 queen-guard never flees, even at low HP', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const queenId = 'queen-guard' as PartyId;
+    const guard = state.parties.get(queenId);
+    expect(guard).toBeDefined();
+    // Wound the queen-guard well below the 30% threshold.
+    const hurt: Party = {
+      ...guard!,
+      units: guard!.units.map((u) => ({ ...u, currentHp: 1 })),
+    };
+    const parties = new Map(state.parties);
+    parties.set(queenId, hurt);
+    const wounded: GameState = { ...state, parties };
+    const next = baselinePlayer.decide(wounded, data, createRng(1));
+    const after = next.parties.get(queenId);
+    // Queen-guard runs the framework's queenGuardOrders hook (jelly-
+    // apply), never the flee-aware decideForParty inner closure.
+    const fleeOrders = (after?.orders ?? []).filter((o) => o.kind === 'flee');
+    expect(fleeOrders.length).toBe(0);
+  });
 });
