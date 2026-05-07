@@ -60,6 +60,25 @@ export interface Stats {
   readonly constitution: number;
 }
 
+/**
+ * Per-plane offset to a unit's combat math. The attacker's plane
+ * (the battle tile's plane) selects the row applied to both sides:
+ * the `attack` of the attacker's affinity row stacks onto its
+ * effective attack, the `armor` of the defender's affinity row stacks
+ * onto its effective armor. Wall planes (north/south/east/west) all
+ * use the same `wall` row.
+ */
+export interface PlaneAffinityRow {
+  readonly attack: number;
+  readonly armor: number;
+}
+
+export interface PlaneAffinity {
+  readonly floor: PlaneAffinityRow;
+  readonly ceiling: PlaneAffinityRow;
+  readonly wall: PlaneAffinityRow;
+}
+
 export interface UnitTemplate {
   readonly id: UnitTemplateId;
   readonly name: string;
@@ -70,6 +89,7 @@ export interface UnitTemplate {
   readonly baseStats: Stats;
   readonly abilities: readonly AbilityId[];
   readonly tags: readonly string[];
+  readonly planeAffinity: PlaneAffinity;
 }
 
 export interface Unit {

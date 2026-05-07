@@ -23,6 +23,10 @@ import type { Rng, Stats, StrategyModifier, Posture, UnitId } from './types.ts';
  * POST occupancy, active Royal Jelly buffs, and Queen-proximity. Each is a
  * neutral `1.0` when the situation does not apply (with `postDefense` being
  * additive, defaulting to `0`).
+ *
+ * `attackerAffinityAttack` and `defenderAffinityArmor` are flat offsets
+ * sourced from per-unit `planeAffinity` keyed off the battle's plane;
+ * see `engine/battle` for selection. Defaults to `0`.
  */
 export interface DamageModifiers {
   readonly posture: { readonly attack: number; readonly defense: number };
@@ -32,6 +36,8 @@ export interface DamageModifiers {
   readonly jellyResilience: number;
   readonly queenProximityAttack: number;
   readonly queenProximityResilience: number;
+  readonly attackerAffinityAttack: number;
+  readonly defenderAffinityArmor: number;
   readonly rng: Rng;
 }
 
@@ -54,15 +60,20 @@ export interface StrategyMultipliers {
  * Compute one attacker -> defender damage tick.
  *
  * Formula:
- *   effectiveAttack  = attacker.attack * posture.attack * strategy.attack
+ *   effectiveAttack  = (attacker.attack + attackerAffinityAttack)
+ *                      * posture.attack * strategy.attack
  *                      * jellyAttack * queenProximityAttack
- *   effectiveDefense = (defender.armor + postDefense) * posture.defense
- *                      * strategy.defense * jellyResilience
- *                      * queenProximityResilience
+ *   effectiveDefense = (defender.armor + defenderAffinityArmor + postDefense)
+ *                      * posture.defense * strategy.defense
+ *                      * jellyResilience * queenProximityResilience
  *   variance         = rng.int(3) - 1   // -1, 0, or +1
  *   damage           = max(1, round(effectiveAttack - effectiveDefense + variance))
  *
- * Guarantees a minimum of 1 damage so battles always make progress.
+ * Plane-affinity offsets fold in additively *before* the multiplicative
+ * stack so a +1/-1 affinity is comparable in magnitude to a 1-point
+ * stat swing rather than being amplified by jelly/posture into 1.5-2x
+ * the intended budget. Guarantees a minimum of 1 damage so battles
+ * always make progress.
  */
 export function computeDamage(
   attacker: Stats,
@@ -70,14 +81,14 @@ export function computeDamage(
   modifiers: DamageModifiers,
 ): number {
   const effectiveAttack =
-    attacker.attack *
+    (attacker.attack + modifiers.attackerAffinityAttack) *
     modifiers.posture.attack *
     modifiers.strategy.attack *
     modifiers.jellyAttack *
     modifiers.queenProximityAttack;
 
   const effectiveDefense =
-    (defender.armor + modifiers.postDefense) *
+    (defender.armor + modifiers.defenderAffinityArmor + modifiers.postDefense) *
     modifiers.posture.defense *
     modifiers.strategy.defense *
     modifiers.jellyResilience *

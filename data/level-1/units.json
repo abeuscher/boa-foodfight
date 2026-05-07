@@ -17,7 +17,12 @@
         "constitution": 10
       },
       "abilities": ["queen-ultimate"],
-      "tags": ["queen", "leader-eligible", "immobile"]
+      "tags": ["queen", "leader-eligible", "immobile"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-footman",
@@ -35,7 +40,12 @@
         "constitution": 7
       },
       "abilities": ["brace"],
-      "tags": ["melee", "infantry"]
+      "tags": ["melee", "infantry"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-archer",
@@ -53,7 +63,12 @@
         "constitution": 6
       },
       "abilities": ["volley"],
-      "tags": ["ranged"]
+      "tags": ["ranged"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-worker",
@@ -71,7 +86,12 @@
         "constitution": 8
       },
       "abilities": ["boat-form", "jelly-apply"],
-      "tags": ["worker", "support"]
+      "tags": ["worker", "support"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-scout",
@@ -89,7 +109,12 @@
         "constitution": 6
       },
       "abilities": ["pheroblast", "scout-ping"],
-      "tags": ["scout", "leader-eligible"]
+      "tags": ["scout", "leader-eligible"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-potato-bug",
@@ -107,7 +132,12 @@
         "constitution": 9
       },
       "abilities": ["brace"],
-      "tags": ["melee", "heavy"]
+      "tags": ["melee", "heavy"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-mage",
@@ -125,7 +155,12 @@
         "constitution": 6
       },
       "abilities": ["plane-switch", "mend", "jelly-apply", "recruit"],
-      "tags": ["caster", "leader-eligible", "support"]
+      "tags": ["caster", "leader-eligible", "support"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "ant-tank",
@@ -143,7 +178,12 @@
         "constitution": 10
       },
       "abilities": ["brace"],
-      "tags": ["melee", "heavy", "no-fly"]
+      "tags": ["melee", "heavy", "no-fly"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spider-queen",
@@ -161,7 +201,12 @@
         "constitution": 6
       },
       "abilities": ["web-tangle", "web-mend", "web-snare", "spawn-spiderlings"],
-      "tags": ["queen", "leader-eligible"]
+      "tags": ["queen", "leader-eligible"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spider-scout",
@@ -179,7 +224,12 @@
         "constitution": 4
       },
       "abilities": [],
-      "tags": ["scout"]
+      "tags": ["scout"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spider-soldier",
@@ -197,7 +247,12 @@
         "constitution": 4
       },
       "abilities": [],
-      "tags": ["melee", "infantry"]
+      "tags": ["melee", "infantry"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spider-spinner",
@@ -215,7 +270,12 @@
         "constitution": 5
       },
       "abilities": ["web-tangle", "spin-web"],
-      "tags": ["debuffer", "support"]
+      "tags": ["debuffer", "support"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spider-elite",
@@ -233,7 +293,12 @@
         "constitution": 5
       },
       "abilities": [],
-      "tags": ["melee", "elite", "queen-guard"]
+      "tags": ["melee", "elite", "queen-guard"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "mouse-merc",
@@ -251,7 +316,12 @@
         "constitution": 8
       },
       "abilities": [],
-      "tags": ["tank", "mercenary"]
+      "tags": ["tank", "mercenary"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     },
     {
       "id": "spiderling",
@@ -269,7 +339,12 @@
         "constitution": 2
       },
       "abilities": [],
-      "tags": ["scout", "swarm"]
+      "tags": ["scout", "swarm"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     }
   ]
 }

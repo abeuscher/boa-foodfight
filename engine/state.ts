@@ -105,6 +105,7 @@ const buildUnitTemplates = (units: UnitsFile): ReadonlyMap<UnitTemplateId, UnitT
       baseStats: t.baseStats,
       abilities: t.abilities.map((a) => a as AbilityId),
       tags: t.tags,
+      planeAffinity: t.planeAffinity,
     });
   }
   return map;

@@ -15,6 +15,34 @@ const slotCostBySize = {
   huge: [4, 5],
 } as const;
 
+/**
+ * Per-plane attack/armor offsets layered onto a unit's combat math.
+ *
+ * The combat resolver consults the attacker's plane (the tile of the
+ * battle) to add `attack` to the attacker's effective attack and the
+ * `armor` of the defender's affinity to its effective armor. Wall
+ * planes (north/south/east/west) all share the same `wall` row.
+ *
+ * Defaults to all-zero so legacy templates (none today) and the
+ * neutral mouse / spiderling rosters carry no implicit modifier.
+ */
+const planeAffinityRowSchema = z.object({
+  attack: z.number().int(),
+  armor: z.number().int(),
+});
+
+const planeAffinitySchema = z.object({
+  floor: planeAffinityRowSchema,
+  ceiling: planeAffinityRowSchema,
+  wall: planeAffinityRowSchema,
+});
+
+const ZERO_AFFINITY = {
+  floor: { attack: 0, armor: 0 },
+  ceiling: { attack: 0, armor: 0 },
+  wall: { attack: 0, armor: 0 },
+} as const;
+
 export const unitTemplateSchema = z
   .object({
     id: idSchema,
@@ -26,6 +54,7 @@ export const unitTemplateSchema = z
     baseStats: statsSchema,
     abilities: z.array(idSchema).default([]),
     tags: z.array(z.string()).default([]),
+    planeAffinity: planeAffinitySchema.default(ZERO_AFFINITY),
   })
   .refine(
     (u) => {

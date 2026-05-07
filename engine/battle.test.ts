@@ -457,6 +457,68 @@ describe('resolveBattle: targeting policy', () => {
   });
 });
 
+describe('resolveBattle: plane affinity', () => {
+  // Spider templates: +1 attack/+1 armor on ceiling, -1 attack on floor.
+  // Ant templates (most): +1/+1 on floor, -1 attack on ceiling.
+  // The combat formula folds affinity additively before the multiplicative
+  // stack, so a battle on the spider's home plane should let it deal more
+  // damage and absorb more — and vice versa for ants.
+  const tilesByPlane = {
+    floor: { plane: 'floor' as const, x: 4, y: 4 },
+    ceiling: { plane: 'ceiling' as const, x: 4, y: 4 },
+  };
+  const SAMPLE_SEEDS = 60;
+
+  const winRateOnPlane = (
+    plane: 'floor' | 'ceiling',
+    aTemplate: string,
+    dTemplate: string,
+  ): { winRate: number; sampleSize: number } => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const tile = tilesByPlane[plane];
+    const aUnit = mkUnit(base, aTemplate, `aff-a-${plane}`);
+    const dUnit = mkUnit(base, dTemplate, `aff-d-${plane}`);
+    const atk = baseAntParty('aff-atk', [aUnit], aUnit.id, tile);
+    // Faction inferred from template; for spider attackers reuse the
+    // baseSpiderParty helper. The helper just sets faction='spider'.
+    const isSpiderAttacker =
+      base.unitTemplates.get(aTemplate as UnitTemplateId)?.faction === 'spider';
+    const atkParty = isSpiderAttacker ? baseSpiderParty('aff-atk', [aUnit], aUnit.id, tile) : atk;
+    const isSpiderDefender =
+      base.unitTemplates.get(dTemplate as UnitTemplateId)?.faction === 'spider';
+    const defParty = isSpiderDefender
+      ? baseSpiderParty('aff-def', [dUnit], dUnit.id, tile)
+      : baseAntParty('aff-def', [dUnit], dUnit.id, tile);
+    const state = installParties(base, [atkParty, defParty]);
+    let wins = 0;
+    for (let s = 0; s < SAMPLE_SEEDS; s++) {
+      const out = resolveBattle(
+        state,
+        neutralInput(atkParty, defParty),
+        createRng(s * 1009 + 7),
+        makeTickClock(),
+      );
+      if (out.result.winner === atkParty.id) wins += 1;
+    }
+    return { winRate: wins / SAMPLE_SEEDS, sampleSize: SAMPLE_SEEDS };
+  };
+
+  it('spider-soldier wins more often vs ant-footman on the ceiling than on the floor', () => {
+    const onCeiling = winRateOnPlane('ceiling', 'spider-soldier', 'ant-footman');
+    const onFloor = winRateOnPlane('floor', 'spider-soldier', 'ant-footman');
+    // Both plane-affinity rows favor the spider on ceiling (+1/+1) and
+    // hurt it on floor (-1 attack, plus the ant gets +1/+1 on floor).
+    // The win-rate gap is large enough to clear seed noise.
+    expect(onCeiling.winRate).toBeGreaterThan(onFloor.winRate);
+  });
+
+  it('ant-footman wins more often vs spider-soldier on the floor than on the ceiling', () => {
+    const onFloor = winRateOnPlane('floor', 'ant-footman', 'spider-soldier');
+    const onCeiling = winRateOnPlane('ceiling', 'ant-footman', 'spider-soldier');
+    expect(onFloor.winRate).toBeGreaterThan(onCeiling.winRate);
+  });
+});
+
 describe('resolveBattle: jelly and queen modifiers wired through', () => {
   it('a strong jelly buff on the attacker boosts win rate vs a neutral baseline', () => {
     const { state: base } = loadScenario(DATA_DIR, 1);

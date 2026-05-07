@@ -28,6 +28,8 @@ import type {
   GameState,
   Party,
   PartyId,
+  Plane,
+  PlaneAffinityRow,
   PostId,
   ReplayEvent,
   Rng,
@@ -75,6 +77,10 @@ interface LiveUnit {
   readonly stats: Stats;
   readonly abilities: readonly UnitTemplate['abilities'][number][];
   readonly isLeader: boolean;
+  /** Affinity row for *this* battle's plane, picked once at battle start.
+   * The combat formula folds `attack` into the attacker's effective
+   * attack and `armor` into the defender's effective armor. */
+  readonly affinity: PlaneAffinityRow;
   hp: number;
   killed: boolean;
   /** Number of upcoming rounds in which this unit cannot attack
@@ -97,10 +103,27 @@ interface ResolveContext {
   readonly damageRng: Rng;
 }
 
+const ZERO_AFFINITY: PlaneAffinityRow = { attack: 0, armor: 0 };
+
+/**
+ * Pick the plane-affinity row that applies on `plane`. All four wall
+ * planes share the template's `wall` row; floor and ceiling get their
+ * own. Templates that lack a `planeAffinity` (defensive default) map
+ * to all-zero so combat math is unchanged for them.
+ */
+const planeAffinityForPlane = (tmpl: UnitTemplate, plane: Plane): PlaneAffinityRow => {
+  const aff = tmpl.planeAffinity;
+  if (!aff) return ZERO_AFFINITY;
+  if (plane === 'floor') return aff.floor;
+  if (plane === 'ceiling') return aff.ceiling;
+  return aff.wall;
+};
+
 const buildLiveUnits = (
   party: Party,
   side: Side,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  battlePlane: Plane,
 ): LiveUnit[] =>
   party.units.map((u) => {
     const tmpl = templates.get(u.templateId);
@@ -111,6 +134,7 @@ const buildLiveUnits = (
       stats: tmpl.baseStats,
       abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
+      affinity: planeAffinityForPlane(tmpl, battlePlane),
       hp: u.currentHp,
       killed: u.currentHp <= 0,
       immobilizedRounds: 0,
@@ -257,6 +281,8 @@ const buildModifiers = (
   actorSide: Side,
   targetSide: Side,
   ctx: ResolveContext,
+  actorAffinity: PlaneAffinityRow,
+  targetAffinity: PlaneAffinityRow,
 ): DamageModifiers => {
   const isAtk = actorSide === 'attacker';
   const targetIsAtk = targetSide === 'attacker';
@@ -279,6 +305,11 @@ const buildModifiers = (
     // these to 1.0 when the bonus is not active for this battle.
     queenProximityAttack: isAtk ? ctx.input.queenProximityAttack : 1,
     queenProximityResilience: targetIsAtk ? ctx.input.queenProximityResilience : 1,
+    // Plane-affinity flat offsets, sourced from each unit's template
+    // affinity row for the battle plane. Attacker contributes +attack,
+    // target contributes +armor.
+    attackerAffinityAttack: actorAffinity.attack,
+    defenderAffinityArmor: targetAffinity.armor,
     rng: ctx.damageRng,
   };
 };
@@ -319,7 +350,7 @@ const runRound = (
     const dmg = computeDamage(
       actor.stats,
       target.stats,
-      buildModifiers(actor.side, target.side, ctx),
+      buildModifiers(actor.side, target.side, ctx, actor.affinity, target.affinity),
     );
     target.hp = Math.max(0, target.hp - dmg);
     const killed = target.hp <= 0;
@@ -378,9 +409,13 @@ export const resolveBattle = (
     damageRng: rng.fork('battle-damage'),
   };
 
+  // The battle resolves on the defender's tile; both sides' affinity
+  // rows are picked off that plane (so a spider attacking onto the
+  // floor uses its floor row, not its ceiling row).
+  const battlePlane: Plane = defender.location.plane;
   const live: LiveUnit[] = [
-    ...buildLiveUnits(attacker, 'attacker', state.unitTemplates),
-    ...buildLiveUnits(defender, 'defender', state.unitTemplates),
+    ...buildLiveUnits(attacker, 'attacker', state.unitTemplates, battlePlane),
+    ...buildLiveUnits(defender, 'defender', state.unitTemplates, battlePlane),
   ];
 
   // Snapshot every participant's HP at battle start (post-opening, since

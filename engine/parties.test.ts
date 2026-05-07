@@ -50,6 +50,11 @@ const fixtureMovementParty = (
       baseStats: { hp: 5, attack: 1, agility: 1, armor: 0, intelligence: 1, constitution: 1 },
       abilities: [],
       tags: [],
+      planeAffinity: {
+        floor: { attack: 0, armor: 0 },
+        ceiling: { attack: 0, armor: 0 },
+        wall: { attack: 0, armor: 0 },
+      },
     });
     units.push({
       id: `u-${String(idx)}` as UnitId,
