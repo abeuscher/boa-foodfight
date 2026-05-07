@@ -335,17 +335,41 @@ function planeGridPosition(plane) {
 // Rendering.
 // ---------------------------------------------------------------------------
 
-function planeOrigin(plane) {
+// Resolve a plane's on-canvas rectangle for the current view mode.
+//
+// In the default 6-grid layout the planes sit at fixed offsets with
+// 30 px cells. When `FOCUSED_PLANE` is set (focus mode), only that
+// plane renders — it occupies the full canvas at the largest cell size
+// that still leaves room for the header label.
+//
+// Returned shape: `{ ox, oy, cellSize, visible }`. `visible: false`
+// signals that the plane should be skipped entirely this frame (used
+// by the renderer + click handler to keep the 6-grid math the same in
+// focus mode).
+function planeRenderArea(plane, canvas) {
+  if (FOCUSED_PLANE) {
+    if (plane !== FOCUSED_PLANE) return { ox: 0, oy: 0, cellSize: 0, visible: false };
+    const w = canvas?.width ?? 990;
+    const h = canvas?.height ?? 720;
+    const cellSize = Math.floor(Math.min(w / GRID, (h - HEADER_H) / GRID));
+    const boardW = cellSize * GRID;
+    const boardH = cellSize * GRID;
+    const ox = Math.floor((w - boardW) / 2);
+    const oy = HEADER_H + Math.floor((h - HEADER_H - boardH) / 2);
+    return { ox, oy, cellSize, visible: true };
+  }
   const pos = planeGridPosition(plane);
-  if (!pos) return { ox: 0, oy: HEADER_H };
+  if (!pos) return { ox: 0, oy: HEADER_H, cellSize: CELL, visible: true };
   return {
     ox: pos.col * (PLANE_W + PLANE_GAP),
     oy: HEADER_H + pos.row * (PLANE_W + HEADER_H + PLANE_GAP),
+    cellSize: CELL,
+    visible: true,
   };
 }
 
-function drawPlane(ctx, plane) {
-  const { ox, oy } = planeOrigin(plane);
+function drawPlane(ctx, plane, area) {
+  const { ox, oy, cellSize } = area;
   // Plane label.
   ctx.fillStyle = '#aaa';
   ctx.font = '12px ui-sans-serif';
@@ -355,12 +379,12 @@ function drawPlane(ctx, plane) {
   ctx.lineWidth = 1;
   for (let i = 0; i <= GRID; i++) {
     ctx.beginPath();
-    ctx.moveTo(ox + i * CELL + 0.5, oy + 0.5);
-    ctx.lineTo(ox + i * CELL + 0.5, oy + GRID * CELL + 0.5);
+    ctx.moveTo(ox + i * cellSize + 0.5, oy + 0.5);
+    ctx.lineTo(ox + i * cellSize + 0.5, oy + GRID * cellSize + 0.5);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(ox + 0.5, oy + i * CELL + 0.5);
-    ctx.lineTo(ox + GRID * CELL + 0.5, oy + i * CELL + 0.5);
+    ctx.moveTo(ox + 0.5, oy + i * cellSize + 0.5);
+    ctx.lineTo(ox + GRID * cellSize + 0.5, oy + i * cellSize + 0.5);
     ctx.stroke();
   }
 }
@@ -379,18 +403,18 @@ function postSource(initialPosts) {
   }));
 }
 
-function drawObstacles(ctx, plane, obstacles) {
+function drawObstacles(ctx, plane, obstacles, area) {
   if (!obstacles || obstacles.length === 0) return;
-  const { ox, oy } = planeOrigin(plane);
+  const { ox, oy, cellSize } = area;
   ctx.fillStyle = '#3a2a18';
   ctx.strokeStyle = '#5a3f22';
   ctx.lineWidth = 1;
   for (const o of obstacles) {
     if (o.plane !== plane) continue;
-    const x = ox + o.x * CELL;
-    const y = oy + o.y * CELL;
-    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-    ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+    const x = ox + o.x * cellSize;
+    const y = oy + o.y * cellSize;
+    ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+    ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
   }
 }
 
@@ -400,9 +424,9 @@ function drawObstacles(ctx, plane, obstacles) {
  * clamped to map bounds (we re-derive in case the replay event
  * didn't carry the explicit `tiles` array).
  */
-function drawDamageZones(ctx, plane, zones) {
+function drawDamageZones(ctx, plane, zones, area) {
   if (!zones || zones.size === 0) return;
-  const { ox, oy } = planeOrigin(plane);
+  const { ox, oy, cellSize } = area;
   ctx.save();
   ctx.fillStyle = 'rgba(255, 230, 80, 0.28)';
   ctx.strokeStyle = 'rgba(255, 230, 80, 0.7)';
@@ -421,18 +445,18 @@ function drawDamageZones(ctx, plane, zones) {
           ].filter((t) => t.x >= 0 && t.x <= 9 && t.y >= 0 && t.y <= 9);
     for (const t of tiles) {
       if (t.plane !== plane) continue;
-      const x = ox + t.x * CELL;
-      const y = oy + t.y * CELL;
-      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-      ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+      const x = ox + t.x * cellSize;
+      const y = oy + t.y * cellSize;
+      ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+      ctx.strokeRect(x + 0.5, y + 0.5, cellSize - 1, cellSize - 1);
     }
   }
   ctx.restore();
 }
 
-function drawWebs(ctx, plane, webs) {
+function drawWebs(ctx, plane, webs, area) {
   if (!webs || webs.size === 0) return;
-  const { ox, oy } = planeOrigin(plane);
+  const { ox, oy, cellSize } = area;
   // Light translucent spider-purple square with a small "X" so the web
   // reads at a glance against both open and obstacle backgrounds.
   ctx.save();
@@ -441,37 +465,43 @@ function drawWebs(ctx, plane, webs) {
   ctx.lineWidth = 1;
   for (const w of webs.values()) {
     if (w.plane !== plane) continue;
-    const x = ox + w.x * CELL;
-    const y = oy + w.y * CELL;
-    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-    // Diagonal silk strands.
+    const x = ox + w.x * cellSize;
+    const y = oy + w.y * cellSize;
+    ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+    // Diagonal silk strands. Inset is proportional so the X stays
+    // visible whether tiles are 30 px (6-grid) or ~70 px (focused).
+    const inset = Math.max(2, Math.floor(cellSize * 0.13));
     ctx.beginPath();
-    ctx.moveTo(x + 4, y + 4);
-    ctx.lineTo(x + CELL - 4, y + CELL - 4);
-    ctx.moveTo(x + CELL - 4, y + 4);
-    ctx.lineTo(x + 4, y + CELL - 4);
+    ctx.moveTo(x + inset, y + inset);
+    ctx.lineTo(x + cellSize - inset, y + cellSize - inset);
+    ctx.moveTo(x + cellSize - inset, y + inset);
+    ctx.lineTo(x + inset, y + cellSize - inset);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawPosts(ctx, plane, postsState, initialPosts) {
-  const { ox, oy } = planeOrigin(plane);
+function drawPosts(ctx, plane, postsState, initialPosts, area) {
+  const { ox, oy, cellSize } = area;
+  // POST badge scales with cell size so it stays legible in focus mode.
+  const badge = Math.max(12, Math.floor(cellSize * 0.8));
+  const half = Math.floor(badge / 2);
+  const fontPx = Math.max(9, Math.floor(cellSize * 0.32));
   for (const def of postSource(initialPosts)) {
     if (def.plane !== plane) continue;
     const live = postsState.get(def.id);
     const owner = live?.owner ?? def.owner;
-    const cx = ox + def.x * CELL + CELL / 2;
-    const cy = oy + def.y * CELL + CELL / 2;
+    const cx = ox + def.x * cellSize + cellSize / 2;
+    const cy = oy + def.y * cellSize + cellSize / 2;
     ctx.fillStyle = FACTION_COLOR[owner] ?? '#888';
-    ctx.fillRect(cx - 12, cy - 12, 24, 24);
+    ctx.fillRect(cx - half, cy - half, badge, badge);
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(cx - 12, cy - 12, 24, 24);
+    ctx.strokeRect(cx - half, cy - half, badge, badge);
     ctx.fillStyle = '#fff';
-    ctx.font = '9px ui-monospace, monospace';
+    ctx.font = `${String(fontPx)}px ui-monospace, monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(shortPostName(def.id), cx, cy + 3);
+    ctx.fillText(shortPostName(def.id), cx, cy + Math.floor(fontPx / 3));
     ctx.textAlign = 'start';
   }
 }
@@ -496,8 +526,11 @@ function shortPostName(id) {
   return id.slice(0, 4);
 }
 
-function drawParties(ctx, plane, parties, neutralHypno) {
-  const { ox, oy } = planeOrigin(plane);
+function drawParties(ctx, plane, parties, neutralHypno, area, followPartyId) {
+  const { ox, oy, cellSize } = area;
+  // Party-circle radius scales with cell size; fan-out distance does too.
+  const radius = Math.max(6, Math.floor(cellSize * 0.22));
+  const fanRadius = Math.max(6, Math.floor(cellSize * 0.22));
   // Bucket parties by tile so we can fan them out if multiple share a cell.
   const byTile = new Map();
   for (const [id, p] of parties) {
@@ -509,15 +542,15 @@ function drawParties(ctx, plane, parties, neutralHypno) {
   }
   for (const [key, bucket] of byTile) {
     const [x, y] = key.split(',').map(Number);
-    const cx = ox + x * CELL + CELL / 2;
-    const cy = oy + y * CELL + CELL / 2;
+    const cx = ox + x * cellSize + cellSize / 2;
+    const cy = oy + y * cellSize + cellSize / 2;
     bucket.forEach((p, i) => {
       // Fan out concentric.
       const angle = (i / bucket.length) * Math.PI * 2;
-      const dx = bucket.length > 1 ? Math.cos(angle) * 6 : 0;
-      const dy = bucket.length > 1 ? Math.sin(angle) * 6 : 0;
+      const dx = bucket.length > 1 ? Math.cos(angle) * fanRadius : 0;
+      const dy = bucket.length > 1 ? Math.sin(angle) * fanRadius : 0;
       ctx.beginPath();
-      ctx.arc(cx + dx, cy + dy, 6, 0, Math.PI * 2);
+      ctx.arc(cx + dx, cy + dy, radius, 0, Math.PI * 2);
       ctx.fillStyle = FACTION_COLOR[p.faction] ?? '#888';
       ctx.fill();
       // Round 8 — outline color flags hypnotize state for neutrals:
@@ -536,6 +569,16 @@ function drawParties(ctx, plane, parties, neutralHypno) {
         ctx.lineWidth = 1;
       }
       ctx.stroke();
+      // Follow-mode marker: bright yellow ring 2 px wider than the
+      // party circle so the followed party is easy to spot when zoomed
+      // in. Drawn on top of the faction/hypno stroke so it always wins.
+      if (followPartyId && p.id === followPartyId) {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, radius + 2, 0, Math.PI * 2);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     });
   }
 }
@@ -546,17 +589,17 @@ function drawParties(ctx, plane, parties, neutralHypno) {
  * locate the action on the canvas at a glance. Disappears when the
  * battle panel closes (BATTLE_STATE = null).
  */
-function drawBattleHighlight(ctx, plane, state) {
+function drawBattleHighlight(ctx, plane, state, area) {
   if (!BATTLE_STATE) return;
   const attackerId = BATTLE_STATE.event.result.attackerPartyId;
   const attacker = state.parties.get(attackerId);
   if (!attacker || attacker.plane !== plane) return;
-  const { ox, oy } = planeOrigin(plane);
+  const { ox, oy, cellSize } = area;
   // Place the outline 2px outside the cell so it doesn't blend with
   // the grid lines or any party circle stroked in the same tile.
-  const x = ox + attacker.x * CELL - 2;
-  const y = oy + attacker.y * CELL - 2;
-  const size = CELL + 4;
+  const x = ox + attacker.x * cellSize - 2;
+  const y = oy + attacker.y * cellSize - 2;
+  const size = cellSize + 4;
   ctx.save();
   // Drop-shadow behind the stroke gives extra pop against the dark bg
   // and the orange-red ant circles.
@@ -572,13 +615,15 @@ function render(canvas, state) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const plane of PLANES) {
-    drawPlane(ctx, plane);
-    drawObstacles(ctx, plane, state.obstacles);
-    drawDamageZones(ctx, plane, state.damageZones);
-    drawWebs(ctx, plane, state.webs);
-    drawPosts(ctx, plane, state.posts, state.initialPosts);
-    drawParties(ctx, plane, state.parties, state.neutralHypno);
-    drawBattleHighlight(ctx, plane, state);
+    const area = planeRenderArea(plane, canvas);
+    if (!area.visible) continue;
+    drawPlane(ctx, plane, area);
+    drawObstacles(ctx, plane, state.obstacles, area);
+    drawDamageZones(ctx, plane, state.damageZones, area);
+    drawWebs(ctx, plane, state.webs, area);
+    drawPosts(ctx, plane, state.posts, state.initialPosts, area);
+    drawParties(ctx, plane, state.parties, state.neutralHypno, area, FOLLOW_PARTY);
+    drawBattleHighlight(ctx, plane, state, area);
   }
   // HUD: queen charge, turn, winner banner.
   ctx.fillStyle = '#888';
@@ -732,11 +777,13 @@ function tileAtClick(canvas, evt) {
   const cx = ((evt.clientX - rect.left) * canvas.width) / rect.width;
   const cy = ((evt.clientY - rect.top) * canvas.height) / rect.height;
   for (const plane of PLANES) {
-    const { ox, oy } = planeOrigin(plane);
-    if (cx < ox || cx >= ox + GRID * CELL) continue;
-    if (cy < oy || cy >= oy + GRID * CELL) continue;
-    const x = Math.floor((cx - ox) / CELL);
-    const y = Math.floor((cy - oy) / CELL);
+    const area = planeRenderArea(plane, canvas);
+    if (!area.visible) continue;
+    const { ox, oy, cellSize } = area;
+    if (cx < ox || cx >= ox + GRID * cellSize) continue;
+    if (cy < oy || cy >= oy + GRID * cellSize) continue;
+    const x = Math.floor((cx - ox) / cellSize);
+    const y = Math.floor((cy - oy) / cellSize);
     return { plane, x, y };
   }
   return null;
@@ -834,6 +881,19 @@ function renderInspect(state, events, tick) {
 //   playing     — auto-advance through actions
 //   timer       — interval id when playing
 let BATTLE_STATE = null;
+
+// Focus mode: when set to a plane name, the canvas renders only that
+// plane at the largest cell size that fits. Click a plane to focus it,
+// click the focused plane again (or the "back to 6-grid" button) to
+// return to the default 3×2 layout.
+let FOCUSED_PLANE = null;
+
+// Follow mode: when set to a partyId, each render frame slaves
+// FOCUSED_PLANE to that party's current plane so the camera tracks the
+// party as it crosses planes. Setting it via the header dropdown.
+// Cleared automatically on replay load if the party isn't in the new
+// replay; otherwise persists across runs/replays.
+let FOLLOW_PARTY = null;
 
 function flattenActions(rounds) {
   const flat = [];
@@ -1246,15 +1306,61 @@ async function loadReplay(run, name) {
   const scrubber = document.getElementById('scrubber');
   scrubber.max = MAX_TICK;
   scrubber.value = 0;
+  rebuildFollowDropdown();
   setTick(0);
   document.getElementById('status').textContent =
     `${CURRENT_EVENTS.length} events, ${MAX_TICK} ticks${MANIFEST ? ' · static' : ' · dev'}`;
+}
+
+// Rebuild the "follow" header dropdown from the parties present in the
+// just-loaded replay. If a party was being followed and is still in the
+// new replay we keep the selection; otherwise we drop back to "(none)".
+function rebuildFollowDropdown() {
+  const parties = hydrateInitialPositions(CURRENT_EVENTS);
+  const select = document.getElementById('follow-select');
+  // Sort by faction then id so ants are grouped together — easier to
+  // scan in-game.
+  const ids = [...parties.entries()]
+    .sort((a, b) => {
+      const fa = a[1].faction ?? 'neutral';
+      const fb = b[1].faction ?? 'neutral';
+      if (fa !== fb) return fa.localeCompare(fb);
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([id, p]) => ({ id, faction: p.faction ?? 'neutral' }));
+  select.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '(none)';
+  select.appendChild(none);
+  for (const { id, faction } of ids) {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${id} [${faction}]`;
+    select.appendChild(opt);
+  }
+  // Drop the follow target if it's not in this replay. We also drop
+  // the focused plane in that case so the new replay opens in the
+  // 6-grid view, not on whatever plane the previous followed party
+  // happened to be on.
+  if (FOLLOW_PARTY && !parties.has(FOLLOW_PARTY)) {
+    FOLLOW_PARTY = null;
+    FOCUSED_PLANE = null;
+  }
+  select.value = FOLLOW_PARTY ?? '';
 }
 
 function setTick(tick) {
   const t = Math.max(0, Math.min(MAX_TICK, tick));
   document.getElementById('scrubber').value = t;
   const state = reduceWithInitial(CURRENT_EVENTS, t);
+  // Follow mode: if a party is being followed, slave the focused plane
+  // to wherever that party is right now. Dead parties keep their last
+  // known plane (we only update when we have a current location).
+  if (FOLLOW_PARTY) {
+    const followed = state.parties.get(FOLLOW_PARTY);
+    if (followed?.plane) FOCUSED_PLANE = followed.plane;
+  }
   render(document.getElementById('board'), state);
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
@@ -1298,6 +1404,31 @@ async function init() {
   board.addEventListener('click', (e) => {
     const tile = tileAtClick(board, e);
     SELECTED_TILE = tile;
+    // Clicking a plane toggles focus on that plane. Clicking the
+    // already-focused plane returns to the 6-grid view. Clicks in the
+    // gutters (no tile under the cursor) leave focus state alone.
+    if (tile) {
+      FOCUSED_PLANE = FOCUSED_PLANE === tile.plane ? null : tile.plane;
+    }
+    setTick(Number(document.getElementById('scrubber').value));
+  });
+  document.getElementById('focus-reset').addEventListener('click', () => {
+    // Clearing focus also exits follow mode — otherwise the next render
+    // would immediately re-focus the followed party's plane.
+    if (FOCUSED_PLANE === null && FOLLOW_PARTY === null) return;
+    FOCUSED_PLANE = null;
+    FOLLOW_PARTY = null;
+    document.getElementById('follow-select').value = '';
+    setTick(Number(document.getElementById('scrubber').value));
+  });
+  document.getElementById('follow-select').addEventListener('change', (e) => {
+    FOLLOW_PARTY = e.target.value || null;
+    if (FOLLOW_PARTY === null) {
+      // Exiting follow returns to whatever view was up before — i.e.,
+      // we drop the auto-focus too. The user can still click a plane
+      // afterward to focus manually.
+      FOCUSED_PLANE = null;
+    }
     setTick(Number(document.getElementById('scrubber').value));
   });
   document.getElementById('speed').addEventListener('input', (e) => {
