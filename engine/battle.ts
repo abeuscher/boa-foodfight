@@ -17,7 +17,7 @@ import {
   type PostureMultipliers,
   type StrategyMultipliers,
 } from './combat.ts';
-import { inPlaneNeighbors } from './coord.ts';
+import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
 import { goldForKill } from './gold-table.ts';
 import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
@@ -30,6 +30,7 @@ import type {
   DayNightPhase,
   Faction,
   GameState,
+  Order,
   Party,
   PartyId,
   Plane,
@@ -61,6 +62,17 @@ export interface BattleInput {
   readonly defenderJellyResilience: number;
   /** Ability definitions for pre-battle resolution (volley, mend, etc.). */
   readonly abilities: AbilitiesFile;
+  /**
+   * Round 15 — last in-plane step each party took this turn (from the
+   * movement phase's `party-moved` events). Used to compute knockback
+   * direction on a successful flee: the fleer is shoved one tile in
+   * the opposite of arrival. Optional — a missing entry means the
+   * party didn't move this turn (e.g., it was at-rest when attacked),
+   * in which case the engine falls back to opposite-of-attacker
+   * bearing (delta from attacker to defender).
+   */
+  readonly attackerArrival?: { readonly from: TileCoord; readonly to: TileCoord };
+  readonly defenderArrival?: { readonly from: TileCoord; readonly to: TileCoord };
 }
 
 export interface BattleOutcome {
@@ -358,12 +370,19 @@ const maybeRedirectCockroach = (
   return friends[rng.int(friends.length)] ?? null;
 };
 
+/**
+ * Run one battle round. When `actingSide` is provided (round 15 — the
+ * post-failed-flee bonus round), only that side's units fire and the
+ * other side skips. Default behavior (both sides fire by agility
+ * order) is preserved when the parameter is omitted.
+ */
 const runRound = (
   index: number,
   units: readonly LiveUnit[],
   ctx: ResolveContext,
   agilityRng: Rng,
   targetCounter: { atk: number; def: number },
+  actingSide?: Side,
 ): BattleRound => {
   const order = computeAgilityOrder(
     units.filter((u) => !u.killed).map((u) => ({ id: u.id, stats: u.stats })),
@@ -380,6 +399,9 @@ const runRound = (
     // counter is decremented at end-of-round below so the unit is free
     // again for the next round (when durationTurns hits 0).
     if (actor.immobilizedRounds > 0) continue;
+    // Round 15 — bonus-round side mask: in a one-sided round the
+    // fleer's units skip entirely.
+    if (actingSide !== undefined && actor.side !== actingSide) continue;
     const enemies = livingOnSide(units, actor.side === 'attacker' ? 'defender' : 'attacker');
     if (enemies.length === 0) break;
 
@@ -425,6 +447,169 @@ const updateUnits = (
     if (!live) return u;
     return { ...u, currentHp: live.hp, ...(live.killed ? {} : { xp: u.xp + xpDelta }) };
   });
+
+// ---------------------------------------------------------------------------
+// Round 15 — flee mechanic
+// ---------------------------------------------------------------------------
+
+/** True iff `orders` contains a `flee` entry. */
+const partyHasFleeOrder = (orders: readonly Order[]): boolean =>
+  orders.some((o) => o.kind === 'flee');
+
+/** Drop the first `flee` order from `orders`. */
+const dropFleeOrder = (orders: readonly Order[]): readonly Order[] => {
+  const next: Order[] = [];
+  let dropped = false;
+  for (const o of orders) {
+    if (!dropped && o.kind === 'flee') {
+      dropped = true;
+      continue;
+    }
+    next.push(o);
+  }
+  return next;
+};
+
+/**
+ * Average agility across the party's living units (currentHp > 0).
+ * Returns 0 if no living units. Used to derive the flee success
+ * probability per the round-15 spec.
+ */
+const avgLivingAgility = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  let sum = 0;
+  let count = 0;
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (!tmpl) continue;
+    sum += tmpl.baseStats.agility;
+    count += 1;
+  }
+  if (count === 0) return 0;
+  return sum / count;
+};
+
+/**
+ * Flee success probability per the round-15 spec:
+ *
+ *   successPct = clamp(30 + (avgAgility - 1) * 6.25, 30, 80)
+ *
+ * Returned as a [0, 1) fraction. Avg agility 1 → 0.30, avg agility 9 →
+ * 0.80, linear in between.
+ */
+const fleeSuccessProbability = (avgAgility: number): number => {
+  const pct = 30 + (avgAgility - 1) * 6.25;
+  const clamped = Math.max(30, Math.min(80, pct));
+  return clamped / 100;
+};
+
+/**
+ * Knockback target on a successful flee. The fleer is shoved one tile
+ * in the opposite of its arrival direction. Returns null if blocked
+ * (off-plane bounds, on an obstacle tile, or the same coord).
+ *
+ * Arrival direction priority:
+ *  1. Last `party-moved` step from the movement phase (caller passes it
+ *     in via `BattleInput`).
+ *  2. Fallback: opposite-of-attacker-bearing — the delta from the
+ *     attacker's location to the defender's location.
+ */
+const computeKnockbackTile = (
+  fleeingSide: Side,
+  attackerLoc: TileCoord,
+  defenderLoc: TileCoord,
+  attackerArrival: BattleInput['attackerArrival'],
+  defenderArrival: BattleInput['defenderArrival'],
+  state: GameState,
+): TileCoord | null => {
+  const fleerLoc = fleeingSide === 'attacker' ? attackerLoc : defenderLoc;
+  const arrival = fleeingSide === 'attacker' ? attackerArrival : defenderArrival;
+
+  let dx = 0;
+  let dy = 0;
+  let plane: Plane = fleerLoc.plane;
+  if (arrival && arrival.from.plane === arrival.to.plane && arrival.to.plane === fleerLoc.plane) {
+    dx = arrival.to.x - arrival.from.x;
+    dy = arrival.to.y - arrival.from.y;
+    plane = arrival.to.plane;
+  } else {
+    // Fallback: opposite of attacker bearing toward the defender.
+    if (fleeingSide === 'defender' && attackerLoc.plane === defenderLoc.plane) {
+      dx = defenderLoc.x - attackerLoc.x;
+      dy = defenderLoc.y - attackerLoc.y;
+      plane = defenderLoc.plane;
+    } else if (fleeingSide === 'attacker' && attackerLoc.plane === defenderLoc.plane) {
+      dx = attackerLoc.x - defenderLoc.x;
+      dy = attackerLoc.y - defenderLoc.y;
+      plane = attackerLoc.plane;
+    }
+  }
+
+  // No usable direction — knockback fails.
+  if (dx === 0 && dy === 0) return null;
+
+  // Normalize to a single tile step (sign per axis). The arrival vector
+  // can be longer than 1 (multi-tile move); the knockback is always
+  // exactly one tile in the opposite direction.
+  const stepX = dx === 0 ? 0 : dx > 0 ? 1 : -1;
+  const stepY = dy === 0 ? 0 : dy > 0 ? 1 : -1;
+  const target: TileCoord = {
+    plane,
+    x: fleerLoc.x - stepX,
+    y: fleerLoc.y - stepY,
+  };
+
+  // Off-plane bounds (10×10).
+  if (target.x < 0 || target.x > 9 || target.y < 0 || target.y > 9) return null;
+  // Same coord (no knockback) is treated as blocked per spec.
+  if (sameCoord(target, fleerLoc)) return null;
+  // Obstacle / missing tile is blocked.
+  const tile = state.tiles.get(coordKey(target));
+  if (!tile) return null;
+  if (tile.terrain.kind === 'obstacle') return null;
+  return target;
+};
+
+interface FleeAttemptOutcome {
+  readonly success: boolean;
+  readonly probability: number;
+  readonly roll: number;
+  readonly knockbackTo: TileCoord | null;
+}
+
+const attemptFleeRoll = (
+  fleeingParty: Party,
+  fleeingSide: Side,
+  attackerLoc: TileCoord,
+  defenderLoc: TileCoord,
+  input: BattleInput,
+  state: GameState,
+  rng: Rng,
+): FleeAttemptOutcome => {
+  const avgAgi = avgLivingAgility(fleeingParty, state.unitTemplates);
+  const probability = fleeSuccessProbability(avgAgi);
+  const roll = rng.next();
+  const rollSuccess = roll < probability;
+  if (!rollSuccess) {
+    return { success: false, probability, roll, knockbackTo: null };
+  }
+  const knockbackTo = computeKnockbackTile(
+    fleeingSide,
+    attackerLoc,
+    defenderLoc,
+    input.attackerArrival,
+    input.defenderArrival,
+    state,
+  );
+  if (knockbackTo === null) {
+    // Roll succeeded but knockback blocked → flee fails.
+    return { success: false, probability, roll, knockbackTo: null };
+  }
+  return { success: true, probability, roll, knockbackTo };
+};
 
 export const resolveBattle = (
   state: GameState,
@@ -492,13 +677,93 @@ export const resolveBattle = (
 
   const roundCount = decideRoundCount(rng.fork('battle-rounds'));
   const agilityRng = rng.fork('battle-agility');
+  const fleeRng = rng.fork('battle-flee');
   const targetCounter = { atk: 0, def: 0 };
   const rounds: BattleRound[] = [];
+
+  // Round 15 — flee state. Track which side has flee orders queued
+  // (mutable: a flee attempt consumes the order on either outcome) and
+  // whether a successful flee has ended the battle. `pendingBonusRound`
+  // is set when a flee fails so the next round runs only the non-
+  // fleeing side's actions.
+  let attackerOrders: readonly Order[] = attacker.orders;
+  let defenderOrders: readonly Order[] = defender.orders;
+  let fleeSucceeded = false;
+  let fleeingPartyId: PartyId | null = null;
+  let knockbackFrom: TileCoord | null = null;
+  let knockbackTo: TileCoord | null = null;
+  /** When non-null, the next round runs only this side; the other side
+   * (the fleer who just failed) skips. Cleared after that round. */
+  let pendingBonusActingSide: Side | null = null;
+  const fleeEvents: ReplayEvent[] = [];
+  const turnNum = state.turn;
+
   for (let i = 0; i < roundCount; i++) {
     if (livingOnSide(live, 'attacker').length === 0) break;
     if (livingOnSide(live, 'defender').length === 0) break;
+
+    // Flee attempt phase: defender first if both sides queued a flee,
+    // then attacker. A successful flee ends the battle immediately; a
+    // failed flee schedules the bonus round (non-fleer-only) for THIS
+    // round and consumes the flee order. Bonus rounds are only honored
+    // when no fresh flee is being attempted this round (the bonus
+    // is the engine's "punishment" for the failed roll).
+    if (pendingBonusActingSide === null) {
+      const sidesToTry: Side[] = [];
+      if (partyHasFleeOrder(defenderOrders)) sidesToTry.push('defender');
+      if (partyHasFleeOrder(attackerOrders)) sidesToTry.push('attacker');
+      let consumedThisRound = false;
+      for (const side of sidesToTry) {
+        if (consumedThisRound) break;
+        const fleeingParty = side === 'attacker' ? attacker : defender;
+        const attempt = attemptFleeRoll(
+          fleeingParty,
+          side,
+          attacker.location,
+          defender.location,
+          input,
+          state,
+          fleeRng,
+        );
+        fleeEvents.push({
+          kind: 'battle-flee-attempted',
+          turn: turnNum,
+          tick: tick(),
+          partyId: fleeingParty.id,
+          successProbability: attempt.probability,
+          roll: attempt.roll,
+          success: attempt.success,
+        });
+        if (side === 'attacker') {
+          attackerOrders = dropFleeOrder(attackerOrders);
+        } else {
+          defenderOrders = dropFleeOrder(defenderOrders);
+        }
+        consumedThisRound = true;
+        if (attempt.success && attempt.knockbackTo !== null) {
+          fleeSucceeded = true;
+          fleeingPartyId = fleeingParty.id;
+          knockbackFrom = fleeingParty.location;
+          knockbackTo = attempt.knockbackTo;
+          break;
+        }
+        // Failed: queue the bonus round for the non-fleeing side.
+        fleeEvents.push({
+          kind: 'battle-flee-failed',
+          turn: turnNum,
+          tick: tick(),
+          partyId: fleeingParty.id,
+        });
+        pendingBonusActingSide = side === 'attacker' ? 'defender' : 'attacker';
+      }
+      if (fleeSucceeded) break;
+    }
+
     applyRoundStartPassives(live, input.abilities);
-    rounds.push(runRound(i, live, ctx, agilityRng, targetCounter));
+    rounds.push(
+      runRound(i, live, ctx, agilityRng, targetCounter, pendingBonusActingSide ?? undefined),
+    );
+    pendingBonusActingSide = null;
   }
 
   // Tally casualties and surviving HP totals.
@@ -522,19 +787,25 @@ export const resolveBattle = (
     }
   }
 
-  // Winner: greater surviving HP. Tie -> draw.
-  const winner: PartyId | 'draw' =
-    attackerHp > defenderHp ? attacker.id : defenderHp > attackerHp ? defender.id : 'draw';
-
-  // Retreat target for the loser; battle tile is the defender's location.
+  // Winner: greater surviving HP. Tie -> draw. Round 15: a successful
+  // flee always ends the battle as a draw with retreatTo populated as
+  // the fleer's knockback tile.
+  let winner: PartyId | 'draw';
   let retreatTo: TileCoord | null = null;
   let loserId: PartyId | null = null;
-  if (winner === attacker.id) {
-    loserId = defender.id;
-    retreatTo = computeRetreatTile(defender.location, defender.faction, state);
-  } else if (winner === defender.id) {
-    loserId = attacker.id;
-    retreatTo = computeRetreatTile(defender.location, attacker.faction, state);
+  if (fleeSucceeded && fleeingPartyId !== null && knockbackTo !== null) {
+    winner = 'draw';
+    retreatTo = knockbackTo;
+    loserId = fleeingPartyId;
+  } else {
+    winner = attackerHp > defenderHp ? attacker.id : defenderHp > attackerHp ? defender.id : 'draw';
+    if (winner === attacker.id) {
+      loserId = defender.id;
+      retreatTo = computeRetreatTile(defender.location, defender.faction, state);
+    } else if (winner === defender.id) {
+      loserId = attacker.id;
+      retreatTo = computeRetreatTile(defender.location, attacker.faction, state);
+    }
   }
 
   const result: BattleResult = {
@@ -549,8 +820,11 @@ export const resolveBattle = (
   };
 
   // Events: opening-ability events first (volley, mend, opening kills),
-  // then battle-resolved, then unit-died (atk then def), then leader-died.
-  const events: ReplayEvent[] = [...openingEvents];
+  // then any flee attempts/outcomes (round 15 — emitted as the rounds
+  // ran so they appear before the battle-resolved summary), then
+  // battle-resolved, then unit-died (atk then def), then leader-died,
+  // then battle-fled if applicable.
+  const events: ReplayEvent[] = [...openingEvents, ...fleeEvents];
   const turn = state.turn;
   events.push({ kind: 'battle-resolved', turn, tick: tick(), result });
   for (const id of attackerCasualties) {
@@ -564,6 +838,16 @@ export const resolveBattle = (
   }
   if (defenderLeaderKilled) {
     events.push({ kind: 'leader-died', turn, tick: tick(), partyId: defender.id });
+  }
+  if (fleeSucceeded && fleeingPartyId !== null && knockbackFrom !== null && knockbackTo !== null) {
+    events.push({
+      kind: 'battle-fled',
+      turn,
+      tick: tick(),
+      partyId: fleeingPartyId,
+      knockbackFrom,
+      knockbackTo,
+    });
   }
 
   // Round 12 — gold credit for kills inside this battle. Per-kill model:
@@ -623,17 +907,24 @@ export const resolveBattle = (
 
   // Locations: winner stays. Loser moves to retreatTo if available; otherwise
   // stays in place (caller treats retreatTo === null as loser stuck/destroyed).
+  // Round 15: the fleer's knockback tile is stored in retreatTo and the
+  // fleer is treated as the loser for relocation purposes (winner ===
+  // 'draw' so the non-fleeing side stays put). Any consumed flee orders
+  // are persisted on the resulting parties so an AI re-issuing flee on
+  // the next turn doesn't double-fire on a stale order.
   const newAttacker: Party = {
     ...attacker,
     units: updateUnits(attacker, liveById, attackerXp),
     location: loserId === attacker.id && retreatTo !== null ? retreatTo : attacker.location,
     leaderless: attacker.leaderless || attackerLeaderKilled,
+    orders: attackerOrders,
   };
   const newDefender: Party = {
     ...defender,
     units: updateUnits(defender, liveById, defenderXp),
     location: loserId === defender.id && retreatTo !== null ? retreatTo : defender.location,
     leaderless: defender.leaderless || defenderLeaderKilled,
+    orders: defenderOrders,
   };
 
   const newParties = new Map(state.parties);
