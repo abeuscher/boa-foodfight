@@ -326,6 +326,12 @@ export type ReplayEvent =
       readonly fromPartyId: PartyId;
       readonly newPartyIds: readonly PartyId[];
     })
+  | (ReplayEventCommon & {
+      readonly kind: 'corner-crossed';
+      readonly partyId: PartyId;
+      readonly from: TileCoord;
+      readonly to: TileCoord;
+    })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 
 // ---------------------------------------------------------------------------

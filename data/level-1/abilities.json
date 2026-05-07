@@ -14,14 +14,24 @@
       "description": "Scout ants release a concentrated phero-burst, blowing the fog off everything within smelling distance."
     },
     {
-      "id": "plane-switch",
-      "name": "Plane-Switch",
+      "id": "ant-plane-switch",
+      "name": "Ant Plane-Switch",
       "category": "movement",
       "target": "self",
       "uses": 1,
       "cooldown": 0,
       "params": {},
-      "description": "Climbers improvise a hand-over-hand ascent and skip the paired-POST corridor entirely. Once per scenario, soldier."
+      "description": "An ant-mage hauls the column up onto another plane via short-range pheromone-thread teleport. Once per scenario, consumes the party's order for that turn."
+    },
+    {
+      "id": "spider-corner-cross",
+      "name": "Spider Corner-Cross",
+      "category": "passive",
+      "target": "self",
+      "uses": null,
+      "cooldown": 0,
+      "params": {},
+      "description": "Spiders are at home crawling around corners. When a spider party's move would land on a plane edge, the engine automatically follows the corner adjacency in the same step. Faction-wide passive; no order required."
     },
     {
       "id": "boat-form",

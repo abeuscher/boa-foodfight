@@ -154,7 +154,7 @@
         "intelligence": 8,
         "constitution": 6
       },
-      "abilities": ["plane-switch", "mend", "jelly-apply", "recruit"],
+      "abilities": ["ant-plane-switch", "mend", "jelly-apply", "recruit"],
       "tags": ["caster", "leader-eligible", "support"],
       "planeAffinity": {
         "floor": { "attack": 1, "armor": 1 },
