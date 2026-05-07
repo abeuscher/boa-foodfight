@@ -115,6 +115,12 @@ function reduceWithInitial(events, targetTick) {
   // Updated by hypnotize-attempted (success), hypnotize-rebound-started
   // events. We track turns approximately for outline color.
   const neutralHypno = new Map();
+  // Round 14 — undiscovered item markers. Keyed by `${plane}:${x},${y}`
+  // because at most one item can occupy a tile (spawn places taken-
+  // tiles list prevents collision). Item-spawned adds; item-discovered
+  // removes; item-dropped re-adds. Older replays without item events
+  // leave this map empty (graceful fallback).
+  const undiscoveredItems = new Map();
   // Per-party unit-level snapshot, keyed by partyId. Each value is
   // { faction, location, leaderId, posture, jellyDoses, units: Map<unitId, {...}> }.
   // Hydrated from scenario-start.parties; HP updates from battle-
@@ -249,6 +255,45 @@ function reduceWithInitial(events, targetTick) {
         if (e.faction === 'ant') antGold = e.newTotal;
         else if (e.faction === 'spider') spiderGold = e.newTotal;
         break;
+      case 'item-spawned': {
+        const k = `${e.location.plane}:${e.location.x},${e.location.y}`;
+        undiscoveredItems.set(k, {
+          plane: e.location.plane,
+          x: e.location.x,
+          y: e.location.y,
+          itemId: e.itemId,
+          buried: !!e.buried,
+        });
+        break;
+      }
+      case 'item-discovered': {
+        const k = `${e.location.plane}:${e.location.x},${e.location.y}`;
+        undiscoveredItems.delete(k);
+        // Track the equipped item on the partyUnits slot for the
+        // parties JSON panel.
+        const pu = partyUnits.get(e.partyId);
+        if (pu) pu.item = e.itemId;
+        break;
+      }
+      case 'item-consumed': {
+        // Slot stays empty; clear any prior item flag for the party.
+        const pu = partyUnits.get(e.partyId);
+        if (pu) pu.item = null;
+        break;
+      }
+      case 'item-dropped': {
+        const k = `${e.location.plane}:${e.location.x},${e.location.y}`;
+        undiscoveredItems.set(k, {
+          plane: e.location.plane,
+          x: e.location.x,
+          y: e.location.y,
+          itemId: e.itemId,
+          buried: false,
+        });
+        const pu = partyUnits.get(e.partyId);
+        if (pu) pu.item = null;
+        break;
+      }
       case 'scenario-end':
         winner = e.winner;
         break;
@@ -266,6 +311,7 @@ function reduceWithInitial(events, targetTick) {
     neutralHypno,
     partyUnits,
     unitTemplates,
+    undiscoveredItems,
     turn,
     queenCharge,
     antGold,
@@ -464,6 +510,31 @@ function drawDamageZones(ctx, plane, zones, area) {
   ctx.restore();
 }
 
+/**
+ * Round 14 — render undiscovered item markers as a small muted "?"
+ * inside the tile. Once an item-discovered event fires, the reducer
+ * removes the marker and the tile renders empty. Replays predating
+ * item-spawned events leave `undiscoveredItems` empty so the canvas
+ * is unchanged for older runs.
+ */
+function drawItemMarkers(ctx, plane, items, area) {
+  if (!items || items.size === 0) return;
+  const { ox, oy, cellSize } = area;
+  const fontPx = Math.max(10, Math.floor(cellSize * 0.5));
+  ctx.save();
+  ctx.fillStyle = '#9aa0a6';
+  ctx.strokeStyle = '#3a3a3a';
+  ctx.font = `bold ${String(fontPx)}px ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  for (const m of items.values()) {
+    if (m.plane !== plane) continue;
+    const cx = ox + m.x * cellSize + cellSize / 2;
+    const cy = oy + m.y * cellSize + cellSize / 2 + Math.floor(fontPx / 3);
+    ctx.fillText('?', cx, cy);
+  }
+  ctx.restore();
+}
+
 function drawWebs(ctx, plane, webs, area) {
   if (!webs || webs.size === 0) return;
   const { ox, oy, cellSize } = area;
@@ -630,6 +701,7 @@ function render(canvas, state) {
     drawPlane(ctx, plane, area);
     drawObstacles(ctx, plane, state.obstacles, area);
     drawDamageZones(ctx, plane, state.damageZones, area);
+    drawItemMarkers(ctx, plane, state.undiscoveredItems, area);
     drawWebs(ctx, plane, state.webs, area);
     drawPosts(ctx, plane, state.posts, state.initialPosts, area);
     drawParties(ctx, plane, state.parties, state.neutralHypno, area, FOLLOW_PARTY);
@@ -762,6 +834,8 @@ function renderPartiesPanel(state) {
         leaderId: p.leaderId,
         posture: p.posture,
         jellyDoses: p.jellyDoses,
+        // Round 14 — equipped persistent item, or null when slot empty.
+        item: p.item ?? null,
         units: [...p.units.values()].map((u) => ({
           id: u.id,
           templateId: u.templateId,
@@ -1210,6 +1284,14 @@ function describeEvent(e) {
       return `${e.center.plane}(${e.center.x},${e.center.y})`;
     case 'gold-earned':
       return `${e.faction} +${String(e.amount)} (${e.source}: ${e.sourceId}) → ${String(e.newTotal)}`;
+    case 'item-spawned':
+      return `${e.itemId}${e.buried ? ' (buried)' : ''} @ ${e.location.plane}(${e.location.x},${e.location.y})`;
+    case 'item-discovered':
+      return `${e.partyId} found ${e.itemId} @ ${e.location.plane}(${e.location.x},${e.location.y})`;
+    case 'item-consumed':
+      return `${e.partyId} consumed ${e.itemId} (${e.effect})`;
+    case 'item-dropped':
+      return `${e.partyId} dropped ${e.itemId} @ ${e.location.plane}(${e.location.x},${e.location.y})`;
     default:
       return '';
   }
