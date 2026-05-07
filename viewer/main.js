@@ -66,6 +66,20 @@ function hydrateInitialPositions(events) {
       break;
     }
   }
+  // Round 8 — neutral-spawned events carry the spawn party + location.
+  // Hydrate them so the very first frame already shows the neutrals.
+  for (const e of events) {
+    if (e.kind !== 'neutral-spawned') continue;
+    if (seen.has(e.partyId)) continue;
+    seen.set(e.partyId, {
+      faction: 'neutral',
+      neutralKind: e.neutralKind,
+      alive: true,
+      plane: e.location.plane,
+      x: e.location.x,
+      y: e.location.y,
+    });
+  }
   for (const e of events) {
     if (e.kind !== 'party-moved') continue;
     if (seen.has(e.partyId)) continue;
@@ -92,6 +106,15 @@ function reduceWithInitial(events, targetTick) {
   // adds; web-broken removes. Spider-spawned spider parties (id
   // starting with `spiderling-`) appear via party-moved events.
   const webs = new Map();
+  // Round 8 — damage zones currently active. Keyed by
+  // `${plane}:${x},${y}` so stacking on the same tile is OK; we keep
+  // a count for transparency. (Tile shape is reconstructed during
+  // render.)
+  const damageZones = new Map();
+  // Round 8 — per-neutral hypnotize/rebound state, keyed by partyId.
+  // Updated by hypnotize-attempted (success), hypnotize-rebound-started
+  // events. We track turns approximately for outline color.
+  const neutralHypno = new Map();
   let turn = 0;
   let queenCharge = 0;
   let winner = null;
@@ -144,6 +167,37 @@ function reduceWithInitial(events, targetTick) {
       case 'web-broken':
         webs.delete(`${e.coord.plane}:${e.coord.x},${e.coord.y}`);
         break;
+      case 'damage-zone-spawned': {
+        const k = `${e.center.plane}:${e.center.x},${e.center.y}`;
+        damageZones.set(k, {
+          plane: e.center.plane,
+          x: e.center.x,
+          y: e.center.y,
+          tiles: e.tiles ?? null,
+        });
+        break;
+      }
+      case 'damage-zone-expired': {
+        const k = `${e.center.plane}:${e.center.x},${e.center.y}`;
+        damageZones.delete(k);
+        break;
+      }
+      case 'hypnotize-attempted':
+        if (e.success) {
+          neutralHypno.set(e.targetId, { state: 'hypnotized' });
+        }
+        break;
+      case 'hypnotize-rebound-started':
+        neutralHypno.set(e.partyId, { state: 'rebound' });
+        break;
+      case 'recruit-attempted-neutral':
+        if (e.success) {
+          // Convert the party display faction to ant.
+          const p = parties.get(e.targetId);
+          if (p) p.faction = 'ant';
+          neutralHypno.delete(e.targetId);
+        }
+        break;
       case 'scenario-end':
         winner = e.winner;
         break;
@@ -151,7 +205,18 @@ function reduceWithInitial(events, targetTick) {
         break;
     }
   }
-  return { parties, posts, initialPosts, obstacles, webs, turn, queenCharge, winner };
+  return {
+    parties,
+    posts,
+    initialPosts,
+    obstacles,
+    webs,
+    damageZones,
+    neutralHypno,
+    turn,
+    queenCharge,
+    winner,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +305,42 @@ function drawObstacles(ctx, plane, obstacles) {
   }
 }
 
+/**
+ * Round 8 — render active damage zones as a semi-transparent yellow
+ * plus shape. Each zone is the center tile + N/S/W/E neighbors,
+ * clamped to map bounds (we re-derive in case the replay event
+ * didn't carry the explicit `tiles` array).
+ */
+function drawDamageZones(ctx, plane, zones) {
+  if (!zones || zones.size === 0) return;
+  const { ox, oy } = planeOrigin(plane);
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 230, 80, 0.28)';
+  ctx.strokeStyle = 'rgba(255, 230, 80, 0.7)';
+  ctx.lineWidth = 1;
+  for (const z of zones.values()) {
+    if (z.plane !== plane) continue;
+    const tiles =
+      z.tiles && z.tiles.length > 0
+        ? z.tiles
+        : [
+            { plane: z.plane, x: z.x, y: z.y },
+            { plane: z.plane, x: z.x, y: z.y - 1 },
+            { plane: z.plane, x: z.x, y: z.y + 1 },
+            { plane: z.plane, x: z.x - 1, y: z.y },
+            { plane: z.plane, x: z.x + 1, y: z.y },
+          ].filter((t) => t.x >= 0 && t.x <= 9 && t.y >= 0 && t.y <= 9);
+    for (const t of tiles) {
+      if (t.plane !== plane) continue;
+      const x = ox + t.x * CELL;
+      const y = oy + t.y * CELL;
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+      ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+    }
+  }
+  ctx.restore();
+}
+
 function drawWebs(ctx, plane, webs) {
   if (!webs || webs.size === 0) return;
   const { ox, oy } = planeOrigin(plane);
@@ -306,7 +407,7 @@ function shortPostName(id) {
   return id.slice(0, 4);
 }
 
-function drawParties(ctx, plane, parties) {
+function drawParties(ctx, plane, parties, neutralHypno) {
   const { ox, oy } = planeOrigin(plane);
   // Bucket parties by tile so we can fan them out if multiple share a cell.
   const byTile = new Map();
@@ -330,8 +431,21 @@ function drawParties(ctx, plane, parties) {
       ctx.arc(cx + dx, cy + dy, 6, 0, Math.PI * 2);
       ctx.fillStyle = FACTION_COLOR[p.faction] ?? '#888';
       ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
+      // Round 8 — outline color flags hypnotize state for neutrals:
+      //   hypnotized: bright purple ring (spider-controlled).
+      //   rebound:    cyan ring (spider-immune, fleeing).
+      //   default:    white ring.
+      const hypno = neutralHypno?.get(p.id);
+      if (hypno?.state === 'hypnotized') {
+        ctx.strokeStyle = '#c026d3';
+        ctx.lineWidth = 2;
+      } else if (hypno?.state === 'rebound') {
+        ctx.strokeStyle = '#22c5e8';
+        ctx.lineWidth = 2;
+      } else {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+      }
       ctx.stroke();
     });
   }
@@ -343,9 +457,10 @@ function render(canvas, state) {
   for (const plane of PLANES) {
     drawPlane(ctx, plane);
     drawObstacles(ctx, plane, state.obstacles);
+    drawDamageZones(ctx, plane, state.damageZones);
     drawWebs(ctx, plane, state.webs);
     drawPosts(ctx, plane, state.posts, state.initialPosts);
-    drawParties(ctx, plane, state.parties);
+    drawParties(ctx, plane, state.parties, state.neutralHypno);
   }
   // HUD: queen charge, turn, winner banner.
   ctx.fillStyle = '#888';
@@ -785,6 +900,20 @@ function describeEvent(e) {
       return `winner=${e.winner}`;
     case 'turn-start':
       return `turn ${e.turn}`;
+    case 'neutral-spawned':
+      return `${e.neutralKind} @ ${e.location.plane}(${e.location.x},${e.location.y})`;
+    case 'hypnotize-attempted':
+      return `${e.partyId}→${e.targetId} ${e.success ? 'OK' : 'FAIL'} (caster ${e.casterHpBefore}→${e.casterHpAfter})`;
+    case 'hypnotize-rebound-started':
+      return `${e.partyId} rebound`;
+    case 'recruit-attempted-neutral':
+      return `${e.partyId}→${e.targetId} (${e.targetType}) ${e.success ? 'OK' : 'FAIL'}`;
+    case 'damage-zone-spawned':
+      return `${e.center.plane}(${e.center.x},${e.center.y})`;
+    case 'damage-zone-tick':
+      return `${e.center.plane}(${e.center.x},${e.center.y}) dmg=${e.damage} units=${e.affectedUnits.length}`;
+    case 'damage-zone-expired':
+      return `${e.center.plane}(${e.center.x},${e.center.y})`;
     default:
       return '';
   }
