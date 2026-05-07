@@ -7,7 +7,7 @@ import { loadScenario } from '../engine/state.ts';
 import type { MoveOrder, PartyId, PostId } from '../engine/types.ts';
 
 import { flankPlayer } from './flank.ts';
-import { postsOfType, SOAP_DISH_TYPE } from './policy-helpers.ts';
+import { postsOfType, SOAP_DISH_TYPE, WALL_CRACK_TYPE } from './policy-helpers.ts';
 import { rushPlayer } from './rush.ts';
 import { turtlePlayer } from './turtle.ts';
 
@@ -39,7 +39,7 @@ describe('rush variant', () => {
 });
 
 describe('turtle variant', () => {
-  it('ceiling-capable parties hold while queen ultimate is uncharged', () => {
+  it('phase A (uncharged): ceiling-capable parties hold with cleared orders', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     expect(state.queenUltimateCharge).toBe(0);
     const next = turtlePlayer.decide(state, data, createRng(1));
@@ -49,7 +49,19 @@ describe('turtle variant', () => {
     }
   });
 
-  it('floor vanguards capture mid-POSTs even while uncharged (to trigger spider counter-push)', () => {
+  it('phase A: queen-guard worker fires jelly-apply at the spear party (pathfinders)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const next = turtlePlayer.decide(state, data, createRng(1));
+    const queenGuard = next.parties.get('queen-guard' as PartyId);
+    expect(queenGuard?.orders).toHaveLength(1);
+    const order = queenGuard?.orders[0];
+    expect(order?.kind).toBe('use-ability');
+    if (order?.kind !== 'use-ability') throw new Error('expected ability order');
+    expect(order.abilityId).toBe('jelly-apply');
+    expect(order.target).toBe('pathfinders');
+  });
+
+  it('floor vanguards stage POSTs even while uncharged (to draw the spider counter-push)', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = turtlePlayer.decide(state, data, createRng(1));
     const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
@@ -59,7 +71,27 @@ describe('turtle variant', () => {
     expect(order.target).toEqual(soap?.location);
   });
 
-  it('ceiling-capable parties push once charge crosses the unleash threshold', () => {
+  it('phase B (mid-charge): ceiling-capable parties preposition toward the wall-crack ladder', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const charged = {
+      ...state,
+      queenUltimateCharge: Math.floor(data.queen.ultimate.chargeMax * 0.6),
+    };
+    const next = turtlePlayer.decide(charged, data, createRng(1));
+    // No wall-crack or towel-rack is yet ant-owned in a fresh state, so
+    // the preposition target falls through to the first wall-crack POST.
+    const cracks = postsOfType(state, WALL_CRACK_TYPE);
+    expect(cracks.length).toBeGreaterThan(0);
+    const expectedTarget = cracks[0]!.location;
+    for (const partyId of ['pathfinders', 'vanguard-bravo'] as PartyId[]) {
+      const party = next.parties.get(partyId);
+      expect(party?.orders).toHaveLength(1);
+      const order = party?.orders[0] as MoveOrder;
+      expect(order.target).toEqual(expectedTarget);
+    }
+  });
+
+  it('phase C (charge >= unleash threshold): ceiling-capable parties commit to spider-web', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const charged = { ...state, queenUltimateCharge: data.queen.ultimate.chargeMax };
     const next = turtlePlayer.decide(charged, data, createRng(1));

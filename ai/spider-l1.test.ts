@@ -133,13 +133,18 @@ describe('spiderL1', () => {
     const next = spiderL1.decide(state, data, createRng(1));
     const scout = next.parties.get('advance-scout' as PartyId);
 
-    // Each non-web-guard, non-scout spider party should hold position
-    // when there's no threat (the 6-plane geometry made spider-web
-    // pile-ups overwhelming, so default patrol is to anchor in place).
+    // Each non-web-guard, non-scout, non-deep-raider spider party should
+    // hold position when there's no threat (the 6-plane geometry made
+    // spider-web pile-ups overwhelming, so default patrol is to anchor
+    // in place). The deep-raider is excluded because it has its own
+    // dedicated logic (proactive descent toward the floor door /
+    // storm-drain column) that intentionally moves every turn — it's
+    // a forward-pressure party, not a patrol party.
     let patrolCount = 0;
     for (const party of next.parties.values()) {
       if (party.faction !== 'spider') continue;
       if (party.id === ('web-guard' as PartyId)) continue;
+      if (party.id === ('deep-raider' as PartyId)) continue;
       if (party.id === scout?.id) continue;
       patrolCount += 1;
       expect(party.orders).toEqual([]);

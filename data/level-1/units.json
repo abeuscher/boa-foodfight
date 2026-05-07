@@ -83,7 +83,7 @@
       "baseStats": {
         "hp": 5,
         "attack": 5,
-        "agility": 9,
+        "agility": 10,
         "armor": 0,
         "intelligence": 3,
         "constitution": 6
@@ -117,7 +117,7 @@
       "slotCost": 1,
       "movement": "ground",
       "baseStats": {
-        "hp": 5,
+        "hp": 6,
         "attack": 6,
         "agility": 5,
         "armor": 1,
@@ -153,7 +153,7 @@
       "slotCost": 4,
       "movement": "climbing",
       "baseStats": {
-        "hp": 34,
+        "hp": 37,
         "attack": 8,
         "agility": 4,
         "armor": 2,
@@ -192,7 +192,7 @@
         "hp": 13,
         "attack": 5,
         "agility": 5,
-        "armor": 2,
+        "armor": 3,
         "intelligence": 1,
         "constitution": 4
       },
@@ -225,7 +225,7 @@
       "slotCost": 2,
       "movement": "climbing",
       "baseStats": {
-        "hp": 11,
+        "hp": 14,
         "attack": 4,
         "agility": 5,
         "armor": 1,
