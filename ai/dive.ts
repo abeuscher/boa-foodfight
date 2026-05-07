@@ -101,12 +101,15 @@ const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[]
   return [order];
 };
 
-/** Round-7 feature 2 placement: push pathfinders to (5, 5) — the
- * tile that maps via plane-switch directly to the ceiling near the
- * spider-web. Saves several turns of floor travel on the dive line. */
+/** Round-9 placement: keep pathfinders' forward push but step off the
+ * deep-raider's intercept window. The round-7 (5, 5) tile sits on the
+ * forward-staged deep-raider's Chebyshev-3 detection arc (the raider
+ * pre-stages to floor 8,5); landing at (4, 4) preserves one tile of
+ * slack so pathfinders reaches the launch tile and plane-switches
+ * before the raider intercepts. Inside Chebyshev-5 of storm-drain. */
 const divePlacement = (state: GameState): GameState =>
   antPlacement(state, {
-    pathfinders: { plane: 'floor', x: 5, y: 5 },
+    pathfinders: { plane: 'floor', x: 4, y: 4 },
   });
 
 const diveCore = buildAntPolicy(

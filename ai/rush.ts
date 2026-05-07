@@ -21,14 +21,20 @@ import { antPlacement } from './placement-helpers.ts';
 import { buildAntPolicy, moveToOrHold, postLocation, SPIDER_WEB } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
-/** Round-7 feature 2 placement: rush pushes all field parties forward
- * toward (5, 5), saving 2+ turns of travel. Saves the canonical chain
- * for movement after turn 1. */
+/** Round-9 placement: split routes so the deep-raider's south-floor
+ * intercept arc (forward-stage at floor 8,5, detect radius 3) can't
+ * hit the trio simultaneously. Vanguard-alpha takes the northern
+ * y=0 row at (5, 0) for the NE flank — well outside the raider's
+ * arc — vanguard-bravo takes the canonical NW diagonal at (3, 3)
+ * for floor staging, and pathfinders takes the southern x=0 column
+ * at (0, 5) for the SW flank. Each party arrives at the web via a
+ * different approach so deep-raider has at most one intercept
+ * opportunity. All three within Chebyshev-5 of storm-drain (0, 0). */
 const rushPlacement = (state: GameState): GameState =>
   antPlacement(state, {
-    'vanguard-alpha': { plane: 'floor', x: 5, y: 5 },
-    'vanguard-bravo': { plane: 'floor', x: 5, y: 4 },
-    pathfinders: { plane: 'floor', x: 4, y: 5 },
+    'vanguard-alpha': { plane: 'floor', x: 5, y: 0 },
+    'vanguard-bravo': { plane: 'floor', x: 3, y: 3 },
+    pathfinders: { plane: 'floor', x: 0, y: 5 },
   });
 
 const rushCore = buildAntPolicy('rush', (state: GameState) => {

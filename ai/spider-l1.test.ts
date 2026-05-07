@@ -191,6 +191,19 @@ describe('spiderL1', () => {
     expect(after?.orders).toBe(sentinelOrders);
   });
 
+  it('round-9 placement softens deep-raider off the (4-5, 4-5) ant approach lane', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const placement = spiderL1.placement;
+    expect(placement).toBeDefined();
+    const placed = placement!(state, data, createRng(1));
+    const raider = placed.parties.get('deep-raider' as PartyId);
+    expect(raider?.location).toEqual({ plane: 'floor', x: 7, y: 3 });
+    // The (4-5, 4-5) box must be unobstructed by the raider on turn 0.
+    expect(raider?.location.x).toBeGreaterThan(5);
+    const silk = placed.parties.get('silk-line' as PartyId);
+    expect(silk?.location).toEqual({ plane: 'ceiling', x: 7, y: 7 });
+  });
+
   it('a spider already standing on the spider-web tile holds (no orders)', () => {
     const { state: initial, data } = loadScenario(DATA_DIR, 1);
     const web = requirePost(initial, 'spider-web' as PostId);
@@ -225,6 +238,22 @@ describe('spiderL1', () => {
       expect(hypnoOrder).toBeDefined();
       expect(hypnoOrder?.abilityId).toBe(HYPNOTIZE);
       expect(hypnoOrder?.target).toBe(cockroachId);
+    });
+
+    it('does NOT issue a hypnotize against stinkbugs (value-0 skip)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const stinkId = partyIdForKind('stinkbugs');
+      const stink = isolated.parties.get(stinkId);
+      const silk = isolated.parties.get('silk-line' as PartyId);
+      if (!stink || !silk) throw new Error('fixture missing');
+      const moved = replaceParty(isolated, { ...stink, location: silk.location });
+      const next = spiderL1.decide(moved, data, createRng(1));
+      const silkAfter = next.parties.get('silk-line' as PartyId);
+      const hypnoOrder = silkAfter?.orders.find(
+        (o) => o.kind === 'use-ability' && o.abilityId === HYPNOTIZE,
+      );
+      expect(hypnoOrder).toBeUndefined();
     });
 
     it('does NOT issue a hypnotize against a neutral in the rebound immunity window', () => {

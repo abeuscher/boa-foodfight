@@ -45,14 +45,22 @@ const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[]
   return [order];
 };
 
-/** Round-7 feature 2 placement: all field parties forward to (4, 4)
- * — ready to plane-switch on the very first turn. Tight clustering
- * keeps the jelly-supply line short. */
+/** Round-9 placement: split routes so the deep-raider's south-floor
+ * intercept arc (forward-stage at floor 8,5, detect radius 3) can't
+ * hit the trio simultaneously. The round-7 (4,4)/(5,4)/(4,5) cluster
+ * sat directly on the raider's arc — we now spread the trio across
+ * three rows: vanguard-alpha at (5, 0) for the NE-floor flank,
+ * vanguard-bravo at (4, 2) just above the raider's intercept band so
+ * the closest-field-party jelly-supply target picks bravo first and
+ * its plane-switch launch tile is only a 4-tile NE diagonal away,
+ * and pathfinders at (0, 5) for the SW-floor flank below the raider.
+ * Three different rows means deep-raider can engage at most one
+ * party per turn. All within Chebyshev-5 of storm-drain. */
 const jellyRushPlacement = (state: GameState): GameState =>
   antPlacement(state, {
-    'vanguard-alpha': { plane: 'floor', x: 4, y: 4 },
-    'vanguard-bravo': { plane: 'floor', x: 5, y: 4 },
-    pathfinders: { plane: 'floor', x: 4, y: 5 },
+    'vanguard-alpha': { plane: 'floor', x: 5, y: 0 },
+    'vanguard-bravo': { plane: 'floor', x: 4, y: 2 },
+    pathfinders: { plane: 'floor', x: 0, y: 5 },
   });
 
 const jellyRushCore = buildAntPolicy(

@@ -104,13 +104,20 @@ const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
  * half the spider-soldier 13-HP baseline. 5 keeps a 9-10 HP unit
  * alive after the cast. */
 const HYPNOTIZE_MIN_HP = 5;
-/** Round 8 — value-ranking by neutral kind. Cockroach (8 units) is
- * the highest-value flip; mice second; stinkbugs last (small swarm
- * + risk of damage zone on miss). */
+/** Round 9 — value-ranking by neutral kind. Cockroach (8 units, attack
+ * 6) is the highest-value flip; mice (3 units) second; stinkbugs
+ * REJECTED (value 0) — only 2 units, and a failed cast spawns a 5-tile
+ * damage zone (1hp/turn for 5 turns) on the stinkbug's tile, which the
+ * spider must subsequently walk through to leave. The expected EV of
+ * a stinkbug attempt is net-negative for the spider once the half-HP
+ * cast cost AND the post-miss damage zone are tallied, so we skip it
+ * entirely (return 0 to make the candidate ineligible at the value
+ * floor). Cockroach + mice still gate on the standard
+ * HYPNOTIZE_MIN_HP threshold. */
 const NEUTRAL_VALUE: Readonly<Record<'cockroaches' | 'mice' | 'stinkbugs', number>> = {
   cockroaches: 3,
   mice: 2,
-  stinkbugs: 1,
+  stinkbugs: 0,
 };
 
 /**
@@ -581,6 +588,11 @@ const pickHypnotizeTarget = (state: GameState, spider: Party): Party | null => {
     if (status.hypnotizedBy === 'spider') continue;
     if (status.spiderImmunityRemaining > 0) continue;
     const value = NEUTRAL_VALUE[status.kind] ?? 0;
+    // Round 9 — skip any neutral whose ranked value is <= 0. This
+    // hard-filters stinkbugs (value 0) so a co-located spider never
+    // attempts a cast whose miss spawns a damage zone it then has to
+    // walk through.
+    if (value <= 0) continue;
     if (
       best === null ||
       value > best.value ||
@@ -602,20 +614,30 @@ const casterHealthyEnough = (party: Party): boolean => {
 };
 
 /**
- * Round-7 feature 2 placement (spider side). With 5 spider parties the
- * engine cap is ⌊5/2⌋ = 2 movable. We commit:
- *   - deep-raider at floor (8, 5): forward of its east-wall home,
- *     closer to the storm-drain column. Still inside spider territory
- *     by movement, but skips ~3 turns of patrol toward the door.
- *   - silk-line at ceiling (7, 7): forward of (9, 8), toward the
- *     storm-drain column on the ceiling — the silk-line variant
- *     already pushes toward storm-drain on turn 2, so the placement
- *     saves a turn of approach without changing the per-turn logic.
+ * Round-9 placement (spider side). With 5 spider parties the engine
+ * cap is ⌊5/2⌋ = 2 movable. We commit:
+ *   - deep-raider at floor (7, 3): pulled BACK from the round-7/8
+ *     forward (8, 5) tile. The aggressive (8, 5) placement crushed
+ *     ant rush/jelly-rush/dive variants (1-4% win rate, 99% timeouts)
+ *     by sitting directly on their (4-5, 4-5) approach lane. (7, 3)
+ *     keeps the raider on the spider half of the floor (above and
+ *     to the right of the centerline) and still inside the storm-
+ *     drain column — but well out of the (4-5, 4-5) ant breakout
+ *     zone, restoring variant viability without surrendering the
+ *     mid-board pressure entirely. The raider's `decideRaiderTarget`
+ *     logic still drives it forward toward live ant trails after
+ *     turn 1, so the descent toward the storm-drain column is only
+ *     deferred by ~1-2 turns, not abandoned.
+ *   - silk-line at ceiling (7, 7): unchanged from round 7. Forward
+ *     of (9, 8) toward the storm-drain column on the ceiling —
+ *     silk-line's per-turn logic already pushes toward storm-drain
+ *     on turn 2, so this saves a turn of approach without changing
+ *     behavior.
  * web-guard intentionally stays at the spider-web (queen).
  */
 const spiderL1Placement = (state: GameState): GameState =>
   spiderPlacement(state, {
-    'deep-raider': { plane: 'floor', x: 8, y: 5 },
+    'deep-raider': { plane: 'floor', x: 7, y: 3 },
     'silk-line': { plane: 'ceiling', x: 7, y: 7 },
   });
 
