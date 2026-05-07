@@ -21,6 +21,37 @@
  *    pulling a non-scout responder onto the ladder before the climb
  *    completes. This is the same conditional-gate idea but on the
  *    *floor/wall* side, not the ceiling.
+ *
+ * Phase-4 round-2 strategy retune (current revision):
+ *  - Pursuit POST-ownership gate raised from >=1 to >=2: previous
+ *    setting one-shot a chipped baseline party as soon as the first
+ *    soap-dish flipped, crushing baseline (19% ant wins) and dive
+ *    (13%). Two-POST gate gives both variants a setup turn before
+ *    the spider hunts wounded.
+ *  - spawn-spiderlings deferred from turn 3 to turn 5: baseline's
+ *    slow chain was being overrun by the spiderling cloud before it
+ *    reached towel-rack. Two extra setup turns let baseline plant
+ *    soap-dish before the swarm arrives.
+ *  - silk-line counter-push softened from ANT_DOMINANCE_THRESHOLD
+ *    (3 POSTs) to a single-POST early lever: when ants own >=1 POST
+ *    AND it is turn >= 3, silk-line pushes wall-crack. Catches the
+ *    rush/turtle/jelly-rush variants that currently dodge the
+ *    3-POST trigger because they capture ceiling/wall POSTs and
+ *    skip past floor totals (rush 77%, turtle 87%, jelly-rush 78%).
+ *    Independent of `pickPusher` so the larger formation can still
+ *    fire the late-game `counterPushActive` push.
+ *  - web-watch active reposition: instead of holding the spawn
+ *    tile, web-watch moves one tile toward the nearest ant party
+ *    every turn (capped to its current plane). Adds a smart
+ *    interceptor that pressures rush's ceiling lane and turtle's
+ *    floor approach without committing to a ceiling tile pick that
+ *    would over-rotate against rush like round-2 did.
+ *  - web-guard AoE dodge: when queenUltimateCharge >= 80 and the
+ *    Queen has charges left, web-guard slides one tile off the
+ *    spider-web tile (toward the ant home base direction) to drop
+ *    the AoE blast radius around the web. Reactive behavior that
+ *    interacts directly with the queen-ultimate `radius`/`damage`
+ *    system in queen.json.
  */
 
 import { distance, sameCoord } from '../engine/coord.ts';
@@ -60,6 +91,20 @@ const THREAT_RADIUS = 2;
  * the floor.
  */
 const ANT_DOMINANCE_THRESHOLD = 3;
+
+/**
+ * Queen ultimate AoE-dodge trigger. Once charge crosses this fraction
+ * of `chargeMax` (queen.json: chargeMax 100, radius 5, damage 60), the
+ * web-guard slides one tile off the spider-web tile so that the
+ * 5-tile blast radius is no longer centered on the queen's defender
+ * stack. The ant queen's ultimate has `usesPerScenario: 1`, so once
+ * `queenUltimatesUsed >= 1` the dodge is unnecessary.
+ */
+const QUEEN_ULT_DODGE_CHARGE = 80;
+
+const SILK_LINE: PartyId = 'silk-line' as PartyId;
+const WEB_WATCH: PartyId = 'web-watch' as PartyId;
+const WEB_GUARD: PartyId = 'web-guard' as PartyId;
 
 const totalSlotCost = (
   party: Party,
@@ -172,7 +217,7 @@ function* eligibleSpiders(state: GameState): IterableIterator<Party> {
     if (party.faction !== 'spider') continue;
     if (party.leaderless) continue;
     if (party.units.length === 0) continue;
-    if (party.id === ('web-guard' as PartyId)) continue;
+    if (party.id === WEB_GUARD) continue;
     yield party;
   }
 }
@@ -214,6 +259,28 @@ const pickPusher = (state: GameState, scoutId: PartyId | null): Party | null => 
 };
 
 /**
+ * Pick the closest party in `candidates` to `from`. Deterministic tiebreak
+ * by lexical PartyId. Generic over what the caller filters in.
+ */
+const closestPartyTo = (candidates: Iterable<Party>, from: TileCoord): Party | null => {
+  let best: { party: Party; d: number } | null = null;
+  for (const party of candidates) {
+    const d = distance(party.location, from);
+    if (best === null || d < best.d || (d === best.d && party.id < best.party.id)) {
+      best = { party, d };
+    }
+  }
+  return best?.party ?? null;
+};
+
+const eligibleResponders = function* (state: GameState, scoutId: PartyId | null): Iterable<Party> {
+  for (const party of eligibleSpiders(state)) {
+    if (scoutId !== null && party.id === scoutId) continue;
+    yield party;
+  }
+};
+
+/**
  * Closest non-scout, non-web-guard spider responder to `target`. Deterministic
  * tiebreak by lexical PartyId.
  */
@@ -221,16 +288,42 @@ const pickResponder = (
   state: GameState,
   scoutId: PartyId | null,
   target: TileCoord,
-): Party | null => {
-  let best: { party: Party; d: number } | null = null;
-  for (const party of eligibleSpiders(state)) {
-    if (scoutId !== null && party.id === scoutId) continue;
-    const d = distance(party.location, target);
-    if (best === null || d < best.d || (d === best.d && party.id < best.party.id)) {
-      best = { party, d };
-    }
+): Party | null => closestPartyTo(eligibleResponders(state, scoutId), target);
+
+const samePlaneAntParties = function* (
+  state: GameState,
+  plane: TileCoord['plane'],
+): Iterable<Party> {
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'ant') continue;
+    if (party.units.length === 0) continue;
+    if (party.location.plane !== plane) continue;
+    yield party;
   }
-  return best?.party ?? null;
+};
+
+/**
+ * Closest threat-eligible ant party to `from` (Chebyshev, same-plane only).
+ * Returns null if no eligible ant is on the same plane. Used by web-watch
+ * to pick its repositioning target without falling into Infinity-distance
+ * cross-plane lookups.
+ */
+const closestAntPartyOnPlane = (state: GameState, from: TileCoord): Party | null =>
+  closestPartyTo(samePlaneAntParties(state, from.plane), from);
+
+/**
+ * Take one step from `from` toward `target` along the larger axis (Chebyshev
+ * step), clamped to the 0-9 board. Stays on the same plane — web-watch
+ * never plane-jumps via this helper, which keeps it from bumping into the
+ * round-2 ceiling-intercept regression that hard-countered rush.
+ */
+const stepToward = (from: TileCoord, target: TileCoord): TileCoord => {
+  if (from.plane !== target.plane) return from;
+  const dx = Math.sign(target.x - from.x);
+  const dy = Math.sign(target.y - from.y);
+  const nx = Math.max(0, Math.min(9, from.x + dx));
+  const ny = Math.max(0, Math.min(9, from.y + dy));
+  return { plane: from.plane, x: nx, y: ny };
 };
 
 /**
@@ -299,11 +392,14 @@ export const spiderL1: AIPolicy = {
 
     // Phase-3 pursuit: once we're past the early rush window, look for
     // an ant party at < 50% effective HP. If found, the closest non-
-    // queen-bearing non-scout spider on the same plane is redirected to
-    // pursue it. Gated on `state.turn >= 4` and ant POST ownership ≥ 1
-    // so rush (which doesn't capture POSTs) can't be hard-countered.
+    // queen-bearing non-scout spider is redirected to pursue it. The
+    // POST-ownership gate is now >= 2 (was >= 1) — the previous setting
+    // hunted baseline as soon as the first soap-dish flipped, killing
+    // its slow chain (19% baseline win rate). Two POSTs means the ants
+    // have committed to the wall climb and the pursuit is no longer a
+    // decisive over-rotation.
     let pursueTarget: { antPartyId: PartyId; loc: TileCoord } | null = null;
-    if (state.turn >= 4 && antControlledPostCount(state) >= 1) {
+    if (state.turn >= 4 && antControlledPostCount(state) >= 2) {
       let weakest: { partyId: PartyId; hpFrac: number; loc: TileCoord } | null = null;
       for (const party of state.parties.values()) {
         if (party.faction !== 'ant') continue;
@@ -330,11 +426,55 @@ export const spiderL1: AIPolicy = {
     const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
     const pusher = counterPushActive ? pickPusher(state, scout?.id ?? null) : null;
 
+    // Silk-line early counter-push: the 3-POST `counterPushActive` gate
+    // never fires against rush/jelly-rush (which capture few POSTs) and
+    // fires too late against turtle. Pull silk-line forward to wall-crack
+    // once the ants have grabbed any POST and we're past turn 2 — a
+    // single-party probe that keeps the ladder contested without
+    // committing the formation.
+    const silkPushActive =
+      !counterPushActive && state.turn >= 3 && antControlledPostCount(state) >= 1;
+
+    // Web-watch active reposition: instead of holding its spawn tile,
+    // step one tile per turn toward the closest ant on its plane. Skip
+    // when web-watch has a higher-priority assignment (responder /
+    // pursuer / pusher) — those branches override naturally below.
+    const webWatchParty = state.parties.get(WEB_WATCH);
+    const webWatchTarget =
+      webWatchParty && webWatchParty.units.length > 0 && !webWatchParty.leaderless
+        ? closestAntPartyOnPlane(state, webWatchParty.location)
+        : null;
+
+    // Queen-ult AoE dodge: when the queen ultimate is nearly ready and
+    // hasn't fired yet, slide web-guard one tile off the spider-web in
+    // the direction of the closest ant. Dropping the queen-guard stack
+    // out of the AoE center reduces incoming AoE damage on the most
+    // valuable spider party. Once the ult has been used, the dodge is
+    // disabled. queen.ultimate.usesPerScenario is 1 (data/level-1/queen.json),
+    // so this fires at most once per scenario.
+    const ultDodgeArmed =
+      state.queenUltimateCharge >= QUEEN_ULT_DODGE_CHARGE && state.queenUltimatesUsed < 1;
+    let webGuardDodgeTarget: TileCoord | null = null;
+    if (ultDodgeArmed) {
+      const refAnt = closestAntPartyOnPlane(state, webLoc);
+      if (refAnt !== null) {
+        const stepped = stepToward(webLoc, refAnt.location);
+        if (!sameCoord(stepped, webLoc)) {
+          webGuardDodgeTarget = stepped;
+        }
+      }
+    }
+
     // Phase-2 ability triggers — emit once on a specific turn so the
     // engine's `uses: 1` envelopes are respected without per-unit
     // bookkeeping in the AI:
     //   turn 2 — silk-line spins a web on its current wall tile.
-    //   turn 3 — web-guard spawns 10 spiderlings as separate parties.
+    //   turn 5 — web-guard spawns 10 spiderlings as separate parties.
+    //
+    // The spawn-spiderlings turn moved from 3 to 5 because the early
+    // swarm overwhelmed baseline's slow chain before it could plant
+    // soap-dish. Two extra turns let baseline get a foothold before
+    // the spiderling cloud arrives.
     const spiderlingsAlreadySpawned = [...state.parties.keys()].some((pid) =>
       pid.startsWith('spiderling-'),
     );
@@ -367,17 +507,29 @@ export const spiderL1: AIPolicy = {
         nextParties.set(id, { ...party, orders: nextOrders });
         continue;
       }
-      // Priority order: web-guard always holds (queen is sacred). Counter-push
-      // wins next — it's the whole point of the rule, so even a party that
-      // happens to be on the web tile gets pulled off when ants dominate.
-      // Otherwise on-the-web means hold; then scout; then patrol/threat.
-      if (id === ('web-guard' as PartyId) && state.turn === 3 && !spiderlingsAlreadySpawned) {
+      // Priority order: web-guard ability fire (turn 5); silk-line ability
+      // fire (turn 2); web-guard AoE dodge (queen ult ~ready); web-guard
+      // hold; counter-push pusher; silk-line early push; pursuit; on-web
+      // hold; scout; web-watch reposition; patrol/threat.
+      if (id === WEB_GUARD && state.turn === 5 && !spiderlingsAlreadySpawned) {
         nextOrders = [{ kind: 'use-ability', abilityId: 'spawn-spiderlings' as AbilityId }];
-      } else if (id === ('silk-line' as PartyId) && state.turn === 2) {
+      } else if (id === SILK_LINE && state.turn === 2) {
         nextOrders = [{ kind: 'use-ability', abilityId: 'spin-web' as AbilityId }];
-      } else if (id === ('web-guard' as PartyId)) {
+      } else if (id === WEB_GUARD && webGuardDodgeTarget !== null) {
+        nextOrders = [moveTo(webGuardDodgeTarget)];
+      } else if (id === WEB_GUARD) {
         nextOrders = [];
       } else if (pusher !== null && id === pusher.id) {
+        nextOrders = sameCoord(party.location, counterPushTargetLoc)
+          ? []
+          : [moveTo(counterPushTargetLoc)];
+      } else if (
+        silkPushActive &&
+        id === SILK_LINE &&
+        // Don't override the scout slot or the threat-response slot.
+        id !== scout?.id &&
+        !(responder !== null && responder.id === SILK_LINE && threat.defend !== null)
+      ) {
         nextOrders = sameCoord(party.location, counterPushTargetLoc)
           ? []
           : [moveTo(counterPushTargetLoc)];
@@ -389,6 +541,14 @@ export const spiderL1: AIPolicy = {
         nextOrders = [];
       } else if (id === scout?.id) {
         nextOrders = ordersForScout(state, party, soapLoc);
+      } else if (
+        id === WEB_WATCH &&
+        webWatchTarget !== null &&
+        // Don't override responder duty.
+        !(responder !== null && responder.id === WEB_WATCH && threat.defend !== null)
+      ) {
+        const stepped = stepToward(party.location, webWatchTarget.location);
+        nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
       } else {
         const isResponder = responder !== null && id === responder.id;
         nextOrders = ordersForPatrolOrThreat(party, threat.defend, webLoc, isResponder);

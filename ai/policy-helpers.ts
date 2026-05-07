@@ -5,7 +5,7 @@
  * strategy itself.
  */
 
-import { sameCoord } from '../engine/coord.ts';
+import { distance, sameCoord } from '../engine/coord.ts';
 import type {
   GameState,
   MoveOrder,
@@ -80,6 +80,27 @@ export const moveToOrHold = (party: Party, target: TileCoord): readonly Order[] 
 export const postLocation = (state: GameState, id: PostId): TileCoord | undefined =>
   state.posts.get(id)?.location;
 
+/** True iff `party` has at least one living unit. */
+export const partyAlive = (party: Party): boolean => party.units.some((u) => u.currentHp > 0);
+
+/** Closest living non-self ant field party id (skips queen-guard implicitly
+ * via the caller-supplied `from`, leaderless parties, and dead parties).
+ * Used by jelly-supply variants to pick a target party for jelly-apply. */
+export const closestFieldPartyId = (state: GameState, from: Party): PartyId | undefined => {
+  let best: { id: PartyId; d: number } | undefined;
+  for (const [id, party] of state.parties) {
+    if (party.faction !== 'ant') continue;
+    if (party.id === from.id) continue;
+    if (party.leaderless) continue;
+    if (!partyAlive(party)) continue;
+    const d = distance(from.location, party.location);
+    if (!best || d < best.d || (d === best.d && id < best.id)) {
+      best = { id, d };
+    }
+  }
+  return best?.id;
+};
+
 /**
  * Returns the next mid-POST to capture, walking the type chain
  * (soap-dish → towel-rack → wall-crack) and within each type picking
@@ -135,9 +156,32 @@ export type DecideForParty = (
   party: Party,
 ) => { orders: readonly Order[]; posture: Posture } | null;
 
+/** Optional hook to give the queen-guard ability orders (e.g.
+ * `jelly-apply`). The queen still doesn't move; only the worker fires
+ * the order. Posture stays `defend`. Return `[]` to keep idle. */
+export type QueenGuardOrders = (state: GameState, queenGuard: Party) => readonly Order[];
+
+const queenGuardOrdersEqual = (a: readonly Order[], b: readonly Order[]): boolean => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (!x || !y) return false;
+    if (x.kind !== y.kind) return false;
+    if (x.kind === 'use-ability' && y.kind === 'use-ability') {
+      if (x.abilityId !== y.abilityId) return false;
+      if (x.target !== y.target) return false;
+    } else if (x.kind === 'move-to' && y.kind === 'move-to') {
+      if (!sameCoord(x.target, y.target)) return false;
+    }
+  }
+  return true;
+};
+
 export const buildAntPolicy = (
   name: string,
   decideForParty: (state: GameState) => DecideForParty,
+  queenGuardOrders?: QueenGuardOrders,
 ): AIPolicy => ({
   name,
   faction: 'ant',
@@ -147,10 +191,13 @@ export const buildAntPolicy = (
     for (const [id, party] of state.parties) {
       if (party.faction !== 'ant') continue;
       // Queen-guard: spec says the Queen is immobile, so the guard never
-      // moves. Always defend.
+      // moves. Always defend. If a queenGuardOrders hook is supplied,
+      // the worker can fire ability orders (target=party); otherwise
+      // the guard sits idle.
       if (party.id === QUEEN_PARTY) {
-        if (party.orders.length === 0 && party.posture === 'defend') continue;
-        nextParties.set(id, { ...party, orders: [], posture: 'defend' });
+        const orders = queenGuardOrders ? queenGuardOrders(state, party) : [];
+        if (queenGuardOrdersEqual(orders, party.orders) && party.posture === 'defend') continue;
+        nextParties.set(id, { ...party, orders, posture: 'defend' });
         continue;
       }
       // Leaderless: auto-retreat is engine-side; the AI doesn't override.
