@@ -117,3 +117,49 @@ export const livingHpFraction = (
   if (maxHp <= 0) return 0;
   return livingHp / maxHp;
 };
+
+/**
+ * Round 16 — approximate party combat power. Sum over living units of
+ * `currentHp * baseStats.attack`. Uses unit-template stats only — armor,
+ * abilities, terrain affinity, jelly buffs, and queen proximity are
+ * ignored for v1 (a deliberately coarse heuristic). Higher = stronger.
+ * Empty / fully-dead parties return 0. Used by the AI's pre-battle
+ * threat-assessment flee trigger to compare its own power against an
+ * impending enemy collision.
+ */
+export const estimatePartyPower = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  let total = 0;
+  for (const unit of party.units) {
+    if (unit.currentHp <= 0) continue;
+    const tmpl = templates.get(unit.templateId);
+    if (!tmpl) continue;
+    total += unit.currentHp * tmpl.baseStats.attack;
+  }
+  return total;
+};
+
+/**
+ * Round 16 — Lanchester square-law approximation of the loss
+ * probability for `myParty` vs `enemyParty`. Returns a value in
+ * `[0, 1]`. The square-law form
+ *   P(loss) = T^2 / (M^2 + T^2)
+ * captures the "strength-squared dominance" of attrition combat where
+ * both sides can engage simultaneously: doubling the enemy quadruples
+ * its winning weight. Returns 0.5 when both sides have 0 power
+ * (degenerate — two empty parties); the AI never actually queues flee
+ * in that branch because the helper above it gates on a real enemy
+ * being present.
+ */
+export const estimateLossProbability = (
+  myParty: Party,
+  enemyParty: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): number => {
+  const mine = estimatePartyPower(myParty, templates);
+  const theirs = estimatePartyPower(enemyParty, templates);
+  if (mine + theirs === 0) return 0.5;
+  return (theirs * theirs) / (mine * mine + theirs * theirs);
+};

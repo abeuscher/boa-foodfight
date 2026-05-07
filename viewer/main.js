@@ -1379,6 +1379,17 @@ function describeEvent(e) {
       return `${e.partyId} fled ${e.knockbackFrom.plane}(${e.knockbackFrom.x},${e.knockbackFrom.y})→${e.knockbackTo.plane}(${e.knockbackTo.x},${e.knockbackTo.y})`;
     case 'battle-flee-failed':
       return `${e.partyId} flee failed`;
+    case 'flee-queued': {
+      // Round 16 — AI-side flee intent. `reason` distinguishes the
+      // round-15 HP-threshold trigger from the round-16 threat
+      // prediction; threat-prediction emits include the predicted
+      // enemy and Lanchester loss probability for transparency.
+      if (e.reason === 'threat-prediction') {
+        const pct = Math.round((e.lossProbability ?? 0) * 100);
+        return `${e.partyId} queues flee vs ${e.enemyPartyId} (loss ${pct}%)`;
+      }
+      return `${e.partyId} queues flee (low HP)`;
+    }
     default:
       return '';
   }

@@ -190,6 +190,26 @@ export const closestUnownedPostOfType = (
  * variant policies don't duplicate that gating logic.
  */
 /**
+ * Round 16 — map a battle loss probability (0..1) to a flee-queue
+ * probability (0..0.8). Below an even match (loss < 0.5) the AI
+ * shouldn't panic-flee at all; at 0.5 the curve starts and runs
+ * linearly to 0.8 at loss=1.0. The 0.8 cap leaves a 20% chance the
+ * party still fights even in a hopeless matchup, for narrative
+ * variety and so the engine's HP-threshold trigger remains the
+ * dominant signal in already-wounded fights.
+ *
+ * Reference table:
+ *   loss 0.5 → flee 0%
+ *   loss 0.6 → flee 16%
+ *   loss 0.7 → flee 32%
+ *   loss 0.8 → flee 48%
+ *   loss 0.9 → flee 64%
+ *   loss 1.0 → flee 80%
+ */
+export const fleeChanceFromLossProb = (lossProb: number): number =>
+  Math.max(0, Math.min(0.8, (lossProb - 0.5) * 2 * 0.8));
+
+/**
  * Per-party decision shape. `orders` + `posture` are required; the
  * round-11 `neutralDecision` field is an optional sentinel — when
  * `setNeutralDecision: true` the framework either writes

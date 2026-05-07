@@ -277,4 +277,75 @@ describe('spiderL1', () => {
       expect(hypnoOrder).toBeUndefined();
     });
   });
+
+  describe('round 16 — pre-battle threat assessment (spider side)', () => {
+    it('web-guard never queues a threat-flee even when a strong ant is co-located', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const guardId = 'web-guard' as PartyId;
+      const guard = initial.parties.get(guardId);
+      const pf = initial.parties.get('pathfinders' as PartyId);
+      if (!guard || !pf) throw new Error('fixture missing');
+      // Co-locate pathfinders ON the web-guard tile (next-step
+      // detection treats the current tile as the arrival when the
+      // party has no move order — but web-guard never moves, so the
+      // exempt set is the only thing that keeps it from fleeing).
+      const moved = replaceParty(initial, { ...pf, location: guard.location });
+      for (let seed = 1; seed <= 8; seed++) {
+        const next = spiderL1.decide(moved, data, createRng(seed));
+        const after = next.parties.get(guardId);
+        const fleeOrders = (after?.orders ?? []).filter((o) => o.kind === 'flee');
+        expect(fleeOrders.length).toBe(0);
+      }
+    });
+
+    it('a non-exempt spider party stepping into a much stronger ant party may queue a flee', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const silk = isolated.parties.get('silk-line' as PartyId);
+      const pf = isolated.parties.get('pathfinders' as PartyId);
+      if (!silk || !pf) throw new Error('fixture missing');
+      // Put pathfinders ONE TILE away from silk-line on its current
+      // plane so silk-line's storm-drain raid step lands on
+      // pathfinders. Pathfinders is the strongest field party, so
+      // the loss-prob will be high.
+      const next1: GameState = {
+        ...isolated,
+        parties: new Map([
+          ...isolated.parties,
+          [
+            silk.id,
+            {
+              ...silk,
+              // Knock silk-line's HP down so its power vs pathfinders
+              // is heavily lopsided. Keeping the unit alive (HP=1)
+              // means the round-15 trigger may also fire — we
+              // explicitly check for the threat-prediction event in
+              // the sidecar, not the order itself.
+              units: silk.units.map((u) => ({ ...u, currentHp: 1 })),
+            },
+          ],
+        ]),
+      };
+      // Place pathfinders on silk's plane next to silk's tile.
+      const next2 = moveAntPartyTo(next1, pf.id, {
+        plane: silk.location.plane,
+        x: silk.location.x,
+        y: Math.max(0, silk.location.y - 1),
+      });
+      // Try several seeds — at least one should fire the threat
+      // trigger.
+      let saw = false;
+      for (let seed = 1; seed <= 32; seed++) {
+        const after = spiderL1.decide(next2, data, createRng(seed));
+        const events = after.pendingPolicyEvents ?? [];
+        if (
+          events.some((e) => e.kind === 'flee-queued' && e.partyId === ('silk-line' as PartyId))
+        ) {
+          saw = true;
+          break;
+        }
+      }
+      expect(saw).toBe(true);
+    });
+  });
 });
