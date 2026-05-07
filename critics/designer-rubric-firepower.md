@@ -37,7 +37,9 @@ You may propose edits to:
 - ≤ 3 proposals per round.
 - ≤ 12 unit templates per faction. Ants currently have 7, spiders 5.
   Adding units requires that the faction stays at or below 12.
-- ≤ 15 abilities total (across both factions). Currently 12.
+- ≤ 22 abilities total (across both factions). Currently 18 after the
+  Phase-2 mechanic additions (spin-web, recruit, spawn-spiderlings,
+  magic-arrow, phalanx-charge).
 - Removing a unit or ability is a legal proposal, but it must not
   leave any roster entry or unit template referencing the removed id.
 
