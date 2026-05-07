@@ -145,7 +145,23 @@ export interface HoldOrder {
   readonly kind: 'hold';
 }
 
-export type Order = MoveOrder | CaptureOrder | AbilityOrder | HoldOrder;
+/**
+ * Round 15 — flee order. Signals intent to retreat from any battle the
+ * party finds itself in this turn. No target. The engine resolves the
+ * flee attempt during battle: if the party has a `flee` order in its
+ * orders list at battle time, an agility-weighted success roll is
+ * attempted (defender first if both sides flee). Success ends the
+ * battle as a `'draw'` and knocks the fleeing party one tile in the
+ * opposite of its arrival direction; failure costs the fleer that
+ * round's actions and the non-fleeing side gets one bonus round of
+ * unopposed attacks. The order is consumed on either outcome — to
+ * re-attempt, the AI must re-issue the order next turn.
+ */
+export interface FleeOrder {
+  readonly kind: 'flee';
+}
+
+export type Order = MoveOrder | CaptureOrder | AbilityOrder | HoldOrder | FleeOrder;
 
 // ---------------------------------------------------------------------------
 // Parties
@@ -640,6 +656,44 @@ export type ReplayEvent =
       readonly partyId: PartyId;
       readonly itemId: ItemId;
       readonly location: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 15 — flee attempt fired during a battle. Emitted whether
+       * the roll succeeds or fails so the viewer can render a "X
+       * attempts flee (NN% chance, rolled R) — success/failure" row in
+       * the play-by-play. `successProbability` is the clamped
+       * [0.30, 0.80] band derived from the fleeing party's average
+       * living agility; `roll` is the [0, 1) draw from the seeded
+       * battle-flee rng fork.
+       */
+      readonly kind: 'battle-flee-attempted';
+      readonly partyId: PartyId;
+      readonly successProbability: number;
+      readonly roll: number;
+      readonly success: boolean;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 15 — successful flee. Battle ended as a draw, party was
+       * knocked back to `knockbackTo` (opposite of arrival direction).
+       * Fires once per successful flee, after the corresponding
+       * `battle-flee-attempted` and the `battle-resolved` events.
+       */
+      readonly kind: 'battle-fled';
+      readonly partyId: PartyId;
+      readonly knockbackFrom: TileCoord;
+      readonly knockbackTo: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 15 — flee attempt failed (either the roll missed or
+       * knockback was blocked). Battle continues with one bonus round
+       * where only the non-fleeing side acts. Fires once per failed
+       * attempt, after the corresponding `battle-flee-attempted`.
+       */
+      readonly kind: 'battle-flee-failed';
+      readonly partyId: PartyId;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 

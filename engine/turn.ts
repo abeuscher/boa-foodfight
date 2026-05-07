@@ -93,10 +93,38 @@ const assignSides = (
   return { attacker: sortedA, defender: sortedB, postDefense };
 };
 
+/**
+ * Round 15 — index the most recent in-plane `party-moved` step per
+ * party from this turn's movement events. Used to feed the flee
+ * knockback direction into `BattleInput` (knockback is opposite of
+ * arrival). Returns the LAST step on the same plane as the party's
+ * current location so cross-plane teleports / paired-POST traversals
+ * don't pollute the direction signal.
+ */
+const indexArrivals = (
+  events: readonly ReplayEvent[],
+  parties: ReadonlyMap<PartyId, Party>,
+): Map<PartyId, { from: TileCoord; to: TileCoord }> => {
+  const out = new Map<PartyId, { from: TileCoord; to: TileCoord }>();
+  for (const e of events) {
+    if (e.kind !== 'party-moved') continue;
+    if (e.from.plane !== e.to.plane) continue;
+    const party = parties.get(e.partyId);
+    if (!party) {
+      out.set(e.partyId, { from: e.from, to: e.to });
+      continue;
+    }
+    if (e.to.plane !== party.location.plane) continue;
+    out.set(e.partyId, { from: e.from, to: e.to });
+  }
+  return out;
+};
+
 const buildBattleInput = (
   state: GameState,
   scenario: ScenarioData,
   pair: readonly [PartyId, PartyId],
+  arrivals: ReadonlyMap<PartyId, { from: TileCoord; to: TileCoord }>,
 ): BattleInput | undefined => {
   const a = state.parties.get(pair[0]);
   const b = state.parties.get(pair[1]);
@@ -105,6 +133,8 @@ const buildBattleInput = (
   const atkProx = queenProximityFor(state, attacker, scenario);
   const atkJelly = jellyMultipliers(attacker, scenario);
   const defJelly = jellyMultipliers(defender, scenario);
+  const attackerArrival = arrivals.get(attacker.id);
+  const defenderArrival = arrivals.get(defender.id);
   return {
     attacker,
     defender,
@@ -116,6 +146,8 @@ const buildBattleInput = (
     defenderJellyAttack: defJelly.attack,
     defenderJellyResilience: defJelly.resilience,
     abilities: scenario.abilities,
+    ...(attackerArrival ? { attackerArrival } : {}),
+    ...(defenderArrival ? { defenderArrival } : {}),
   };
 };
 
@@ -142,6 +174,9 @@ export const runTurn = (
   // 2. Battles for collisions. Re-check liveness against the working state
   // (not the snapshot from movement) because an earlier battle in the loop
   // may have wiped one of the parties already.
+  // Round 15 — index this turn's arrivals once so flee knockback can
+  // pull the right direction per fleeing party.
+  const arrivals = indexArrivals(moveOutcome.events, working.parties);
   for (const pair of moveOutcome.collisions) {
     const a = working.parties.get(pair[0]);
     const b = working.parties.get(pair[1]);
@@ -149,7 +184,7 @@ export const runTurn = (
     const aAlive = a.units.some((u) => u.currentHp > 0);
     const bAlive = b.units.some((u) => u.currentHp > 0);
     if (!aAlive || !bAlive) continue;
-    const input = buildBattleInput(working, scenario, pair);
+    const input = buildBattleInput(working, scenario, pair, arrivals);
     if (!input) continue;
     const battleRng = rng.fork(`battle-${String(pair[0])}-${String(pair[1])}`);
     const outcome = resolveBattle(working, input, battleRng, tick);
