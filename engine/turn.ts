@@ -17,7 +17,7 @@ import { resolveMovement } from './movement.ts';
 import { containsQueen } from './parties.ts';
 import { applyPlacement } from './placement.ts';
 import { postAt, resolveCaptures } from './posts.ts';
-import type { NeutralSpawnEvent, ScenarioData } from './state.ts';
+import type { ItemSpawnEvent, NeutralSpawnEvent, ScenarioData } from './state.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
 export interface TurnOutcome {
@@ -203,6 +203,12 @@ export interface RunScenarioOptions {
    * (e.g., legacy harness callers).
    */
   readonly neutralSpawnEvents?: readonly NeutralSpawnEvent[];
+  /**
+   * Round-14 item-spawn payloads to emit alongside `scenario-start`.
+   * One `item-spawned` event per entry. Optional: omitted means
+   * caller chose not to spawn items (legacy / pre-round-14 harness).
+   */
+  readonly itemSpawnEvents?: readonly ItemSpawnEvent[];
 }
 
 export interface ScenarioOutcome {
@@ -319,6 +325,19 @@ export const runScenario = (
       partyId: ev.partyId,
       neutralKind: ev.neutralKind,
       location: ev.location,
+    });
+  }
+  // Round 14: emit one `item-spawned` event per dropped item. These
+  // also follow `scenario-start` so the viewer can render the muted
+  // "?" markers from the very first frame.
+  for (const ev of options.itemSpawnEvents ?? []) {
+    events.push({
+      kind: 'item-spawned',
+      turn: 0,
+      tick: tick(),
+      itemId: ev.itemId,
+      location: ev.location,
+      buried: ev.buried,
     });
   }
   events.push({ kind: 'turn-start', turn: 1, tick: tick() });

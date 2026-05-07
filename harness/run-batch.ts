@@ -120,7 +120,7 @@ const main = (): void => {
 
   const startedAt = Date.now();
   for (const seed of args.seeds) {
-    const { state, data, neutralSpawnEvents } = loadScenario(args.dataDir, seed);
+    const { state, data, neutralSpawnEvents, itemSpawnEvents } = loadScenario(args.dataDir, seed);
     const clock = createTickClock();
     const sink = createFileSink(path.join(args.outDir, `replay-${String(seed)}.jsonl`));
     const outcome = runScenario(state, data, createRng(seed), clock.next, {
@@ -130,6 +130,7 @@ const main = (): void => {
       // per-policy rng fork inside `runScenario`.
       policies: [player, enemy, neutralPlayer],
       neutralSpawnEvents,
+      itemSpawnEvents,
     });
     for (const event of outcome.events) sink.emit(event);
     sink.close();
