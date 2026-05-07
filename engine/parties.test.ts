@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import {
   baseMovementAllowance,
   containsQueen,
+  estimateLossProbability,
+  estimatePartyPower,
   isAlive,
   livingUnits,
   slotsUsed,
@@ -199,6 +201,70 @@ describe('engine/parties', () => {
       const { party, templates } = fixtureMovementParty(['ground']);
       const dead: Party = { ...party, units: party.units.map((u) => ({ ...u, currentHp: 0 })) };
       expect(baseMovementAllowance(dead, templates)).toBe(0);
+    });
+  });
+
+  describe('estimatePartyPower', () => {
+    it('returns 0 for an all-dead party', () => {
+      const { party, templates } = fixtureMovementParty(['ground', 'ground']);
+      const dead: Party = { ...party, units: party.units.map((u) => ({ ...u, currentHp: 0 })) };
+      expect(estimatePartyPower(dead, templates)).toBe(0);
+    });
+
+    it('returns sum of currentHp * attack across living units', () => {
+      const { party, templates } = fixtureMovementParty(['ground', 'ground']);
+      // Each fixture unit has 5 hp and attack 1 → 5 * 1 + 5 * 1 = 10.
+      expect(estimatePartyPower(party, templates)).toBe(10);
+    });
+
+    it('skips dead units when summing power', () => {
+      const { party, templates } = fixtureMovementParty(['ground', 'ground']);
+      const halfDead: Party = {
+        ...party,
+        units: [{ ...party.units[0]!, currentHp: 0 }, ...party.units.slice(1)],
+      };
+      expect(estimatePartyPower(halfDead, templates)).toBe(5);
+    });
+  });
+
+  describe('estimateLossProbability', () => {
+    it('returns 0.5 for two identical parties', () => {
+      const { party, templates } = fixtureMovementParty(['ground', 'ground']);
+      expect(estimateLossProbability(party, party, templates)).toBeCloseTo(0.5, 6);
+    });
+
+    it('returns > 0.8 when enemy power is 2x mine', () => {
+      const { party: small, templates } = fixtureMovementParty(['ground']);
+      const { party: big } = fixtureMovementParty(['ground', 'ground']);
+      // Need both parties using the same templates map; rebuild big
+      // with the same templates as small.
+      const big2: Party = {
+        ...small,
+        units: [...small.units, { ...small.units[0]!, id: 'u-extra' as UnitId, currentHp: 5 }],
+      };
+      void big;
+      const lossProb = estimateLossProbability(small, big2, templates);
+      // mine=5, theirs=10 → 100/(25+100) = 0.8
+      expect(lossProb).toBeGreaterThanOrEqual(0.8);
+    });
+
+    it('returns 0.5 when both parties have 0 power (degenerate)', () => {
+      const { party, templates } = fixtureMovementParty(['ground']);
+      const dead: Party = { ...party, units: party.units.map((u) => ({ ...u, currentHp: 0 })) };
+      expect(estimateLossProbability(dead, dead, templates)).toBe(0.5);
+    });
+
+    it('approaches 1 as enemy power dwarfs mine', () => {
+      const { party: solo, templates } = fixtureMovementParty(['ground']);
+      // Build a giant enemy: 10 units of 5hp each → power 50 vs my 5.
+      const giantUnits = Array.from({ length: 10 }, (_, i) => ({
+        ...solo.units[0]!,
+        id: `u-giant-${String(i)}` as UnitId,
+      }));
+      const giant: Party = { ...solo, units: giantUnits };
+      const lossProb = estimateLossProbability(solo, giant, templates);
+      // mine=5, theirs=50 → 2500/(25+2500) ≈ 0.99
+      expect(lossProb).toBeGreaterThan(0.95);
     });
   });
 

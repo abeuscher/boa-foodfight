@@ -21,6 +21,7 @@ import type {
 import { baselinePlayer } from './baseline.ts';
 import {
   CEILING_CAPABLE,
+  fleeChanceFromLossProb,
   PATHFINDERS,
   postsOfType,
   SOAP_DISH_TYPE,
@@ -423,6 +424,28 @@ describe('baselinePlayer', () => {
     const next = baselinePlayer.decide(wounded, data, createRng(1));
     const after = next.parties.get(PATHFINDERS);
     expect(after?.orders[0]?.kind).toBe('flee');
+  });
+
+  describe('fleeChanceFromLossProb (round 16)', () => {
+    it('returns 0 at an even match (lossProb = 0.5)', () => {
+      expect(fleeChanceFromLossProb(0.5)).toBe(0);
+    });
+
+    it('returns 0 below an even match', () => {
+      expect(fleeChanceFromLossProb(0.4)).toBe(0);
+      expect(fleeChanceFromLossProb(0)).toBe(0);
+    });
+
+    it('returns 0.8 at a hopeless match (lossProb = 1.0)', () => {
+      expect(fleeChanceFromLossProb(1)).toBeCloseTo(0.8, 6);
+    });
+
+    it('matches the spec reference table at intermediate values', () => {
+      expect(fleeChanceFromLossProb(0.6)).toBeCloseTo(0.16, 6);
+      expect(fleeChanceFromLossProb(0.7)).toBeCloseTo(0.32, 6);
+      expect(fleeChanceFromLossProb(0.8)).toBeCloseTo(0.48, 6);
+      expect(fleeChanceFromLossProb(0.9)).toBeCloseTo(0.64, 6);
+    });
   });
 
   it('round-15 queen-guard never flees, even at low HP', () => {
