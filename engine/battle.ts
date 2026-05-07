@@ -508,14 +508,23 @@ const fleeSuccessProbability = (avgAgility: number): number => {
 
 /**
  * Knockback target on a successful flee. The fleer is shoved one tile
- * in the opposite of its arrival direction. Returns null if blocked
- * (off-plane bounds, on an obstacle tile, or the same coord).
+ * "opposite of the tile it arrived from" — i.e., it continues forward
+ * in the direction of motion, landing one tile past where it stopped.
+ * Returns null if blocked (off-plane bounds, on an obstacle tile, or
+ * the same coord as the fleer).
  *
- * Arrival direction priority:
- *  1. Last `party-moved` step from the movement phase (caller passes it
- *     in via `BattleInput`).
- *  2. Fallback: opposite-of-attacker-bearing — the delta from the
- *     attacker's location to the defender's location.
+ * Direction sources, in priority order:
+ *  1. Last `party-moved` step this turn (caller passes via `BattleInput`).
+ *     The arrival delta is `to - from`; knockback target is
+ *     `to + (to - from) = location + delta`.
+ *  2. Fallback (no movement this turn — typically the defender was
+ *     attacked at its own tile): use the delta from the attacker's
+ *     location to the defender's, i.e., the direction the attack came
+ *     in. The fleer is shoved "past" itself away from the attacker:
+ *     target = `defenderLoc + (defenderLoc - attackerLoc)`. The
+ *     attacker's symmetric fallback (rare — attackers always moved
+ *     into the battle tile) shoves them past the defender in the
+ *     same model.
  */
 const computeKnockbackTile = (
   fleeingSide: Side,
@@ -535,17 +544,19 @@ const computeKnockbackTile = (
     dx = arrival.to.x - arrival.from.x;
     dy = arrival.to.y - arrival.from.y;
     plane = arrival.to.plane;
-  } else {
-    // Fallback: opposite of attacker bearing toward the defender.
-    if (fleeingSide === 'defender' && attackerLoc.plane === defenderLoc.plane) {
+  } else if (attackerLoc.plane === defenderLoc.plane) {
+    // Fallback: attack-bearing delta. For the defender (the natural
+    // "didn't move" case) the attack came in along (def - atk), so
+    // knockback continues past the defender in that direction. The
+    // attacker's symmetric branch shoves them past the defender.
+    if (fleeingSide === 'defender') {
       dx = defenderLoc.x - attackerLoc.x;
       dy = defenderLoc.y - attackerLoc.y;
-      plane = defenderLoc.plane;
-    } else if (fleeingSide === 'attacker' && attackerLoc.plane === defenderLoc.plane) {
+    } else {
       dx = attackerLoc.x - defenderLoc.x;
       dy = attackerLoc.y - defenderLoc.y;
-      plane = attackerLoc.plane;
     }
+    plane = fleerLoc.plane;
   }
 
   // No usable direction — knockback fails.
@@ -553,13 +564,13 @@ const computeKnockbackTile = (
 
   // Normalize to a single tile step (sign per axis). The arrival vector
   // can be longer than 1 (multi-tile move); the knockback is always
-  // exactly one tile in the opposite direction.
+  // exactly one tile past the fleer in the same direction.
   const stepX = dx === 0 ? 0 : dx > 0 ? 1 : -1;
   const stepY = dy === 0 ? 0 : dy > 0 ? 1 : -1;
   const target: TileCoord = {
     plane,
-    x: fleerLoc.x - stepX,
-    y: fleerLoc.y - stepY,
+    x: fleerLoc.x + stepX,
+    y: fleerLoc.y + stepY,
   };
 
   // Off-plane bounds (10×10).
