@@ -22,7 +22,10 @@ import type { JellyFile } from './schemas/index.ts';
 import type {
   AbilityId,
   AbilityOrder,
+  DamageZone,
   GameState,
+  NeutralKind,
+  NeutralStatus,
   Order,
   Party,
   PartyId,
@@ -115,6 +118,19 @@ interface HandlerArgs {
   state: GameState;
   parties: Map<PartyId, Party>;
   webbedTiles: Map<string, TileCoord>;
+  /**
+   * Round 8 — neutral-control state. Mutated in place by hypnotize /
+   * recruit handlers when a neutral is taken or converted. Recruit
+   * deletes the neutral's entry on success; hypnotize sets the
+   * `hypnotizedBy` / `hypnoticControlRemaining` fields.
+   */
+  neutralStatus: Map<PartyId, NeutralStatus>;
+  /**
+   * Round 8 — active stinkbug damage zones. Pushed onto by the
+   * recruit / hypnotize handlers when a failed attempt targets a
+   * stinkbug.
+   */
+  damageZones: DamageZone[];
   tick: () => number;
 }
 
@@ -198,26 +214,91 @@ const handleSpinWeb = (args: HandlerArgs): HandlerResult => {
   return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
 };
 
+const RECRUIT_SUCCESS_RATE = 0.25;
+
+/**
+ * Round 8 — neutral recruit branch. The ant-mage may target a neutral
+ * party (mice/cockroaches/stinkbugs) at the same tile regardless of
+ * unit count. On success the entire neutral party converts to faction
+ * `'ant'` permanently; the `neutralStatus` entry is dropped.
+ */
+const recruitNeutral = (args: {
+  party: Party;
+  slot: { order: AbilityOrder; index: number };
+  state: GameState;
+  parties: Map<PartyId, Party>;
+  webbedTiles: Map<string, TileCoord>;
+  neutralStatus: Map<PartyId, NeutralStatus>;
+  damageZones: DamageZone[];
+  tick: () => number;
+  rng: Rng;
+  target: Party;
+  targetKind: NeutralKind;
+}): HandlerResult => {
+  const { party, slot, state, parties, webbedTiles, neutralStatus, tick, rng, target, targetKind } =
+    args;
+  const events: ReplayEvent[] = [];
+  const success = rng.next() < RECRUIT_SUCCESS_RATE;
+  events.push(abilityUsedEvent(state, party.id, RECRUIT, tick));
+  events.push({
+    kind: 'recruit-attempted-neutral',
+    turn: state.turn,
+    tick: tick(),
+    partyId: party.id,
+    targetId: target.id,
+    targetType: targetKind,
+    success,
+  });
+  if (success) {
+    // Convert the entire neutral party to ant. Drop neutralStatus.
+    parties.set(target.id, { ...target, faction: 'ant' });
+    neutralStatus.delete(target.id);
+  }
+  // Always consume the order regardless of outcome.
+  parties.set(party.id, { ...party, orders: dropOrderAt(party.orders, slot.index) });
+  return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+};
+
 const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
-  const { party, slot, state, parties, webbedTiles, tick, rng } = args;
+  const { party, slot, state, parties, webbedTiles, neutralStatus, damageZones, tick, rng } = args;
   const events: ReplayEvent[] = [];
   if (!partyHasAbility(party, RECRUIT, state.unitTemplates)) {
     consumeOrder(party, slot, parties);
     return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
   }
-  // Target must be a single-unit enemy party at the same tile.
   const target = resolveTargetParty(party, slot.order, parties);
   const targetLiving = target ? livingUnits(target) : [];
   const sameTile =
     target?.location.plane === party.location.plane &&
     target.location.x === party.location.x &&
     target.location.y === party.location.y;
+  // Round 8: neutral target — convert entire party at the same 25%
+  // rate. Multi-unit targets allowed.
+  if (target && sameTile && target.faction === 'neutral' && targetLiving.length > 0) {
+    const status = neutralStatus.get(target.id);
+    if (status) {
+      return recruitNeutral({
+        party,
+        slot,
+        state,
+        parties,
+        webbedTiles,
+        neutralStatus,
+        damageZones,
+        tick,
+        rng,
+        target,
+        targetKind: status.kind,
+      });
+    }
+  }
+  // Legacy: single-unit enemy spider party at the same tile.
   if (!target || !sameTile || targetLiving.length !== 1 || target.faction === party.faction) {
     consumeOrder(party, slot, parties);
     events.push(abilityUsedEvent(state, party.id, RECRUIT, tick));
     return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
   }
-  const success = rng.next() < 0.25;
+  const success = rng.next() < RECRUIT_SUCCESS_RATE;
   events.push({
     kind: 'ability-used',
     turn: state.turn,
@@ -234,7 +315,6 @@ const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
     success,
   });
   if (success) {
-    // Move the unit from target party to mage's party.
     const recruitedUnit = targetLiving[0]!;
     const newSourceUnits = [...party.units, recruitedUnit];
     const newTargetUnits = target.units.filter((u) => u.id !== recruitedUnit.id);
@@ -359,6 +439,12 @@ export const resolveAbilityOrders = (
   const events: ReplayEvent[] = [];
   const parties = new Map<PartyId, Party>(state.parties);
   const webbedTiles = new Map<string, TileCoord>(state.webbedTiles);
+  // Round 8: thread neutral-control state + damage-zone list through
+  // every ability handler. Recruit (against a neutral) drops a status
+  // entry on success; hypnotize sets one. Failed recruit/hypnotize
+  // against a stinkbug pushes a damage zone.
+  const neutralStatus = new Map<PartyId, NeutralStatus>(state.neutralStatus);
+  const damageZones: DamageZone[] = [...state.damageZones];
   // Snapshot original ids so we don't iterate over freshly-spawned
   // spiderling parties and try to resolve their (empty) orders.
   const originalIds = [...state.parties.keys()];
@@ -368,7 +454,16 @@ export const resolveAbilityOrders = (
     const slot = firstAbilityOrder(party.orders);
     if (!slot) continue;
     let r: HandlerResult | undefined;
-    const baseArgs: HandlerArgs = { party, slot, state, parties, webbedTiles, tick };
+    const baseArgs: HandlerArgs = {
+      party,
+      slot,
+      state,
+      parties,
+      webbedTiles,
+      neutralStatus,
+      damageZones,
+      tick,
+    };
     switch (slot.order.abilityId) {
       case JELLY_APPLY:
         r = handleJellyApply({ ...baseArgs, jelly });
@@ -392,7 +487,7 @@ export const resolveAbilityOrders = (
   }
   void firstUnitWithAbility; // export-by-side-effect: keeps helper testable
   return {
-    state: { ...state, parties, webbedTiles },
+    state: { ...state, parties, webbedTiles, neutralStatus, damageZones },
     events,
   };
 };
