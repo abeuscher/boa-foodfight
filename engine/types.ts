@@ -153,6 +153,22 @@ export type Posture = 'run' | 'fight' | 'defend';
 
 export type StrategyModifier = 'offensive' | 'defensive' | 'protect-leader' | 'target-weakest';
 
+/**
+ * Round 11 — neutral-recruit "commit-or-abandon" decision attached to
+ * an ant party. When set, the AI honors the decision for `turnsRemaining`
+ * end-of-turn ticks: a `pursue` decision walks one tile toward
+ * `targetPartyId` each turn; an `ignore` decision suppresses the detour
+ * branch entirely. Co-located opportunistic recruit always fires
+ * regardless of this field. The engine end-of-turn tick decrements the
+ * counter and drops the field when it hits 0 or when a `pursue` target
+ * disappears.
+ */
+export interface NeutralDecision {
+  readonly kind: 'pursue' | 'ignore';
+  readonly targetPartyId?: PartyId;
+  readonly turnsRemaining: number;
+}
+
 export interface Party {
   readonly id: PartyId;
   readonly faction: Faction;
@@ -164,6 +180,10 @@ export interface Party {
   readonly strategyModifiers: readonly StrategyModifier[];
   readonly jellyDoses: number;
   readonly leaderless: boolean;
+  /** Round 11 — optional 5-turn neutral-recruit commit/abandon
+   * decision. Only meaningful for ant parties carrying both ant-scout
+   * and ant-mage. */
+  readonly neutralDecision?: NeutralDecision;
 }
 
 // ---------------------------------------------------------------------------

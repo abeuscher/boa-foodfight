@@ -6,9 +6,11 @@
  */
 
 import { distance, sameCoord } from '../engine/coord.ts';
+import type { ScenarioData } from '../engine/state.ts';
 import type {
   GameState,
   MoveOrder,
+  NeutralDecision,
   Order,
   Party,
   PartyId,
@@ -16,6 +18,7 @@ import type {
   Posture,
   Post,
   PostId,
+  Rng,
   TileCoord,
 } from '../engine/types.ts';
 
@@ -186,9 +189,24 @@ export const closestUnownedPostOfType = (
  * queen-guard, and leaderless parties using consistent rules so the
  * variant policies don't duplicate that gating logic.
  */
-export type DecideForParty = (
-  party: Party,
-) => { orders: readonly Order[]; posture: Posture } | null;
+/**
+ * Per-party decision shape. `orders` + `posture` are required; the
+ * round-11 `neutralDecision` field is an optional sentinel — when
+ * `setNeutralDecision: true` the framework either writes
+ * `neutralDecision` onto the party (if the field is present) or clears
+ * it (if `neutralDecision` is undefined). This lets baseline both stash
+ * a fresh 5-turn decision and explicitly clear stale ones from the
+ * same return-shape; non-baseline variants leave `setNeutralDecision`
+ * unset and the party's existing field is preserved untouched.
+ */
+export interface PartyDecision {
+  readonly orders: readonly Order[];
+  readonly posture: Posture;
+  readonly setNeutralDecision?: boolean;
+  readonly neutralDecision?: NeutralDecision;
+}
+
+export type DecideForParty = (party: Party) => PartyDecision | null;
 
 /** Optional hook to give the queen-guard ability orders (e.g.
  * `jelly-apply`). The queen still doesn't move; only the worker fires
@@ -212,15 +230,34 @@ const queenGuardOrdersEqual = (a: readonly Order[], b: readonly Order[]): boolea
   return true;
 };
 
+/**
+ * Per-state decide function with access to the seeded rng. Round 11
+ * baseline uses the rng to roll the 1-in-3 follow-or-ignore dice; most
+ * variants take the simpler stateless form below and ignore the rng.
+ */
+export type DecideForPartyWithRng = (state: GameState, rng: Rng) => DecideForParty;
+
 export const buildAntPolicy = (
   name: string,
   decideForParty: (state: GameState) => DecideForParty,
   queenGuardOrders?: QueenGuardOrders,
+): AIPolicy => buildAntPolicyWithRng(name, (state) => decideForParty(state), queenGuardOrders);
+
+/**
+ * Round-11 variant of `buildAntPolicy` that threads the seeded `rng`
+ * into the per-state factory. Used by baseline so the commit-or-abandon
+ * dice roll is deterministic. Variants that don't roll dice keep using
+ * `buildAntPolicy` (which calls this with a no-op factory wrapper).
+ */
+export const buildAntPolicyWithRng = (
+  name: string,
+  decideForParty: DecideForPartyWithRng,
+  queenGuardOrders?: QueenGuardOrders,
 ): AIPolicy => ({
   name,
   faction: 'ant',
-  decide(state) {
-    const perParty = decideForParty(state);
+  decide(state: GameState, _scenario: ScenarioData, rng: Rng) {
+    const perParty = decideForParty(state, rng);
     const nextParties = new Map(state.parties);
     for (const [id, party] of state.parties) {
       if (party.faction !== 'ant') continue;
@@ -238,9 +275,29 @@ export const buildAntPolicy = (
       if (party.leaderless) continue;
       const decision = perParty(party);
       if (decision === null) continue;
-      const { orders, posture } = decision;
-      if (orders === party.orders && posture === party.posture) continue;
-      nextParties.set(id, { ...party, orders, posture });
+      const { orders, posture, setNeutralDecision, neutralDecision } = decision;
+      const ordersChanged = orders !== party.orders;
+      const postureChanged = posture !== party.posture;
+      const decisionChanged =
+        setNeutralDecision === true && neutralDecision !== party.neutralDecision;
+      if (!ordersChanged && !postureChanged && !decisionChanged) continue;
+      // When the per-party decision opts in to mutate `neutralDecision`
+      // (round-11 baseline only), apply that delta — either setting the
+      // field to a fresh decision or clearing it entirely. Other
+      // variants leave `setNeutralDecision` undefined, which preserves
+      // the existing field untouched (the engine end-of-turn tick is
+      // the only other writer).
+      if (setNeutralDecision === true) {
+        if (neutralDecision === undefined) {
+          const { neutralDecision: _drop, ...rest } = party;
+          void _drop;
+          nextParties.set(id, { ...rest, orders, posture });
+        } else {
+          nextParties.set(id, { ...party, orders, posture, neutralDecision });
+        }
+      } else {
+        nextParties.set(id, { ...party, orders, posture });
+      }
     }
     return { ...state, parties: nextParties };
   },

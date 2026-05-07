@@ -256,15 +256,13 @@ describe('baselinePlayer', () => {
     expect(order.target).toBe(cockroachId);
   });
 
-  it('round-10 detour: pathfinders steps one tile toward a Cheb-3 cockroach instead of toward the dive launch', () => {
+  it('round-11 pursue roll: pathfinders stashes a 5-turn pursue decision and steps toward a Cheb-3 cockroach', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     const pfParty = state.parties.get(PATHFINDERS)!;
-    // Place a cockroach within Chebyshev-3 on the same plane, but NOT
-    // co-located, and not on the path the dive line would naturally
-    // walk. (4,4) → cockroach at (5,7) is 3 tiles SE; the dive launch
-    // tile is (web.x, web.y) = (9,9), so a one-tile step toward
-    // (5,7) goes (5,5) which differs from the (5,5) baseline NE step.
+    // Place a cockroach within Chebyshev-3 on the same plane, not
+    // co-located. Round-11 swaps the unconditional detour for a 1-in-3
+    // dice; seed 10 happens to fall on the pursue side.
     const cockroachId = partyIdForKind('cockroaches');
     const cockroachLoc: TileCoord = {
       plane: pfParty.location.plane,
@@ -273,20 +271,104 @@ describe('baselinePlayer', () => {
     };
     state = setNeutralLocation(state, cockroachId, cockroachLoc);
     state = ensureNeutralStatus(state, cockroachId, 'cockroaches');
-    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const next = baselinePlayer.decide(state, initial.data, createRng(10));
     const pf = next.parties.get(PATHFINDERS);
     expect(pf?.orders).toHaveLength(1);
     const order = pf?.orders[0] as MoveOrder;
     expect(order.kind).toBe('move-to');
-    // One-tile Chebyshev step toward (cockroachLoc.x, cockroachLoc.y).
+    // One-tile Chebyshev step toward the cockroach.
     expect(order.target).toEqual({
       plane: pfParty.location.plane,
       x: pfParty.location.x + 1,
       y: pfParty.location.y + 1,
     });
+    // Decision stashed: 5-turn pursue commitment with the target id.
+    expect(pf?.neutralDecision).toEqual({
+      kind: 'pursue',
+      targetPartyId: cockroachId,
+      turnsRemaining: 5,
+    });
   });
 
-  it('round-10 detour does NOT fire toward a stinkbug within Chebyshev-3', () => {
+  it('round-11 ignore roll: pathfinders stashes a 5-turn ignore decision and falls through to the dive line', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const pfParty = state.parties.get(PATHFINDERS)!;
+    const cockroachId = partyIdForKind('cockroaches');
+    const cockroachLoc: TileCoord = {
+      plane: pfParty.location.plane,
+      x: pfParty.location.x + 1,
+      y: pfParty.location.y + 3,
+    };
+    state = setNeutralLocation(state, cockroachId, cockroachLoc);
+    state = ensureNeutralStatus(state, cockroachId, 'cockroaches');
+    // Seed 1 rolls "ignore"; the party should head to the dive launch.
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const pf = next.parties.get(PATHFINDERS);
+    const web = state.posts.get('spider-web' as PostId)!;
+    const order = pf?.orders[0] as MoveOrder;
+    expect(order.kind).toBe('move-to');
+    expect(order.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
+    expect(pf?.neutralDecision).toEqual({ kind: 'ignore', turnsRemaining: 5 });
+  });
+
+  it('round-11 ignore decision blocks pursuit of a fresh cockroach for 5 turns', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const pfParty = state.parties.get(PATHFINDERS)!;
+    // Pre-stash an ignore decision on pathfinders (3 turns left). A
+    // fresh cockroach within Chebyshev-3 must NOT divert the party.
+    const parties = new Map(state.parties);
+    parties.set(PATHFINDERS, {
+      ...pfParty,
+      neutralDecision: { kind: 'ignore', turnsRemaining: 3 },
+    });
+    state = { ...state, parties };
+    const cockroachId = partyIdForKind('cockroaches');
+    state = setNeutralLocation(state, cockroachId, {
+      plane: pfParty.location.plane,
+      x: pfParty.location.x + 1,
+      y: pfParty.location.y + 1,
+    });
+    state = ensureNeutralStatus(state, cockroachId, 'cockroaches');
+    const next = baselinePlayer.decide(state, initial.data, createRng(10));
+    const pf = next.parties.get(PATHFINDERS);
+    const web = state.posts.get('spider-web' as PostId)!;
+    const order = pf?.orders[0] as MoveOrder;
+    // Despite the seed-10 "pursue" roll, the active ignore decision
+    // bypasses the dice branch entirely; the AI heads to the dive line.
+    expect(order.kind).toBe('move-to');
+    expect(order.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
+    // Decision is preserved (the engine end-of-turn tick decrements;
+    // the AI doesn't rewrite it here).
+    expect(pf?.neutralDecision).toEqual({ kind: 'ignore', turnsRemaining: 3 });
+  });
+
+  it('round-11 opportunistic recruit fires even with an active ignore decision', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const pfParty = state.parties.get(PATHFINDERS)!;
+    // Active ignore decision + co-located cockroach. The opportunistic
+    // recruit branch must take precedence (the dice mechanic governs
+    // detour, not co-located recruit).
+    const parties = new Map(state.parties);
+    parties.set(PATHFINDERS, {
+      ...pfParty,
+      neutralDecision: { kind: 'ignore', turnsRemaining: 4 },
+    });
+    state = { ...state, parties };
+    const cockroachId = partyIdForKind('cockroaches');
+    state = relocateNeutralCoLocated(state, cockroachId, PATHFINDERS);
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const pf = next.parties.get(PATHFINDERS);
+    expect(pf?.orders).toHaveLength(1);
+    const order = pf?.orders[0] as AbilityOrder;
+    expect(order.kind).toBe('use-ability');
+    expect(order.abilityId).toBe('recruit');
+    expect(order.target).toBe(cockroachId);
+  });
+
+  it('round-11 detour does NOT fire toward a stinkbug within Chebyshev-3', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     const pfParty = state.parties.get(PATHFINDERS)!;

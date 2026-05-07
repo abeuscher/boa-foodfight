@@ -68,22 +68,26 @@ import type {
   Order,
   Party,
   PartyId,
+  Rng,
   TileCoord,
 } from '../engine/types.ts';
 
 import {
+  decideNeutralFollow,
   findRecruitableNeutralNear,
+  partyHasScoutAndMage,
+  pursueStep,
   RECRUIT_ABILITY,
-  stepTowardNeutral,
   tryOpportunisticRecruit,
 } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
-  buildAntPolicy,
+  buildAntPolicyWithRng,
   CEILING_CAPABLE,
   moveToOrHold,
   nextStageTarget,
   partyAlive,
+  type PartyDecision,
   PATHFINDERS,
   postLocation,
   postsOfType,
@@ -184,14 +188,76 @@ const baselinePlacement = (state: GameState): GameState =>
     'vanguard-bravo': { plane: 'floor', x: 3, y: 5 },
   });
 
-const baselineCore: AIPolicy = buildAntPolicy(
+/**
+ * Bundle of derived per-turn state passed to the main-strategy helper
+ * so the round-11 layered branches don't recompute it. Single struct
+ * instead of four parameters keeps the helper's signature short.
+ */
+interface MainStrategyContext {
+  readonly stageTarget: ReturnType<typeof nextStageTarget>;
+  readonly webLoc: TileCoord | undefined;
+  readonly committed: boolean;
+  readonly bravoMayDive: boolean;
+}
+
+/**
+ * The pre-round-11 baseline order-pick: kill-dive for ceiling parties,
+ * web-commit / staging-walk for vanguard-alpha. Returns the orders +
+ * posture exactly as the policy-helpers framework expects. Pulled out
+ * into a helper so the round-11 commit-or-abandon branches can fall
+ * through to it after stashing an `ignore` decision.
+ */
+const mainStrategyOrders = (party: Party, ctx: MainStrategyContext): PartyDecision => {
+  const { webLoc, committed, bravoMayDive, stageTarget } = ctx;
+  // Coordinated kill-dive (round 6): both ceiling-capable parties
+  // (pathfinders, vanguard-bravo) run the floor (web.x, web.y) →
+  // ceiling (web.x, web.y) plane-switch route from turn 1 onward.
+  if (party.id === PATHFINDERS) {
+    const target = killDiveTarget(party.location, webLoc);
+    if (target !== undefined) {
+      return { orders: moveToOrHold(party, target), posture: 'fight' };
+    }
+  }
+  // Round-9: vanguard-bravo joins the dive line earlier — gate flips
+  // on any soap-dish captured.
+  if (party.id === VANGUARD_BRAVO && bravoMayDive) {
+    const target = killDiveTarget(party.location, webLoc);
+    if (target !== undefined) {
+      return { orders: moveToOrHold(party, target), posture: 'fight' };
+    }
+  }
+  // Commit phase: every wall-crack ant-owned → vanguard-alpha walks
+  // the canonical ladder to the web.
+  if (committed && webLoc !== undefined) {
+    return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+  }
+  // Staging phase: walk the canonical chain (soap-dish → towel-rack
+  // → wall-crack) per `nextStageTarget`.
+  if (stageTarget !== undefined) {
+    return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
+  }
+  // Every stage POST is ours but the wall-cracks-captured branch
+  // didn't fire (rare race) — fall back to the web.
+  if (webLoc !== undefined) {
+    return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+  }
+  return { orders: [], posture: 'fight' };
+};
+
+const baselineCore: AIPolicy = buildAntPolicyWithRng(
   'baseline-staging',
-  (state: GameState) => {
-    const stageTarget = nextStageTarget(state);
-    const webLoc = postLocation(state, SPIDER_WEB);
+  (state: GameState, rng: Rng) => {
+    const ctx: MainStrategyContext = {
+      stageTarget: nextStageTarget(state),
+      webLoc: postLocation(state, SPIDER_WEB),
+      committed: wallCracksCaptured(state),
+      bravoMayDive: anySoapDishCaptured(state),
+    };
     const isOpeningTurn = state.turn === 0;
-    const committed = wallCracksCaptured(state);
-    const bravoMayDive = anySoapDishCaptured(state);
+    // Round-11 dice fork. One stream per turn (forked off the policy
+    // rng) so the per-party rolls are deterministic and don't share
+    // entropy with battle/movement subsystems.
+    const decisionRng = rng.fork('neutral-decision');
     return (party) => {
       // Turn-0 freebie: ceiling-capable parties self-buff with jelly-
       // apply. Costs nothing (no movement yet) and the multiplier
@@ -200,100 +266,79 @@ const baselineCore: AIPolicy = buildAntPolicy(
         return { orders: [jellyApplyOrder(party.id)], posture: 'fight' };
       }
 
-      // Round-10 neutral recruit branches (both gated on the party
-      // carrying an ant-mage with the recruit ability available):
+      // Round-11 neutral-recruit "commit-or-abandon" mechanic
+      // (baseline only). Three layered branches:
       //
-      //   (a) Opportunistic — co-located with a recruitable neutral
-      //       (cockroaches/mice; stinkbugs skipped to avoid the
-      //       damage-zone spawn on failure). Fire `recruit` directly.
-      //       25% success → permanent conversion of the entire neutral
-      //       party (cockroaches yield 8 units of attack-6/agility-7,
-      //       mice yield 3). Costs the focal party one order this
-      //       turn; everyone else still moves.
+      //   (a) Opportunistic recruit — always fires when co-located
+      //       with a recruitable neutral (cockroaches/mice; stinkbugs
+      //       skipped to avoid the damage-zone spawn on failure).
+      //       Independent of any pursue/ignore decision.
       //
-      //   (b) Detour — baseline only — if no co-located target but a
+      //   (b) Active pursue — if the party is currently committed to a
+      //       `pursue` decision, walk one tile toward the target each
+      //       turn until co-located, the target dies/converts, or the
+      //       5-turn window expires (engine end-of-turn tick).
+      //
+      //   (c) New-decision roll — if the party is eligible (carries
+      //       both ant-scout and ant-mage), no active decision, and a
       //       recruitable neutral sits within Chebyshev-3 on the same
-      //       plane, the party diverts one tile toward the higher-
-      //       value pick (cockroaches outrank mice). The detour is
-      //       skipped on turn 0 (the jelly pre-buff branch above
-      //       already returned) and skipped when an enemy spider is
-      //       co-located (the kill battle this turn is more important
-      //       than chasing a neutral).
+      //       plane, roll 1-in-3:
+      //         pursue → 5-turn detour toward the spotted target.
+      //         ignore → 5-turn suppression of any further detour.
+      //       This replaces round 10's per-turn detour-or-not flip
+      //       (which was dragging baseline off-task on every cockroach
+      //       random walk).
       //
       // Variants run only branch (a) so dive/rush/turtle/flank/jelly-
-      // rush keep their primary strategies intact; baseline gets the
-      // detour because the round-10 brief calls for one variant to
-      // demonstrate the new behavior actively.
+      // rush keep their primary strategies intact.
       const recruit = tryOpportunisticRecruit(state, party);
       if (recruit) return recruit;
-      const hasRecruit = partyHasAbility(party, RECRUIT_ABILITY, state.unitTemplates);
-      // Detour branch (baseline only): a recruitable neutral is within
-      // Chebyshev-3 on the same plane and we're not already engaged
-      // (no enemy spider co-located). Step one tile toward the highest-
-      // value pick instead of toward the kill-dive / staging target.
-      // The detour fires for at most one extra turn before either
-      // converting to the opportunistic branch above (if we close the
-      // gap) or the original target rejoining via fall-through (if the
-      // neutral wandered away). Skipped on turn 0 (the jelly pre-buff
-      // branch already returned).
-      if (hasRecruit && !coLocatedWithSpider(state, party)) {
-        const detour = findRecruitableNeutralNear(state, party);
-        if (detour !== undefined) {
-          const step = stepTowardNeutral(party.location, detour.location);
+
+      // Branch (b): an active `pursue` decision overrides all other
+      // movement targets until it expires or the target is gone.
+      if (party.neutralDecision?.kind === 'pursue') {
+        const step = pursueStep(state, party, party.neutralDecision);
+        if (step !== null) {
           return { orders: moveToOrHold(party, step), posture: 'fight' };
         }
+        // Target gone or co-located — fall through. The end-of-turn
+        // tick will drop the modifier next turn.
       }
 
-      // Coordinated kill-dive (round 6): both ceiling-capable parties
-      // (pathfinders, vanguard-bravo) run the floor (web.x, web.y) →
-      // ceiling (web.x, web.y) plane-switch route from turn 1 onward.
-      // Each mage's `ant-plane-switch` (uses=1) is reserved for the
-      // kill-jump rather than spent on staging. The two parties
-      // arrive at the launch tile within a turn of each other so the
-      // kill battle is two-on-many, not one-on-many. The bravo dive
-      // line is a floor approach, so the round-3 deep-raider spider
-      // party on east-wall (5,5) cannot intercept; the deep-raider
-      // awareness from round 3 (a wall-crack-ladder detour) is no
-      // longer needed.
-      if (party.id === PATHFINDERS) {
-        const target = killDiveTarget(party.location, webLoc);
-        if (target !== undefined) {
-          return { orders: moveToOrHold(party, target), posture: 'fight' };
+      // Branch (c): roll a fresh decision. Eligible parties only
+      // (scout + mage in the roster), no active decision, no enemy
+      // spider co-located (a battle this turn outranks neutral
+      // chasing), and a recruitable neutral within Chebyshev-3.
+      // Active-ignore parties skip this block entirely (their decision
+      // is non-undefined so the gate fails fast).
+      const hasRecruit = partyHasAbility(party, RECRUIT_ABILITY, state.unitTemplates);
+      if (
+        hasRecruit &&
+        party.neutralDecision === undefined &&
+        partyHasScoutAndMage(party, state.unitTemplates) &&
+        !coLocatedWithSpider(state, party)
+      ) {
+        const spotted = findRecruitableNeutralNear(state, party);
+        if (spotted !== undefined) {
+          const decision = decideNeutralFollow(decisionRng, spotted.partyId);
+          if (decision.kind === 'pursue') {
+            // Step toward the just-committed target this turn.
+            const step = pursueStep(state, party, decision);
+            return {
+              orders: step !== null ? moveToOrHold(party, step) : [],
+              posture: 'fight',
+              setNeutralDecision: true,
+              neutralDecision: decision,
+            };
+          }
+          // Ignore: stash the 5-turn modifier and fall through to the
+          // main strategy below this turn.
+          const main = mainStrategyOrders(party, ctx);
+          return { ...main, setNeutralDecision: true, neutralDecision: decision };
         }
       }
-      // Round-9: vanguard-bravo joins the dive line earlier. The
-      // gate moves from "any wall-crack captured" (round 6) to "any
-      // soap-dish captured" (round 9) — the canonical chain's first
-      // POST flips around turn 4-5 with the round-9 forward
-      // placement, so bravo arrives at the launch tile in time to
-      // assist pathfinders rather than trailing by 4-5 turns.
-      if (party.id === VANGUARD_BRAVO && bravoMayDive) {
-        const target = killDiveTarget(party.location, webLoc);
-        if (target !== undefined) {
-          return { orders: moveToOrHold(party, target), posture: 'fight' };
-        }
-      }
 
-      // Commit phase: once the canonical chain is complete, vanguard-
-      // alpha (the only field party not on the dive line) walks the
-      // canonical wall-crack ladder via the paired-POST shortcut at
-      // towel-rack to the spider-web.
-      if (committed && webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-
-      // Staging phase: walk the canonical chain (soap-dish → towel-
-      // rack → wall-crack) per `nextStageTarget`.
-      if (stageTarget !== undefined) {
-        return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
-      }
-
-      // Every stage POST is ours but the wall-cracks-captured branch
-      // didn't fire (rare race) — fall back to the web.
-      if (webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-      return { orders: [], posture: 'fight' };
+      return mainStrategyOrders(party, ctx);
     };
   },
   queenGuardOrders,

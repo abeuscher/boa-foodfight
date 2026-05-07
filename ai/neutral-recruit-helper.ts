@@ -41,16 +41,32 @@ import type {
   AbilityId,
   AbilityOrder,
   GameState,
+  NeutralDecision,
   NeutralKind,
   Order,
   Party,
   PartyId,
   Posture,
+  Rng,
   TileCoord,
+  UnitTemplate,
+  UnitTemplateId,
 } from '../engine/types.ts';
 
 /** Recruit ability id, branded for type safety. */
 export const RECRUIT_ABILITY: AbilityId = 'recruit' as AbilityId;
+
+/**
+ * Round 11 — "decide once, commit for 5 turns" tuning. The baseline-
+ * only mechanic that fixes the round-10 single-cockroach detour churn:
+ * an eligible party either commits to a 5-turn pursuit OR a 5-turn
+ * ignore window, with the choice gated by a 1-in-3 dice roll.
+ */
+export const NEUTRAL_FOLLOW_PROBABILITY = 1 / 3;
+export const NEUTRAL_DECISION_DURATION = 5;
+export const NEUTRAL_DETECTION_RADIUS = 3;
+const ANT_SCOUT_TEMPLATE: UnitTemplateId = 'ant-scout' as UnitTemplateId;
+const ANT_MAGE_TEMPLATE: UnitTemplateId = 'ant-mage' as UnitTemplateId;
 
 /** Per-kind recruit value used by both opportunistic and detour
  * branches. Cockroaches (8 units) > mice (3 units) >> stinkbugs
@@ -171,4 +187,75 @@ export const tryOpportunisticRecruit = (
   const target = findRecruitableNeutralAt(state, party);
   if (target === undefined) return undefined;
   return { orders: [recruitOrder(target)], posture: 'fight' };
+};
+
+/**
+ * Round 11 — true iff `party` carries at least one living `ant-scout`
+ * AND at least one living `ant-mage`. The eligibility filter for the
+ * commit-or-abandon mechanic. By templateId rather than abilities so
+ * the qualification is a structural roster property: queen-guard
+ * (footman / archer / worker) and vanguard-bravo (footman / potato-bug
+ * / archer / mage — no scout) are filtered out; only `pathfinders`
+ * (mage + scout + archer) qualifies under the level-1 roster.
+ */
+export const partyHasScoutAndMage = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  let hasScout = false;
+  let hasMage = false;
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (!tmpl) continue;
+    if (tmpl.id === ANT_SCOUT_TEMPLATE) hasScout = true;
+    if (tmpl.id === ANT_MAGE_TEMPLATE) hasMage = true;
+    if (hasScout && hasMage) return true;
+  }
+  return false;
+};
+
+/**
+ * Round 11 — roll a 1-in-3 dice (using the seeded RNG) to decide
+ * whether the eligible party commits to pursuing the spotted neutral
+ * for 5 turns or commits to ignoring all neutrals for 5 turns. The
+ * dice roll is the only source of stochasticity — the commit window
+ * length is fixed.
+ */
+export const decideNeutralFollow = (rng: Rng, neutralPartyId: PartyId): NeutralDecision => {
+  if (rng.next() < NEUTRAL_FOLLOW_PROBABILITY) {
+    return {
+      kind: 'pursue',
+      targetPartyId: neutralPartyId,
+      turnsRemaining: NEUTRAL_DECISION_DURATION,
+    };
+  }
+  return { kind: 'ignore', turnsRemaining: NEUTRAL_DECISION_DURATION };
+};
+
+/**
+ * Round 11 — one-tile Chebyshev step toward the pursue target. Returns
+ * `null` when the target party is gone (recruited / dead / despawned)
+ * or when the party is already co-located (the opportunistic-recruit
+ * branch handles co-location). The end-of-turn tick is responsible for
+ * dropping a stale decision once the target disappears, but the AI
+ * still tolerates a one-turn race where the decision survives a turn
+ * past the target — return null and let the party fall through to its
+ * main strategy that turn.
+ */
+export const pursueStep = (
+  state: GameState,
+  party: Party,
+  decision: NeutralDecision,
+): TileCoord | null => {
+  if (decision.kind !== 'pursue') return null;
+  const targetId = decision.targetPartyId;
+  if (targetId === undefined) return null;
+  const target = state.parties.get(targetId);
+  if (!target) return null;
+  if (target.leaderless) return null;
+  if (!target.units.some((u) => u.currentHp > 0)) return null;
+  if (target.location.plane !== party.location.plane) return null;
+  if (sameCoord(target.location, party.location)) return null;
+  return stepTowardNeutral(party.location, target.location);
 };
