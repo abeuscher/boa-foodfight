@@ -66,6 +66,7 @@ import type {
   PartyId,
   Post,
   PostId,
+  ReplayEvent,
   Rng,
   TileCoord,
   UnitTemplate,
@@ -142,6 +143,23 @@ const RAIDER_CEILING_DOOR: TileCoord = { plane: 'east-wall', x: 5, y: 0 };
  * turn head start before the ant could hop to the wall.
  */
 const RAIDER_DETECT = 3;
+
+/**
+ * Round 13 — reactive emergency defense. When the spider AI detects an
+ * ant trail entry with `ageInTurns <= 1` either on the spider-web's
+ * plane within Chebyshev `EMERGENCY_RADIUS` of the web, OR on the floor
+ * at `(webLoc.x, webLoc.y)` (the dive variant's plane-switch launch
+ * tile, an imminent threat), it overrides offensive orders for the
+ * non-web-guard parties listed in `EMERGENCY_RECALL_ORDER` and steps
+ * each one toward the web. Web-guard stays put; spiderlings keep
+ * chasing closest ant (they converge naturally if the closest ant is
+ * at the web).
+ */
+const EMERGENCY_RADIUS = 4;
+/** Max trail-entry age (in turns) that still counts as an active threat
+ * for emergency-defense detection. Age 0 = current tile, age 1 = last
+ * turn's tile. Older entries are stale crumbs and don't trigger. */
+const EMERGENCY_MAX_AGE = 1;
 
 const totalSlotCost = (
   party: Party,
@@ -460,6 +478,67 @@ const stepToward = (from: TileCoord, target: TileCoord): TileCoord => {
 };
 
 /**
+ * Round 13 — collect the trail entries that meet the web-threat
+ * conditions:
+ *   1. ageInTurns <= EMERGENCY_MAX_AGE AND on the spider-web's plane
+ *      within Chebyshev EMERGENCY_RADIUS of the web.
+ *   2. ageInTurns <= EMERGENCY_MAX_AGE AND on the *floor* at
+ *      (webLoc.x, webLoc.y) — the dive variant's plane-switch launch
+ *      tile, an imminent threat.
+ * Returns the matched entries (possibly empty). The caller treats
+ * `entries.length > 0` as the trigger condition.
+ */
+const collectWebThreatEntries = (
+  state: GameState,
+  webLoc: TileCoord,
+): readonly SpiderVisibleTrailEntry[] => {
+  const trail = getSpiderVisibleAntTrail(state);
+  const matched: SpiderVisibleTrailEntry[] = [];
+  for (const entry of trail) {
+    if (entry.ageInTurns > EMERGENCY_MAX_AGE) continue;
+    // Condition 1: same plane as the web, within EMERGENCY_RADIUS.
+    if (entry.plane === webLoc.plane) {
+      const dx = Math.abs(entry.x - webLoc.x);
+      const dy = Math.abs(entry.y - webLoc.y);
+      if (Math.max(dx, dy) <= EMERGENCY_RADIUS) {
+        matched.push(entry);
+        continue;
+      }
+    }
+    // Condition 2: on the floor at (webLoc.x, webLoc.y) — dive launch.
+    if (entry.plane === 'floor' && entry.x === webLoc.x && entry.y === webLoc.y) {
+      matched.push(entry);
+    }
+  }
+  return matched;
+};
+
+/**
+ * Round 13 — true iff at least one ant trail entry triggers the
+ * web-threat conditions (see `collectWebThreatEntries`). Helper around
+ * the collection function so callers that only need the boolean don't
+ * have to discard the array. Exported for unit-test access.
+ */
+export const isWebThreatened = (state: GameState, webLoc: TileCoord): boolean =>
+  collectWebThreatEntries(state, webLoc).length > 0;
+
+/**
+ * Round 13 — recall priority for emergency-defense. Higher-priority ids
+ * appear first; if a party isn't in this list its orders pass through
+ * the standard branches untouched. web-guard is intentionally ABSENT
+ * (it already holds at the web). Spiderlings are also absent — their
+ * "chase closest ant" behavior naturally converges on the web when an
+ * ant runs the gauntlet.
+ */
+const EMERGENCY_RECALL_ORDER: readonly PartyId[] = [
+  SILK_LINE,
+  // counter-push pusher slot is computed dynamically (largest non-scout
+  // non-raider non-silk party) — handled inline in `decide`.
+  'advance-scout' as PartyId,
+  DEEP_RAIDER,
+];
+
+/**
  * Scout orders:
  *   - Default: walk to soap-dish (preserved for the existing test).
  *   - If ants already own the soap-dish, harass the towel-rack on the
@@ -710,6 +789,34 @@ export const spiderL1: AIPolicy = {
     const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
     const pusher = counterPushActive ? pickPusher(state, scout?.id ?? null) : null;
 
+    // Round 13 — reactive emergency defense. When ants are closing on
+    // the spider-web, override offensive orders for the recall list:
+    //   silk-line (highest priority — furthest forward)
+    //   counter-push pusher (largest non-scout/non-raider/non-silk)
+    //   advance-scout
+    //   deep-raider
+    // For each, replace orders with a step toward the spider-web. Once
+    // a recalled party reaches the web, defend in place. web-guard +
+    // spiderlings keep their normal behavior (web-guard already holds
+    // at the web; spiderlings chase closest ant).
+    //
+    // Always recompute the pusher slot here regardless of whether
+    // counter-push was active — under emergency we want to recall the
+    // largest available reinforcement even if no POST has flipped yet.
+    const emergencyTrailEntries = collectWebThreatEntries(state, webLoc);
+    const emergencyActive = emergencyTrailEntries.length > 0;
+    const emergencyPusher = emergencyActive ? pickPusher(state, scout?.id ?? null) : null;
+    const recallSet = new Set<PartyId>();
+    if (emergencyActive) {
+      for (const recallId of EMERGENCY_RECALL_ORDER) recallSet.add(recallId);
+      if (emergencyPusher !== null) recallSet.add(emergencyPusher.id);
+    }
+    // Track which parties actually receive the recall step this turn
+    // (so the telemetry payload only lists the parties whose orders
+    // we mutated — web-guard is excluded by construction since it's
+    // not in EMERGENCY_RECALL_ORDER).
+    const recalledThisTurn: PartyId[] = [];
+
     // Silk-line early counter-push: when ants own >=1 POST AND turn >= 3,
     // silk-line pushes wall-crack.
     const silkEarlyPushActive =
@@ -778,6 +885,34 @@ export const spiderL1: AIPolicy = {
         nextParties.set(id, { ...party, orders: nextOrders });
         continue;
       }
+
+      // Round 13 — emergency-defense override. If the web is threatened
+      // and this party is on the recall list, replace its orders with a
+      // step toward the spider-web. Hypnotize still fires (small ability,
+      // no movement cost). web-guard is intentionally NOT in the recall
+      // set — it already holds at the web. Once a recalled party arrives
+      // at the web tile, posture stays 'fight' and orders clear (defend
+      // in place). Plane-jump via edge corners is automatic (round-7
+      // spider-corner-cross passive); when off-plane we issue the off-
+      // plane target directly so the engine resolves the edge step.
+      if (emergencyActive && recallSet.has(id)) {
+        let recallOrders: readonly Order[];
+        if (sameCoord(party.location, webLoc)) {
+          recallOrders = [];
+        } else if (party.location.plane === webLoc.plane) {
+          const stepped = stepToward(party.location, webLoc);
+          recallOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
+        } else {
+          // Cross-plane: emit the off-plane target directly; the engine's
+          // edge-adjacency / spider-corner-cross path resolves it.
+          recallOrders = [moveTo(webLoc)];
+        }
+        const ordersWithHypno: readonly Order[] = [...hypnoOrders, ...recallOrders];
+        nextParties.set(id, { ...party, orders: ordersWithHypno });
+        recalledThisTurn.push(id);
+        continue;
+      }
+
       // Priority order: deep-raider (with optional turn-3 spin-web combo);
       // web-guard ability fire (turn 3); silk-line ability fire (turn 2);
       // web-guard hold; counter-push pusher; silk-line early-push (wall-
@@ -849,6 +984,39 @@ export const spiderL1: AIPolicy = {
       nextParties.set(id, { ...party, orders: ordersWithHypno });
     }
 
-    return { ...state, parties: nextParties };
+    // Round 13 — emit the emergency-defense telemetry event when the
+    // override fired AND at least one party was actually recalled.
+    // The driver drains state.pendingPolicyEvents and appends them to
+    // the per-turn replay stream. We use a single-element queue (the
+    // spider-l1 emergency path is the only writer in this policy).
+    let pendingPolicyEvents: readonly ReplayEvent[] = state.pendingPolicyEvents ?? [];
+    if (emergencyActive && recalledThisTurn.length > 0) {
+      // Sort the recall list deterministically so a replay seeded the
+      // same way always produces an identical event payload (the
+      // iteration order over `state.parties` is insertion-order, which
+      // is stable, but lex sort makes the JSON easier to diff).
+      const sortedRecalls = [...recalledThisTurn].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+      const event: ReplayEvent = {
+        kind: 'spider-emergency-defense',
+        turn: state.turn,
+        // The engine's tick clock is driver-side; the AI doesn't have
+        // access to it. Use 0 as a sentinel — the consumer can reorder
+        // by event index within the turn if exact tick matters. The
+        // driver appends these events immediately after policy.decide,
+        // so they slot in between turn-start and movement events.
+        tick: 0,
+        recalledPartyIds: sortedRecalls,
+        threatTrailEntries: emergencyTrailEntries.map((e) => ({
+          partyId: e.partyId,
+          plane: e.plane,
+          x: e.x,
+          y: e.y,
+          ageInTurns: e.ageInTurns,
+        })),
+      };
+      pendingPolicyEvents = [...pendingPolicyEvents, event];
+    }
+
+    return { ...state, parties: nextParties, pendingPolicyEvents };
   },
 };

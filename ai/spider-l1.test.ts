@@ -20,7 +20,7 @@ import type {
 } from '../engine/types.ts';
 
 import { postsOfType, SOAP_DISH_TYPE, TOWEL_RACK_TYPE } from './policy-helpers.ts';
-import { spiderL1 } from './spider-l1.ts';
+import { isWebThreatened, spiderL1 } from './spider-l1.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -275,6 +275,126 @@ describe('spiderL1', () => {
         (o) => o.kind === 'use-ability' && o.abilityId === HYPNOTIZE,
       );
       expect(hypnoOrder).toBeUndefined();
+    });
+  });
+
+  describe('round 13 — emergency-defense recall', () => {
+    /**
+     * Seed a single fresh (age 0) trail entry at `loc` for `partyId`,
+     * overwriting the existing trail. Mirrors the test-fixture pattern
+     * used elsewhere (moveAntPartyTo) but lets us independently set
+     * the trail without moving the actual party — useful when probing
+     * `isWebThreatened` directly with a synthetic fixture.
+     */
+    const setTrailEntry = (
+      state: GameState,
+      partyId: PartyId,
+      loc: TileCoord,
+      ageInTurns = 0,
+    ): GameState => {
+      const fresh: PheroTrailEntry = {
+        plane: loc.plane,
+        x: loc.x,
+        y: loc.y,
+        ageInTurns,
+      };
+      const trails = new Map(state.pheroTrails);
+      trails.set(partyId, [fresh]);
+      return { ...state, pheroTrails: trails };
+    };
+
+    it('isWebThreatened returns true when a fresh ant trail entry sits on the spider-web tile (ceiling 9, 9)', () => {
+      const { state: initial } = loadScenario(DATA_DIR, 1);
+      const web = requirePost(initial, 'spider-web' as PostId);
+      // Drop any pre-existing trails so only our fixture matters.
+      const cleared: GameState = {
+        ...initial,
+        pheroTrails: new Map<PartyId, readonly PheroTrailEntry[]>(),
+      };
+      const seeded = setTrailEntry(cleared, 'pathfinders' as PartyId, web.location);
+      expect(isWebThreatened(seeded, web.location)).toBe(true);
+    });
+
+    it('isWebThreatened returns false when all ant trail entries are far (floor SW corner)', () => {
+      const { state: initial } = loadScenario(DATA_DIR, 1);
+      const web = requirePost(initial, 'spider-web' as PostId);
+      const cleared: GameState = {
+        ...initial,
+        pheroTrails: new Map<PartyId, readonly PheroTrailEntry[]>(),
+      };
+      // Seed every ant party at floor (0, 0) — far from ceiling (9, 9).
+      let seeded = cleared;
+      for (const [id, party] of cleared.parties) {
+        if (party.faction !== 'ant') continue;
+        seeded = setTrailEntry(seeded, id, { plane: 'floor', x: 0, y: 0 });
+      }
+      expect(isWebThreatened(seeded, web.location)).toBe(false);
+    });
+
+    it('isWebThreatened returns true when an ant is on the floor at (web.x, web.y) — dive-variant launch tile', () => {
+      const { state: initial } = loadScenario(DATA_DIR, 1);
+      const web = requirePost(initial, 'spider-web' as PostId);
+      const cleared: GameState = {
+        ...initial,
+        pheroTrails: new Map<PartyId, readonly PheroTrailEntry[]>(),
+      };
+      // Seed a trail entry on the floor at (web.x, web.y) — this is
+      // the plane-switch launch tile for a dive into the web.
+      const launch: TileCoord = { plane: 'floor', x: web.location.x, y: web.location.y };
+      const seeded = setTrailEntry(cleared, 'pathfinders' as PartyId, launch);
+      expect(isWebThreatened(seeded, web.location)).toBe(true);
+    });
+
+    it('emergency override redirects silk-line toward the spider-web (not toward storm-drain)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const web = requirePost(initial, 'spider-web' as PostId);
+      // Place silk-line away from the web so its recall step is a
+      // strict move (not a hold) — start from a ceiling tile a few
+      // steps off the web.
+      const silk = initial.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      let state = replaceParty(initial, {
+        ...silk,
+        location: { plane: 'ceiling', x: 5, y: 5 },
+      });
+      // Clear any pre-existing pheromone trails and seed a fresh
+      // age-0 trail entry on the web tile to trigger the emergency.
+      state = { ...state, pheroTrails: new Map() };
+      state = setTrailEntry(state, 'pathfinders' as PartyId, web.location);
+
+      const next = spiderL1.decide(state, data, createRng(1));
+      const silkAfter = next.parties.get('silk-line' as PartyId);
+      // Find the move-to order (skipping any prepended hypnotize).
+      const moveOrder = silkAfter?.orders.find((o) => o.kind === 'move-to');
+      expect(moveOrder).toBeDefined();
+      // The recall target is the web's plane (ceiling). Storm-drain
+      // is on the floor, so the order must point to the ceiling.
+      expect(moveOrder?.target.plane).toBe('ceiling');
+      // Step toward the web from (5, 5) on the ceiling: each axis
+      // increments toward (9, 9), so the step lands at (6, 6).
+      expect(moveOrder?.target).toEqual({ plane: 'ceiling', x: 6, y: 6 });
+    });
+
+    it('emergency override emits a spider-emergency-defense replay event with the recall list', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const web = requirePost(initial, 'spider-web' as PostId);
+      const silk = initial.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      let state = replaceParty(initial, {
+        ...silk,
+        location: { plane: 'ceiling', x: 5, y: 5 },
+      });
+      state = { ...state, pheroTrails: new Map() };
+      state = setTrailEntry(state, 'pathfinders' as PartyId, web.location);
+
+      const next = spiderL1.decide(state, data, createRng(1));
+      const queued = next.pendingPolicyEvents ?? [];
+      const emergencyEvent = queued.find((e) => e.kind === 'spider-emergency-defense');
+      expect(emergencyEvent).toBeDefined();
+      if (emergencyEvent?.kind === 'spider-emergency-defense') {
+        expect(emergencyEvent.recalledPartyIds).toContain('silk-line' as PartyId);
+        expect(emergencyEvent.threatTrailEntries.length).toBeGreaterThan(0);
+      }
     });
   });
 });

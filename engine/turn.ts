@@ -331,6 +331,16 @@ export const runScenario = (
         scenario,
         rng.fork(`policy-${policy.name}-${String(turnsPlayed)}`),
       );
+      // Round 13 — drain any AI-emitted telemetry events the policy
+      // queued onto state.pendingPolicyEvents. The driver appends
+      // them to the replay stream and clears the queue so subsequent
+      // policies start with an empty buffer. Pure pass-through; no
+      // policy currently depends on reading the queue back.
+      const queued = working.pendingPolicyEvents ?? [];
+      if (queued.length > 0) {
+        events.push(...queued);
+        working = { ...working, pendingPolicyEvents: [] };
+      }
     }
     const outcome = runTurn(working, scenario, rng, tick);
     working = outcome.state;
