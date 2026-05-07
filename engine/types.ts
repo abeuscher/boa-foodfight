@@ -365,15 +365,6 @@ export interface GameState {
    * yet; pure tracking.
    */
   readonly playerGold: PlayerGold;
-  /**
-   * Round 13 — AI-emitted telemetry events queued by a policy's
-   * `decide` for the turn driver to drain. Optional/empty by default;
-   * the spider-l1 emergency-defense path is the only current writer.
-   * The driver appends these to the per-turn replay event stream and
-   * resets the field to `[]` after each `policy.decide(...)`. Pure
-   * data — no behavior depends on the field beyond replay output.
-   */
-  readonly pendingPolicyEvents?: readonly ReplayEvent[];
   readonly winner: Faction | null;
 }
 
@@ -574,24 +565,6 @@ export type ReplayEvent =
       readonly sourceId: PostId | UnitTemplateId;
       readonly amount: number;
       readonly newTotal: number;
-    })
-  | (ReplayEventCommon & {
-      /**
-       * Round 13 — spider-l1 reactive emergency defense fired this turn.
-       * Carries the recall-list (parties whose offensive orders were
-       * overridden with a step toward the spider-web) and the threat
-       * trail entries that triggered the override. Emitted at most once
-       * per turn, only when at least one party is being recalled.
-       */
-      readonly kind: 'spider-emergency-defense';
-      readonly recalledPartyIds: readonly PartyId[];
-      readonly threatTrailEntries: readonly {
-        readonly partyId: PartyId;
-        readonly plane: Plane;
-        readonly x: number;
-        readonly y: number;
-        readonly ageInTurns: number;
-      }[];
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 
