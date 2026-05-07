@@ -32,21 +32,6 @@ const firstPostOfType = (state: GameState, type: string): Post => {
 };
 
 /**
- * Forces the round-3 `deep-raider` spider party into a leaderless
- * state so the baseline's east-wall awareness branch (vanguard-bravo
- * detours via the wall-crack ladder while deep-raider lives) is
- * disabled. Tests that assert the canonical commit-phase pathing for
- * ALL field parties use this helper to neutralize the detour gate.
- */
-const neutralizeDeepRaider = (state: GameState): GameState => {
-  const dr = state.parties.get('deep-raider' as PartyId);
-  if (!dr) return state;
-  const parties = new Map(state.parties);
-  parties.set(dr.id, { ...dr, leaderless: true });
-  return { ...state, parties };
-};
-
-/**
  * Most tests below want to assert *movement* targets, which the
  * ceiling-capable parties don't issue on turn 0 (they fire a turn-0
  * `jelly-apply` self-buff). Bumping `state.turn` to 1 sidesteps that
@@ -60,12 +45,17 @@ describe('baselinePlayer', () => {
     expect(baselinePlayer.faction).toBe('ant');
   });
 
-  it('queen-guard is held in place (no orders, defend posture)', () => {
+  it('queen-guard worker fires jelly-apply at pathfinders each turn (round-6 supply line)', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = baselinePlayer.decide(state, data, createRng(1));
     const queenGuard = next.parties.get('queen-guard' as PartyId);
-    expect(queenGuard?.orders).toHaveLength(0);
+    expect(queenGuard?.orders).toHaveLength(1);
     expect(queenGuard?.posture).toBe('defend');
+    const order = queenGuard?.orders[0];
+    expect(order?.kind).toBe('use-ability');
+    if (order?.kind !== 'use-ability') throw new Error('expected ability order');
+    expect(order.abilityId).toBe('jelly-apply');
+    expect(order.target).toBe('pathfinders');
   });
 
   it('ceiling-capable parties pre-buff with jelly-apply on turn 0', () => {
@@ -83,101 +73,98 @@ describe('baselinePlayer', () => {
     }
   });
 
-  it('first-stage target is the first soap-dish; field parties get a move-to toward it', () => {
+  it('vanguard-bravo dive triggers once any wall-crack is captured (stages until then)', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
+    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
+    // Capture only the FIRST wall-crack so bravo's gate flips but the
+    // canonical chain isn't fully complete.
+    const cracks = postsOfType(state, WALL_CRACK_TYPE);
+    expect(cracks.length).toBeGreaterThan(0);
+    const posts = new Map(state.posts);
+    posts.set(cracks[0]!.id, { ...cracks[0]!, owner: 'ant' });
+    state = { ...state, posts };
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const web = state.posts.get('spider-web' as PostId)!;
+    const bravo = next.parties.get('vanguard-bravo' as PartyId);
+    const bvOrder = bravo?.orders[0] as MoveOrder;
+    expect(bvOrder.kind).toBe('move-to');
+    expect(bvOrder.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
+  });
+
+  it('first-stage targets: vanguards stage toward soap-dish; pathfinders runs the dive line from turn 1', () => {
     const initial = loadScenario(DATA_DIR, 1);
     const state = advancePastOpening(initial.state);
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const soap = firstPostOfType(state, SOAP_DISH_TYPE);
-    let fieldOrdersIssued = 0;
-    for (const party of next.parties.values()) {
-      if (party.faction !== 'ant') continue;
-      if (party.id === ('queen-guard' as PartyId)) continue;
-      expect(party.orders).toHaveLength(1);
-      const order = party.orders[0] as MoveOrder;
+    const web = state.posts.get('spider-web' as PostId)!;
+    for (const partyId of ['vanguard-alpha', 'vanguard-bravo'] as PartyId[]) {
+      const party = next.parties.get(partyId);
+      const order = party?.orders[0] as MoveOrder;
       expect(order.kind).toBe('move-to');
       expect(order.target).toEqual(soap.location);
-      fieldOrdersIssued += 1;
     }
-    expect(fieldOrdersIssued).toBeGreaterThan(0);
+    // Pathfinders runs the dive line on turn 1.
+    const pf = next.parties.get('pathfinders' as PartyId);
+    const pfOrder = pf?.orders[0] as MoveOrder;
+    expect(pfOrder.kind).toBe('move-to');
+    expect(pfOrder.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
   });
 
-  it('after every soap-dish is owned, retargets to towel-rack', () => {
+  it('after every soap-dish is owned, vanguards retarget to towel-rack', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const towel = firstPostOfType(state, TOWEL_RACK_TYPE);
-    const sample = [...next.parties.values()].find(
-      (p) => p.faction === 'ant' && p.id !== ('queen-guard' as PartyId),
-    );
-    const order = sample?.orders[0] as MoveOrder;
-    expect(order.target).toEqual(towel.location);
+    for (const partyId of ['vanguard-alpha', 'vanguard-bravo'] as PartyId[]) {
+      const party = next.parties.get(partyId);
+      const order = party?.orders[0] as MoveOrder;
+      expect(order.kind).toBe('move-to');
+      expect(order.target).toEqual(towel.location);
+    }
   });
 
-  it('after soap-dish + towel-rack are owned, retargets to wall-crack', () => {
+  it('after soap-dish + towel-rack are owned, vanguards retarget to wall-crack', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const crack = firstPostOfType(state, WALL_CRACK_TYPE);
-    const sample = [...next.parties.values()].find(
-      (p) => p.faction === 'ant' && p.id !== ('queen-guard' as PartyId),
-    );
-    const order = sample?.orders[0] as MoveOrder;
-    expect(order.target).toEqual(crack.location);
+    for (const partyId of ['vanguard-alpha', 'vanguard-bravo'] as PartyId[]) {
+      const party = next.parties.get(partyId);
+      const order = party?.orders[0] as MoveOrder;
+      expect(order.kind).toBe('move-to');
+      expect(order.target).toEqual(crack.location);
+    }
   });
 
-  it('after all foothold POSTs are owned and deep-raider is neutralized, every field party commits to spider-web', () => {
+  it('after all foothold POSTs are owned, vanguard-alpha commits to spider-web; vanguard-bravo joins the dive line', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
     state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
-    state = neutralizeDeepRaider(state);
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const spiderWeb = state.posts.get('spider-web' as PostId)!;
-    let fieldOrdersIssued = 0;
-    for (const party of next.parties.values()) {
-      if (party.faction !== 'ant') continue;
-      if (party.id === ('queen-guard' as PartyId)) continue;
-      expect(party.orders).toHaveLength(1);
-      const order = party.orders[0] as MoveOrder;
-      expect(order.kind).toBe('move-to');
-      expect(order.target).toEqual(spiderWeb.location);
-      fieldOrdersIssued += 1;
+    const alpha = next.parties.get('vanguard-alpha' as PartyId);
+    const alphaOrder = alpha?.orders[0] as MoveOrder;
+    expect(alphaOrder.kind).toBe('move-to');
+    expect(alphaOrder.target).toEqual(spiderWeb.location);
+    // Pathfinders + vanguard-bravo on the dive line.
+    const launchTile = {
+      plane: 'floor' as const,
+      x: spiderWeb.location.x,
+      y: spiderWeb.location.y,
+    };
+    for (const partyId of ['pathfinders', 'vanguard-bravo'] as PartyId[]) {
+      const p = next.parties.get(partyId);
+      const o = p?.orders[0] as MoveOrder;
+      expect(o.kind).toBe('move-to');
+      expect(o.target).toEqual(launchTile);
     }
-    expect(fieldOrdersIssued).toBeGreaterThan(0);
-  });
-
-  it('east-wall awareness: vanguard-bravo detours through a captured wall-crack while deep-raider is alive', () => {
-    const initial = loadScenario(DATA_DIR, 1);
-    let state = advancePastOpening(initial.state);
-    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
-    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
-    state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
-    // deep-raider untouched: alive on east-wall (5,5).
-    const next = baselinePlayer.decide(state, initial.data, createRng(1));
-    const bravo = next.parties.get('vanguard-bravo' as PartyId);
-    expect(bravo?.orders).toHaveLength(1);
-    const order = bravo?.orders[0] as MoveOrder;
-    expect(order.kind).toBe('move-to');
-    const crack = firstPostOfType(state, WALL_CRACK_TYPE);
-    expect(order.target).toEqual(crack.location);
-  });
-
-  it('east-wall awareness clears: once deep-raider is leaderless, vanguard-bravo commits direct to spider-web', () => {
-    const initial = loadScenario(DATA_DIR, 1);
-    let state = advancePastOpening(initial.state);
-    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
-    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
-    state = setAllOfTypeOwned(state, WALL_CRACK_TYPE, 'ant');
-    state = neutralizeDeepRaider(state);
-    const next = baselinePlayer.decide(state, initial.data, createRng(1));
-    const bravo = next.parties.get('vanguard-bravo' as PartyId);
-    const order = bravo?.orders[0] as MoveOrder;
-    const web = state.posts.get('spider-web' as PostId)!;
-    expect(order.target).toEqual(web.location);
   });
 
   it('does not modify spider parties', () => {
