@@ -52,6 +52,10 @@ import type {
 } from './types.ts';
 
 const PLANE_SWITCH: AbilityId = 'plane-switch' as AbilityId;
+
+const WALL_PLANES = new Set<string>(['north-wall', 'south-wall', 'east-wall', 'west-wall']);
+const isWallPlane = (plane: string): boolean => WALL_PLANES.has(plane);
+
 /**
  * Tag that, when present on any LIVING unit in a party, suppresses the
  * party's plane-switch teleport — the unit is too heavy / earthbound to
@@ -251,6 +255,14 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
   }
 
   let allowance = baseMovementAllowance(partyIn, state.unitTemplates);
+  // Asymmetric wall traversal: spiders climb walls fluently (2
+  // tiles/turn) while ants struggle (1 tile/turn). Floor and ceiling
+  // keep the default allowance from `baseMovementAllowance`. Determined
+  // by the *starting* plane this turn — a party that crosses onto a
+  // wall mid-step uses the budget it had before crossing.
+  if (isWallPlane(partyIn.location.plane)) {
+    allowance = partyIn.faction === 'spider' ? 2 : 1;
+  }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];
   const tiebreak = movementRng.fork('movement-tiebreak');

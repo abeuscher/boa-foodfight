@@ -475,6 +475,28 @@ function templateOf(unitId) {
   return m ? m[1] : unitId;
 }
 
+/** Pretty proper-case name for a unit template ("ant-mage" -> "Ant Mage"). */
+function prettyTemplate(templateId) {
+  const labels = {
+    'ant-queen': 'Ant Queen',
+    'ant-footman': 'Ant Footman',
+    'ant-archer': 'Ant Archer',
+    'ant-mage': 'Ant Mage',
+    'ant-scout': 'Ant Scout',
+    'ant-worker': 'Ant Worker',
+    'ant-potato-bug': 'Ant Potato-bug',
+    'ant-tank': 'Ant Tank',
+    'spider-queen': 'Spider Queen',
+    'spider-elite': 'Spider Elite',
+    'spider-soldier': 'Spider Soldier',
+    'spider-spinner': 'Spider Spinner',
+    'spider-scout': 'Spider Scout',
+    spiderling: 'Spiderling',
+  };
+  return labels[templateId] ?? templateId;
+}
+
+/** Lowercase shorthand for the compact roster column. */
 function shortTemplate(templateId) {
   const labels = {
     'ant-queen': 'queen',
@@ -490,8 +512,31 @@ function shortTemplate(templateId) {
     'spider-soldier': 'soldier',
     'spider-spinner': 'spinner',
     'spider-scout': 'scout',
+    spiderling: 'spiderling',
   };
   return labels[templateId] ?? templateId;
+}
+
+/** Verb that reads as the unit's basic-attack flavor. Kept short so
+ * the play-by-play stays scannable. */
+function attackVerb(templateId) {
+  const verbs = {
+    'ant-queen': 'strikes',
+    'ant-footman': 'attacks',
+    'ant-archer': 'shoots',
+    'ant-mage': 'casts at',
+    'ant-scout': 'ambushes',
+    'ant-worker': 'swings at',
+    'ant-potato-bug': 'rams',
+    'ant-tank': 'rams',
+    'spider-queen': 'lashes',
+    'spider-elite': 'claws',
+    'spider-soldier': 'bites',
+    'spider-spinner': 'tangles',
+    'spider-scout': 'darts at',
+    spiderling: 'nips at',
+  };
+  return verbs[templateId] ?? 'hits';
 }
 
 function hpBar(hp, maxHp) {
@@ -541,10 +586,12 @@ function renderBattleLog(state) {
       items.push(`<li class="round-header">— round ${round + 1} —</li>`);
       lastRound = round;
     }
-    const atk = `${action.attackerId.slice(0, 5)} ${shortTemplate(templateOf(action.attackerId))}`;
-    const def = `${action.defenderId.slice(0, 5)} ${shortTemplate(templateOf(action.defenderId))}`;
+    const atkTpl = templateOf(action.attackerId);
+    const defTpl = templateOf(action.defenderId);
+    const verb = attackVerb(atkTpl);
     const cls = action.killed ? 'kill' : '';
-    const msg = `${atk} → ${def} : ${action.damage} dmg${action.killed ? ' (killed)' : ''}`;
+    const tail = action.killed ? ' (killed)' : '';
+    const msg = `${prettyTemplate(atkTpl)} ${verb} ${prettyTemplate(defTpl)} for ${String(action.damage)} damage.${tail}`;
     items.push(`<li class="${cls}">${escapeHtml(msg)}</li>`);
   }
   if (state.index >= state.actions.length) {
