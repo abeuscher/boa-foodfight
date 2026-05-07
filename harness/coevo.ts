@@ -245,6 +245,20 @@ const gate = (round: number): void => {
   const passingVariants = variants.filter((v) => v.summary.antWinRate >= 0.4).length;
   const diversityOk = passingVariants >= 3;
 
+  // Run the (cheap, programmatic) interest critic so the orchestrator
+  // gets a watchability signal alongside win-rate. Critic exits
+  // non-zero only on hard error; ignore its exit code.
+  const interestRun = runStep('interest critic', 'pnpm critic:interest');
+  let interest: { overall?: { composite: number }; summaries?: unknown } = {};
+  try {
+    interest = JSON.parse(
+      fs.readFileSync(repoPath('out/critic-interest/report.json'), 'utf8'),
+    ) as typeof interest;
+  } catch {
+    // First-run race or harness blip; leave empty.
+  }
+  void interestRun;
+
   const verdict = {
     pass: inBand && diversityOk,
     band: { min: BALANCE_BAND_MIN, max: BALANCE_BAND_MAX },
@@ -252,6 +266,7 @@ const gate = (round: number): void => {
     inBand,
     diversityOk,
     variants: variants.map((v) => ({ variant: v.variant, winRate: v.summary.antWinRate })),
+    interest,
   };
   fs.writeFileSync(
     repoPath(path.join(dir, 'gate.json')),
@@ -259,7 +274,7 @@ const gate = (round: number): void => {
     'utf8',
   );
   console.log(
-    `gate: baseline ${(baselineWinRate * 100).toFixed(1)}% inBand=${String(inBand)} diversity=${String(diversityOk)} -> ${verdict.pass ? 'PASS' : 'FAIL'}`,
+    `gate: baseline ${(baselineWinRate * 100).toFixed(1)}% inBand=${String(inBand)} diversity=${String(diversityOk)} interest=${String(interest.overall?.composite ?? '?')} -> ${verdict.pass ? 'PASS' : 'FAIL'}`,
   );
   for (const v of variants) {
     console.log(`  ${v.variant}: ${(v.summary.antWinRate * 100).toFixed(1)}%`);
