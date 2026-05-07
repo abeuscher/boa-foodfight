@@ -63,6 +63,38 @@ const WALL_PLANES = new Set<string>(['north-wall', 'south-wall', 'east-wall', 'w
 const isWallPlane = (plane: string): boolean => WALL_PLANES.has(plane);
 
 /**
+ * Ant scout-template id. The round-7 ant scout-majority bonus (3 tiles
+ * per turn on any plane) keys off this template id rather than the
+ * `scout` tag, because spider-scouts also carry a `scout` tag and the
+ * bonus is ant-only.
+ */
+const ANT_SCOUT_TEMPLATE_ID = 'ant-scout';
+
+/**
+ * True iff strictly more than half of the party's living units are
+ * ant-scouts. Round-7 movement bonus: a strict-majority ant-scout
+ * party moves up to 3 tiles per turn on any plane (does not compound
+ * with the wall asymmetry — the cap is 3 on any plane). Spider-scout
+ * units do NOT trigger this; the check is template-id specific.
+ */
+const scoutMajorityAnt = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): boolean => {
+  if (party.faction !== 'ant') return false;
+  let livingCount = 0;
+  let scoutCount = 0;
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    livingCount += 1;
+    const tmpl = templates.get(u.templateId);
+    if (tmpl && (tmpl.id as string) === ANT_SCOUT_TEMPLATE_ID) scoutCount += 1;
+  }
+  if (livingCount === 0) return false;
+  return scoutCount * 2 > livingCount;
+};
+
+/**
  * Tag that, when present on any LIVING unit in a party, suppresses the
  * party's plane-switch teleport — the unit is too heavy / earthbound to
  * be carried up by a mage. Such parties must use paired POSTs or edge
@@ -286,6 +318,12 @@ const resolveParty = (
   // default allowance from `baseMovementAllowance`.
   if (isWallPlane(partyIn.location.plane)) {
     allowance = partyIn.faction === 'spider' ? 3 : 2;
+  }
+  // Round-7 feature 1: ant scout-majority parties move 3/turn on any
+  // plane. Does not compound with the wall asymmetry — the cap is 3
+  // regardless of plane. Spider-scout parties do NOT trigger this.
+  if (scoutMajorityAnt(partyIn, state.unitTemplates)) {
+    if (allowance < 3) allowance = 3;
   }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];

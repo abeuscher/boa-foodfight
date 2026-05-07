@@ -15,6 +15,9 @@ import type {
   Terrain,
   Tile,
   TileCoord,
+  Unit,
+  UnitId,
+  UnitTemplateId,
 } from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
@@ -290,5 +293,94 @@ describe('resolveMovement: spider-corner-cross + ant-plane-switch (rec 1.4)', ()
       (e) => e.kind === 'corner-crossed' && e.partyId === partyId,
     );
     expect(cornerEvents).toHaveLength(0);
+  });
+});
+
+describe('resolveMovement: ant-scout-majority bonus (round 7 feature 1)', () => {
+  // Helpers for building parties with custom unit composition. We re-use
+  // the unit ids the loader already minted; the only thing that matters
+  // for the allowance check is `templateId` + `currentHp`.
+  const buildUnit = (templateId: string, seq: number, hp = 5): Unit => ({
+    id: `u-test-${String(seq)}-${templateId}` as UnitId,
+    templateId: templateId as UnitTemplateId,
+    currentHp: hp,
+    level: 1,
+    xp: 0,
+  });
+
+  const setUnits = (state: GameState, partyId: PartyId, units: readonly Unit[]): GameState => {
+    const parties = new Map(state.parties);
+    const party = parties.get(partyId);
+    if (!party) throw new Error(`no such party: ${String(partyId)}`);
+    const leaderId = units[0]?.id ?? party.leaderId;
+    parties.set(partyId, { ...party, units, leaderId });
+    return { ...state, parties };
+  };
+
+  it('a strict-majority ant-scout party (2-of-3) moves 3 tiles on east-wall (bonus fires)', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = 'vanguard-alpha' as PartyId;
+    let s = setLocation(state, partyId, { plane: 'east-wall', x: 0, y: 5 });
+    // 2 ant-scouts + 1 ant-footman = strict majority scouts (2/3 > 1/2).
+    s = setUnits(s, partyId, [
+      buildUnit('ant-scout', 1),
+      buildUnit('ant-scout', 2),
+      buildUnit('ant-footman', 3),
+    ]);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: { plane: 'east-wall', x: 9, y: 5 } }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    // Without the bonus, ant-on-wall is 2/turn -> would land on (2, 5).
+    // The scout-majority bonus elevates the allowance to 3 -> (3, 5).
+    expect(after?.location).toEqual({ plane: 'east-wall', x: 3, y: 5 });
+  });
+
+  it('a 50/50 split (1-of-2 ant-scouts) does NOT trigger the bonus on east-wall', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = 'vanguard-alpha' as PartyId;
+    let s = setLocation(state, partyId, { plane: 'east-wall', x: 0, y: 5 });
+    // 1 scout + 1 footman = 50/50, NOT strict majority.
+    s = setUnits(s, partyId, [buildUnit('ant-scout', 1), buildUnit('ant-footman', 2)]);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: { plane: 'east-wall', x: 9, y: 5 } }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    // No bonus -> ant on wall is 2/turn; should land on x=2.
+    expect(after?.location).toEqual({ plane: 'east-wall', x: 2, y: 5 });
+  });
+
+  it('a full-scout ant party on east-wall moves 3 tiles (bonus does NOT compound)', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = 'vanguard-alpha' as PartyId;
+    let s = setLocation(state, partyId, { plane: 'east-wall', x: 0, y: 5 });
+    // 3 ant-scouts -> strict majority (3/3).
+    s = setUnits(s, partyId, [
+      buildUnit('ant-scout', 1),
+      buildUnit('ant-scout', 2),
+      buildUnit('ant-scout', 3),
+    ]);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: { plane: 'east-wall', x: 9, y: 5 } }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    // Wall ants normally move 2/turn; with bonus capped at 3 — should
+    // land on x=3, not x=4 or higher (no compounding).
+    expect(after?.location).toEqual({ plane: 'east-wall', x: 3, y: 5 });
+  });
+
+  it('a spider-scout-majority party does NOT receive the bonus', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    // advance-scout has 3 spider-scout + 1 spider-soldier — already scout-
+    // majority by template, but they are SPIDER scouts, not ant. Place on
+    // floor (where spider default is 3, but the round-7 ant bonus would
+    // have meant nothing different anyway). The point is the bonus is
+    // ant-only, so on a wall plane spiders stay at their existing 3
+    // (their normal wall allowance), and never go higher.
+    const partyId = 'advance-scout' as PartyId;
+    let s = setLocation(state, partyId, { plane: 'east-wall', x: 0, y: 5 });
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: { plane: 'east-wall', x: 9, y: 5 } }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const after = out.state.parties.get(partyId);
+    // Spider on wall -> 3/turn. The ant-only bonus didn't compound, so
+    // we still see 3 tiles, not 4 or 5.
+    expect(after?.location).toEqual({ plane: 'east-wall', x: 3, y: 5 });
   });
 });
