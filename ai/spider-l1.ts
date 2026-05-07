@@ -98,6 +98,21 @@ const SILK_LINE: PartyId = 'silk-line' as PartyId;
 const WEB_GUARD: PartyId = 'web-guard' as PartyId;
 const DEEP_RAIDER: PartyId = 'deep-raider' as PartyId;
 
+const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+/** Round 8 — minimum caster currentHp before issuing a hypnotize.
+ * The cast halves currentHp so we want the leader to survive at >=
+ * half the spider-soldier 13-HP baseline. 5 keeps a 9-10 HP unit
+ * alive after the cast. */
+const HYPNOTIZE_MIN_HP = 5;
+/** Round 8 — value-ranking by neutral kind. Cockroach (8 units) is
+ * the highest-value flip; mice second; stinkbugs last (small swarm
+ * + risk of damage zone on miss). */
+const NEUTRAL_VALUE: Readonly<Record<'cockroaches' | 'mice' | 'stinkbugs', number>> = {
+  cockroaches: 3,
+  mice: 2,
+  stinkbugs: 1,
+};
+
 /**
  * Deep-raider home tile on east-wall and the two corner-approach tiles.
  * The raider patrols between these; corners are where it can plane-jump
@@ -545,6 +560,48 @@ const decideRaiderTarget = (state: GameState): TileCoord => {
 };
 
 /**
+ * Round 8 — opportunistic hypnotize target selection.
+ *
+ * Returns the best (highest-value) co-located neutral party that is
+ * NOT already hypnotized AND NOT in the rebound immunity window.
+ * Returns null if no eligible target.
+ *
+ * "Co-located" means the spider party's tile equals the neutral's
+ * tile (no walking required). The AI never goes out of its way for a
+ * hypnosis; it's pure opportunity grabbing.
+ */
+const pickHypnotizeTarget = (state: GameState, spider: Party): Party | null => {
+  let best: { party: Party; value: number } | null = null;
+  for (const candidate of state.parties.values()) {
+    if (candidate.faction !== 'neutral') continue;
+    if (!sameCoord(candidate.location, spider.location)) continue;
+    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
+    const status = state.neutralStatus.get(candidate.id);
+    if (!status) continue;
+    if (status.hypnotizedBy === 'spider') continue;
+    if (status.spiderImmunityRemaining > 0) continue;
+    const value = NEUTRAL_VALUE[status.kind] ?? 0;
+    if (
+      best === null ||
+      value > best.value ||
+      (value === best.value && candidate.id < best.party.id)
+    ) {
+      best = { party: candidate, value };
+    }
+  }
+  return best?.party ?? null;
+};
+
+/** Round 8 — leader currentHp gate. Hypnotize halves caster HP, so
+ * we require the leader (chosen caster) to be above
+ * HYPNOTIZE_MIN_HP. */
+const casterHealthyEnough = (party: Party): boolean => {
+  const leader = party.units.find((u) => u.id === party.leaderId);
+  if (!leader || leader.currentHp <= 0) return false;
+  return leader.currentHp > HYPNOTIZE_MIN_HP;
+};
+
+/**
  * Round-7 feature 2 placement (spider side). With 5 spider parties the
  * engine cap is ⌊5/2⌋ = 2 movable. We commit:
  *   - deep-raider at floor (8, 5): forward of its east-wall home,
@@ -667,6 +724,18 @@ export const spiderL1: AIPolicy = {
         continue;
       }
 
+      // Round 8 — opportunistic hypnotize. If this spider party is
+      // co-located with an eligible (non-hypnotized, non-rebound)
+      // neutral and the caster is healthy enough to survive the
+      // half-HP cost, issue a hypnotize use-ability. The order goes
+      // alongside (in front of) whatever the rest of the policy
+      // decides; resolveAbilityOrders will fire abilities before
+      // movement.
+      const hypnoTarget = casterHealthyEnough(party) ? pickHypnotizeTarget(state, party) : null;
+      const hypnoOrders: readonly Order[] = hypnoTarget
+        ? [{ kind: 'use-ability', abilityId: HYPNOTIZE, target: hypnoTarget.id }]
+        : [];
+
       let nextOrders: readonly Order[];
       // Spiderling chase: step toward the closest same-plane ant party
       // every turn. A pointed swarm is a real flanking threat.
@@ -682,7 +751,8 @@ export const spiderL1: AIPolicy = {
           const ty = Math.max(0, Math.min(9, party.location.y + dy));
           target = { plane: party.location.plane, x: tx, y: ty };
         }
-        nextOrders = sameCoord(party.location, target) ? [] : [moveTo(target)];
+        const moveOrders = sameCoord(party.location, target) ? [] : [moveTo(target)];
+        nextOrders = [...hypnoOrders, ...moveOrders];
         nextParties.set(id, { ...party, orders: nextOrders });
         continue;
       }
@@ -751,7 +821,10 @@ export const spiderL1: AIPolicy = {
         nextOrders = ordersForPatrolOrThreat(party, threat.defend, webLoc, isResponder);
       }
 
-      nextParties.set(id, { ...party, orders: nextOrders });
+      // Prepend any opportunistic hypnotize order so the engine fires
+      // it (resolveAbilityOrders runs before movement).
+      const ordersWithHypno: readonly Order[] = [...hypnoOrders, ...nextOrders];
+      nextParties.set(id, { ...party, orders: ordersWithHypno });
     }
 
     return { ...state, parties: nextParties };

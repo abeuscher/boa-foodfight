@@ -3,11 +3,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { sameCoord } from '../engine/coord.ts';
+import { partyIdForKind } from '../engine/neutrals.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
 import type {
+  AbilityId,
   GameState,
   MoveOrder,
+  NeutralStatus,
   Party,
   PartyId,
   PheroTrailEntry,
@@ -201,5 +204,48 @@ describe('spiderL1', () => {
     const next = spiderL1.decide(state, data, createRng(1));
     const after = next.parties.get('silk-line' as PartyId);
     expect(after?.orders).toEqual([]);
+  });
+
+  describe('round 8 — opportunistic hypnotize', () => {
+    const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+
+    it('issues a hypnotize order when co-located with an eligible neutral', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Move the cockroaches neutral to silk-line's tile so they are
+      // co-located.
+      const cockroachId = partyIdForKind('cockroaches');
+      const cockroach = isolated.parties.get(cockroachId);
+      const silk = isolated.parties.get('silk-line' as PartyId);
+      if (!cockroach || !silk) throw new Error('fixture missing');
+      const moved = replaceParty(isolated, { ...cockroach, location: silk.location });
+      const next = spiderL1.decide(moved, data, createRng(1));
+      const silkAfter = next.parties.get('silk-line' as PartyId);
+      const hypnoOrder = silkAfter?.orders.find((o) => o.kind === 'use-ability');
+      expect(hypnoOrder).toBeDefined();
+      expect(hypnoOrder?.abilityId).toBe(HYPNOTIZE);
+      expect(hypnoOrder?.target).toBe(cockroachId);
+    });
+
+    it('does NOT issue a hypnotize against a neutral in the rebound immunity window', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const cockroachId = partyIdForKind('cockroaches');
+      const cockroach = isolated.parties.get(cockroachId);
+      const silk = isolated.parties.get('silk-line' as PartyId);
+      if (!cockroach || !silk) throw new Error('fixture missing');
+      let s = replaceParty(isolated, { ...cockroach, location: silk.location });
+      // Mark the neutral as in-rebound.
+      const status = s.neutralStatus.get(cockroachId)!;
+      const newStatus = new Map<PartyId, NeutralStatus>(s.neutralStatus);
+      newStatus.set(cockroachId, { ...status, spiderImmunityRemaining: 5 });
+      s = { ...s, neutralStatus: newStatus };
+      const next = spiderL1.decide(s, data, createRng(1));
+      const silkAfter = next.parties.get('silk-line' as PartyId);
+      const hypnoOrder = silkAfter?.orders.find(
+        (o) => o.kind === 'use-ability' && o.abilityId === HYPNOTIZE,
+      );
+      expect(hypnoOrder).toBeUndefined();
+    });
   });
 });
