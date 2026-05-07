@@ -237,12 +237,20 @@ const tryPlaneTransition = (
 interface PartyResolution {
   readonly nextParty: Party;
   readonly steps: readonly PartyMoveStep[];
+  /** Webs broken by this party this turn (only ants ever break webs).
+   * Caller updates state.webbedTiles + emits web-broken events. */
+  readonly brokenWebs: readonly TileCoord[];
 }
 
-const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): PartyResolution => {
+const resolveParty = (
+  partyIn: Party,
+  state: GameState,
+  movementRng: Rng,
+  webbedTiles: Map<string, TileCoord>,
+): PartyResolution => {
   // No orders -> hold.
   const moveSlot = firstMoveOrder(partyIn.orders);
-  if (!moveSlot) return { nextParty: partyIn, steps: [] };
+  if (!moveSlot) return { nextParty: partyIn, steps: [], brokenWebs: [] };
 
   const target = moveSlot.order.target;
 
@@ -251,6 +259,7 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
     return {
       nextParty: { ...partyIn, orders: dropOrderAt(partyIn.orders, moveSlot.index) },
       steps: [],
+      brokenWebs: [],
     };
   }
 
@@ -265,6 +274,7 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
   }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];
+  const brokenWebs: TileCoord[] = [];
   const tiebreak = movementRng.fork('movement-tiebreak');
 
   while (allowance > 0 && !sameCoord(location, target)) {
@@ -285,6 +295,17 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
       if (!next) break; // Boxed in; party stays put for the rest of this turn.
     }
 
+    // Web blocking: if this party is an ant attempting to enter a webbed
+    // tile, abort the step, consume the web (it breaks), and end the
+    // party's turn. Spiders pass through webs freely.
+    const destKey = coordKey(next);
+    if (partyIn.faction === 'ant' && webbedTiles.has(destKey)) {
+      const broken = webbedTiles.get(destKey)!;
+      webbedTiles.delete(destKey);
+      brokenWebs.push(broken);
+      break;
+    }
+
     steps.push({ partyId: partyIn.id, from: location, to: next });
     location = next;
     allowance -= 1;
@@ -295,7 +316,7 @@ const resolveParty = (partyIn: Party, state: GameState, movementRng: Rng): Party
   const ordersOut = arrived ? dropOrderAt(partyIn.orders, moveSlot.index) : partyIn.orders;
 
   const nextParty: Party = { ...partyIn, location, orders: ordersOut };
-  return { nextParty, steps };
+  return { nextParty, steps, brokenWebs };
 };
 
 // ---------------------------------------------------------------------------
@@ -353,6 +374,9 @@ export const resolveMovement = (
   const movementRng = rng.fork('movement');
   const events: ReplayEvent[] = [];
   const nextParties = new Map<PartyId, Party>();
+  // Mutable copy of webbedTiles. Ant parties stepping onto a web break
+  // it; we emit web-broken events and reflect the change in nextState.
+  const webbedTiles = new Map<string, TileCoord>(state.webbedTiles);
 
   // Seed the working map with current parties; we will overwrite as we go.
   for (const [id, party] of state.parties) nextParties.set(id, party);
@@ -364,7 +388,7 @@ export const resolveMovement = (
   for (const id of orderedIds) {
     const partyIn = nextParties.get(id);
     if (!partyIn) continue;
-    const { nextParty, steps } = resolveParty(partyIn, state, movementRng);
+    const { nextParty, steps, brokenWebs } = resolveParty(partyIn, state, movementRng, webbedTiles);
     nextParties.set(id, nextParty);
     for (const step of steps) {
       events.push({
@@ -376,9 +400,18 @@ export const resolveMovement = (
         to: step.to,
       });
     }
+    for (const broken of brokenWebs) {
+      events.push({
+        kind: 'web-broken',
+        turn: state.turn,
+        tick: tick(),
+        partyId: id,
+        coord: broken,
+      });
+    }
   }
 
-  const nextState: GameState = { ...state, parties: nextParties };
+  const nextState: GameState = { ...state, parties: nextParties, webbedTiles };
   const collisions = detectCollisions(nextParties);
 
   return { state: nextState, events, collisions };

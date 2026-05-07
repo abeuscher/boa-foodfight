@@ -124,7 +124,7 @@
         "intelligence": 8,
         "constitution": 6
       },
-      "abilities": ["plane-switch", "mend", "jelly-apply"],
+      "abilities": ["plane-switch", "mend", "jelly-apply", "recruit"],
       "tags": ["caster", "leader-eligible", "support"]
     },
     {
@@ -160,7 +160,7 @@
         "intelligence": 9,
         "constitution": 6
       },
-      "abilities": ["web-tangle", "web-mend", "web-snare"],
+      "abilities": ["web-tangle", "web-mend", "web-snare", "spawn-spiderlings"],
       "tags": ["queen", "leader-eligible"]
     },
     {
@@ -214,7 +214,7 @@
         "intelligence": 5,
         "constitution": 5
       },
-      "abilities": ["web-tangle"],
+      "abilities": ["web-tangle", "spin-web"],
       "tags": ["debuffer", "support"]
     },
     {
@@ -252,6 +252,24 @@
       },
       "abilities": [],
       "tags": ["tank", "mercenary"]
+    },
+    {
+      "id": "spiderling",
+      "name": "Spiderling",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 3,
+        "attack": 2,
+        "agility": 6,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 2
+      },
+      "abilities": [],
+      "tags": ["scout", "swarm"]
     }
   ]
 }

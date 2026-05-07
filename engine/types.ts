@@ -216,6 +216,11 @@ export interface GameState {
   /** How many times the Queen ultimate has fired this scenario. Capped by
    * `queen.ultimate.usesPerScenario` in the data. */
   readonly queenUltimatesUsed: number;
+  /** Tile coords currently holding a spider-spun web. Keyed by
+   * `coordKey(coord)`. Ant parties stepping onto a webbed tile are
+   * blocked for a turn and the web is consumed. Spiders pass through
+   * freely. */
+  readonly webbedTiles: ReadonlyMap<string, TileCoord>;
   readonly buttons: number;
   readonly winner: Faction | null;
 }
@@ -280,6 +285,27 @@ export type ReplayEvent =
       readonly doses: number;
     })
   | (ReplayEventCommon & { readonly kind: 'fog-revealed'; readonly coords: readonly TileCoord[] })
+  | (ReplayEventCommon & {
+      readonly kind: 'web-spun';
+      readonly partyId: PartyId;
+      readonly coord: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'web-broken';
+      readonly partyId: PartyId;
+      readonly coord: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'recruit-attempted';
+      readonly partyId: PartyId;
+      readonly targetUnitId: UnitId;
+      readonly success: boolean;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'spiderlings-spawned';
+      readonly fromPartyId: PartyId;
+      readonly newPartyIds: readonly PartyId[];
+    })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 
 // ---------------------------------------------------------------------------

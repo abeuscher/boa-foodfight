@@ -129,7 +129,7 @@ export const runTurn = (
 
   // 0. Ability orders (use-ability). Resolved before movement so the
   //    jelly buff is active when movement-triggered battles fire.
-  const abilityOutcome = resolveAbilityOrders(working, scenario.jelly, tick);
+  const abilityOutcome = resolveAbilityOrders(working, scenario.jelly, rng.fork('abilities'), tick);
   working = abilityOutcome.state;
   events.push(...abilityOutcome.events);
 
