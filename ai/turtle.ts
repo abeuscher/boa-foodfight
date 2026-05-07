@@ -55,6 +55,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { tryOpportunisticRecruit } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
@@ -145,6 +146,13 @@ export const turtlePlayer: AIPolicy = ((): AIPolicy => {
         if (CEILING_CAPABLE.has(party.id)) {
           return null;
         }
+        // Round-10 opportunistic neutral recruit: vanguard-alpha (the
+        // only floor party turtle moves) usually doesn't carry an
+        // ant-mage, but the helper safely returns undefined when the
+        // party lacks the ability. Branch fires only when a co-located
+        // recruitable neutral is present.
+        const recruit = tryOpportunisticRecruit(state, party);
+        if (recruit) return recruit;
         if (stageTarget === undefined) return { orders: [], posture: 'fight' };
         return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
       };
@@ -165,6 +173,16 @@ export const turtlePlayer: AIPolicy = ((): AIPolicy => {
         if (party.faction !== 'ant') continue;
         if (!CEILING_CAPABLE.has(party.id)) continue;
         if (party.leaderless) continue;
+        // Round-10 opportunistic neutral recruit (ceiling-capable
+        // override): if the spear is co-located with a recruitable
+        // neutral, fire `recruit` instead of moving to the dive
+        // target. Skips Phase A's "clear orders" branch because the
+        // recruit is strictly better than holding idle.
+        const recruit = tryOpportunisticRecruit(state, party);
+        if (recruit) {
+          nextParties.set(id, { ...party, orders: recruit.orders, posture: recruit.posture });
+          continue;
+        }
         let target: TileCoord | undefined;
         if (fraction >= CHARGE_UNLEASH_FRACTION) {
           // Phase C: all-out unleash.

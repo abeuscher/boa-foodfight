@@ -17,6 +17,7 @@
 
 import type { GameState } from '../engine/types.ts';
 
+import { tryOpportunisticRecruit } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import { buildAntPolicy, moveToOrHold, postLocation, SPIDER_WEB } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
@@ -40,6 +41,12 @@ const rushPlacement = (state: GameState): GameState =>
 const rushCore = buildAntPolicy('rush', (state: GameState) => {
   const target = postLocation(state, SPIDER_WEB);
   return (party) => {
+    // Round-10 opportunistic neutral recruit. Fires only when a rush
+    // party happens to land on a wandering cockroach/mouse — never
+    // detours from the spider-web push. Stinkbugs are filtered out
+    // by the helper to avoid the damage-zone spawn on failed recruit.
+    const recruit = tryOpportunisticRecruit(state, party);
+    if (recruit) return recruit;
     if (target === undefined) return { orders: [], posture: 'fight' };
     return { orders: moveToOrHold(party, target), posture: 'fight' };
   };

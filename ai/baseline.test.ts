@@ -2,13 +2,26 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { partyIdForKind } from '../engine/neutrals.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
-import type { Faction, GameState, MoveOrder, PartyId, Post, PostId } from '../engine/types.ts';
+import type {
+  AbilityOrder,
+  Faction,
+  GameState,
+  MoveOrder,
+  NeutralKind,
+  Party,
+  PartyId,
+  Post,
+  PostId,
+  TileCoord,
+} from '../engine/types.ts';
 
 import { baselinePlayer } from './baseline.ts';
 import {
   CEILING_CAPABLE,
+  PATHFINDERS,
   postsOfType,
   SOAP_DISH_TYPE,
   TOWEL_RACK_TYPE,
@@ -38,6 +51,59 @@ const firstPostOfType = (state: GameState, type: string): Post => {
  * branch so the staging assertions check the canonical move-to chain.
  */
 const advancePastOpening = (state: GameState): GameState => ({ ...state, turn: 1 });
+
+/**
+ * Moves the neutral party `neutralId` to the same tile as the ant
+ * party `antId`. Used by the round-10 opportunistic-recruit test to
+ * force a co-location scenario the random spawn rarely produces.
+ */
+const relocateNeutralCoLocated = (
+  state: GameState,
+  neutralId: PartyId,
+  antId: PartyId,
+): GameState => {
+  const ant = state.parties.get(antId);
+  if (!ant) throw new Error(`no ant party '${String(antId)}'`);
+  return setNeutralLocation(state, neutralId, ant.location);
+};
+
+/**
+ * Relocates a neutral party. Test-only: bypasses the engine's neutral
+ * AI and sets up the geometry directly so the per-turn AI decision
+ * branches see the desired arrangement.
+ */
+const setNeutralLocation = (
+  state: GameState,
+  neutralId: PartyId,
+  location: TileCoord,
+): GameState => {
+  const party = state.parties.get(neutralId);
+  if (!party) throw new Error(`no neutral party '${String(neutralId)}'`);
+  const parties = new Map(state.parties);
+  const updated: Party = { ...party, location };
+  parties.set(neutralId, updated);
+  return { ...state, parties };
+};
+
+/**
+ * Ensures `state.neutralStatus` has an uncontrolled entry for the
+ * given neutral kind. Used by the round-10 detour tests so the
+ * `findRecruitableNeutralNear` helper sees a positive-value status.
+ */
+const ensureNeutralStatus = (
+  state: GameState,
+  neutralId: PartyId,
+  kind: NeutralKind,
+): GameState => {
+  const map = new Map(state.neutralStatus);
+  map.set(neutralId, {
+    hypnotizedBy: null,
+    hypnoticControlRemaining: 0,
+    spiderImmunityRemaining: 0,
+    kind,
+  });
+  return { ...state, neutralStatus: map };
+};
 
 describe('baselinePlayer', () => {
   it('declares its identity', () => {
@@ -174,6 +240,78 @@ describe('baselinePlayer', () => {
       const after = next.parties.get(id);
       expect(after?.orders).toBe(party.orders);
     }
+  });
+
+  it('round-10 opportunistic recruit fires when pathfinders is co-located with a cockroach', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const cockroachId = partyIdForKind('cockroaches');
+    state = relocateNeutralCoLocated(state, cockroachId, PATHFINDERS);
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const pf = next.parties.get(PATHFINDERS);
+    expect(pf?.orders).toHaveLength(1);
+    const order = pf?.orders[0] as AbilityOrder;
+    expect(order.kind).toBe('use-ability');
+    expect(order.abilityId).toBe('recruit');
+    expect(order.target).toBe(cockroachId);
+  });
+
+  it('round-10 detour: pathfinders steps one tile toward a Cheb-3 cockroach instead of toward the dive launch', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const pfParty = state.parties.get(PATHFINDERS)!;
+    // Place a cockroach within Chebyshev-3 on the same plane, but NOT
+    // co-located, and not on the path the dive line would naturally
+    // walk. (4,4) → cockroach at (5,7) is 3 tiles SE; the dive launch
+    // tile is (web.x, web.y) = (9,9), so a one-tile step toward
+    // (5,7) goes (5,5) which differs from the (5,5) baseline NE step.
+    const cockroachId = partyIdForKind('cockroaches');
+    const cockroachLoc: TileCoord = {
+      plane: pfParty.location.plane,
+      x: pfParty.location.x + 1,
+      y: pfParty.location.y + 3,
+    };
+    state = setNeutralLocation(state, cockroachId, cockroachLoc);
+    state = ensureNeutralStatus(state, cockroachId, 'cockroaches');
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const pf = next.parties.get(PATHFINDERS);
+    expect(pf?.orders).toHaveLength(1);
+    const order = pf?.orders[0] as MoveOrder;
+    expect(order.kind).toBe('move-to');
+    // One-tile Chebyshev step toward (cockroachLoc.x, cockroachLoc.y).
+    expect(order.target).toEqual({
+      plane: pfParty.location.plane,
+      x: pfParty.location.x + 1,
+      y: pfParty.location.y + 1,
+    });
+  });
+
+  it('round-10 detour does NOT fire toward a stinkbug within Chebyshev-3', () => {
+    const initial = loadScenario(DATA_DIR, 1);
+    let state = advancePastOpening(initial.state);
+    const pfParty = state.parties.get(PATHFINDERS)!;
+    const stinkbugId = partyIdForKind('stinkbugs');
+    const stinkbugLoc: TileCoord = {
+      plane: pfParty.location.plane,
+      x: pfParty.location.x + 1,
+      y: pfParty.location.y + 1,
+    };
+    state = setNeutralLocation(state, stinkbugId, stinkbugLoc);
+    state = ensureNeutralStatus(state, stinkbugId, 'stinkbugs');
+    // Move every other neutral far away so the only nearby candidate
+    // is the stinkbug. Confirms the helper's stinkbug filter holds.
+    const cockroachId = partyIdForKind('cockroaches');
+    const miceId = partyIdForKind('mice');
+    state = setNeutralLocation(state, cockroachId, { plane: 'east-wall', x: 0, y: 0 });
+    state = setNeutralLocation(state, miceId, { plane: 'west-wall', x: 0, y: 0 });
+    const next = baselinePlayer.decide(state, initial.data, createRng(1));
+    const pf = next.parties.get(PATHFINDERS);
+    // Baseline kill-dive line: pathfinders heads to (web.x, web.y) on
+    // the floor (the launch tile). Confirms the detour did NOT fire.
+    const web = state.posts.get('spider-web' as PostId)!;
+    const order = pf?.orders[0] as MoveOrder;
+    expect(order.kind).toBe('move-to');
+    expect(order.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
   });
 
   it('is deterministic for a given seed', () => {

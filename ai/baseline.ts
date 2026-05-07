@@ -65,13 +65,18 @@ import type {
   AbilityId,
   AbilityOrder,
   GameState,
-  NeutralKind,
   Order,
   Party,
   PartyId,
   TileCoord,
 } from '../engine/types.ts';
 
+import {
+  findRecruitableNeutralNear,
+  RECRUIT_ABILITY,
+  stepTowardNeutral,
+  tryOpportunisticRecruit,
+} from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
@@ -90,48 +95,6 @@ import {
 import type { AIPolicy } from './types.ts';
 
 const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
-const RECRUIT: AbilityId = 'recruit' as AbilityId;
-
-/**
- * Round-9 neutral recruit priority. Only cockroaches are worth a
- * recruit attempt — 8 units of attack-6/agility-7 on permanent
- * conversion is a major firepower lift. Mice (3 units) and stinkbugs
- * (failed attempt spawns a damage zone) are skipped: stopping to
- * recruit costs the dive-spear party a movement turn each attempt
- * (25% success, so ~4 turns on average), which is too expensive for
- * a 3-unit yield. Stinkbugs are also actively dangerous on failure.
- */
-const NEUTRAL_RECRUIT_VALUE: Readonly<Record<NeutralKind, number>> = {
-  cockroaches: 1,
-  mice: 0,
-  stinkbugs: 0,
-};
-
-/**
- * Round-9: pick the highest-value co-located, recruitable neutral
- * party. "Recruitable" = same tile as `party`, not already converted,
- * not currently spider-hypnotized (engine consumes the order without
- * effect), at least one living unit, and `kind !== 'stinkbugs'` (we
- * skip stinkbugs to avoid the damage-zone spawn on failure). Tie-break
- * by lex party-id for determinism.
- */
-const pickNeutralRecruitTarget = (state: GameState, party: Party): PartyId | undefined => {
-  let best: { id: PartyId; value: number } | undefined;
-  for (const [id, candidate] of state.parties) {
-    if (candidate.faction !== 'neutral') continue;
-    if (!sameCoord(candidate.location, party.location)) continue;
-    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
-    const status = state.neutralStatus.get(id);
-    if (!status) continue;
-    if (status.hypnotizedBy === 'spider' && status.hypnoticControlRemaining > 0) continue;
-    const value = NEUTRAL_RECRUIT_VALUE[status.kind] ?? 0;
-    if (value <= 0) continue;
-    if (!best || value > best.value || (value === best.value && id < best.id)) {
-      best = { id, value };
-    }
-  }
-  return best?.id;
-};
 
 /** True iff every wall-crack POST is ant-owned. After that, vanguard-
  * alpha (the only field party not on the dive line) commits to the
@@ -163,6 +126,18 @@ const jellyApplyOrder = (target: PartyId): AbilityOrder => ({
   abilityId: JELLY_APPLY,
   target,
 });
+
+/** True iff a living spider party occupies the same tile as `party`.
+ * Used by the round-10 detour branch to avoid pulling a party off the
+ * tile where a kill battle is about to resolve. */
+const coLocatedWithSpider = (state: GameState, party: Party): boolean => {
+  for (const candidate of state.parties.values()) {
+    if (candidate.faction !== 'spider') continue;
+    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
+    if (sameCoord(candidate.location, party.location)) return true;
+  }
+  return false;
+};
 
 /** Kill-dive target for a ceiling-capable party. The dive walks the
  * floor tile directly under the web (the "launch tile"); from the
@@ -225,21 +200,47 @@ const baselineCore: AIPolicy = buildAntPolicy(
         return { orders: [jellyApplyOrder(party.id)], posture: 'fight' };
       }
 
-      // Round-9 neutral recruit opportunity: any ant-mage-bearing
-      // party co-located with a non-stinkbug, non-hypnotized neutral
-      // tries `recruit`. 25% success → permanent conversion of the
-      // entire neutral party (cockroaches yield 8 units of attack-6/
-      // agility-7). On failure the order is consumed but no damage
-      // zone (we skip stinkbugs explicitly via NEUTRAL_RECRUIT_VALUE).
-      if (partyHasAbility(party, RECRUIT, state.unitTemplates)) {
-        const recruitTarget = pickNeutralRecruitTarget(state, party);
-        if (recruitTarget !== undefined) {
-          const order: AbilityOrder = {
-            kind: 'use-ability',
-            abilityId: RECRUIT,
-            target: recruitTarget,
-          };
-          return { orders: [order], posture: 'fight' };
+      // Round-10 neutral recruit branches (both gated on the party
+      // carrying an ant-mage with the recruit ability available):
+      //
+      //   (a) Opportunistic — co-located with a recruitable neutral
+      //       (cockroaches/mice; stinkbugs skipped to avoid the
+      //       damage-zone spawn on failure). Fire `recruit` directly.
+      //       25% success → permanent conversion of the entire neutral
+      //       party (cockroaches yield 8 units of attack-6/agility-7,
+      //       mice yield 3). Costs the focal party one order this
+      //       turn; everyone else still moves.
+      //
+      //   (b) Detour — baseline only — if no co-located target but a
+      //       recruitable neutral sits within Chebyshev-3 on the same
+      //       plane, the party diverts one tile toward the higher-
+      //       value pick (cockroaches outrank mice). The detour is
+      //       skipped on turn 0 (the jelly pre-buff branch above
+      //       already returned) and skipped when an enemy spider is
+      //       co-located (the kill battle this turn is more important
+      //       than chasing a neutral).
+      //
+      // Variants run only branch (a) so dive/rush/turtle/flank/jelly-
+      // rush keep their primary strategies intact; baseline gets the
+      // detour because the round-10 brief calls for one variant to
+      // demonstrate the new behavior actively.
+      const recruit = tryOpportunisticRecruit(state, party);
+      if (recruit) return recruit;
+      const hasRecruit = partyHasAbility(party, RECRUIT_ABILITY, state.unitTemplates);
+      // Detour branch (baseline only): a recruitable neutral is within
+      // Chebyshev-3 on the same plane and we're not already engaged
+      // (no enemy spider co-located). Step one tile toward the highest-
+      // value pick instead of toward the kill-dive / staging target.
+      // The detour fires for at most one extra turn before either
+      // converting to the opportunistic branch above (if we close the
+      // gap) or the original target rejoining via fall-through (if the
+      // neutral wandered away). Skipped on turn 0 (the jelly pre-buff
+      // branch already returned).
+      if (hasRecruit && !coLocatedWithSpider(state, party)) {
+        const detour = findRecruitableNeutralNear(state, party);
+        if (detour !== undefined) {
+          const step = stepTowardNeutral(party.location, detour.location);
+          return { orders: moveToOrHold(party, step), posture: 'fight' };
         }
       }
 

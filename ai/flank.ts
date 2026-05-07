@@ -76,6 +76,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { tryOpportunisticRecruit } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
@@ -178,6 +179,19 @@ const flankCore = buildAntPolicy('flank', (state: GameState) => {
   const webLoc = postLocation(state, SPIDER_WEB);
   const isOpeningTurn = state.turn === 0;
   return (party) => {
+    // Round-10 opportunistic neutral recruit: any ant-mage-bearing
+    // party co-located with a recruitable neutral (cockroach/mouse,
+    // never stinkbug) fires `recruit`. Runs before the corner-march /
+    // staging branches so it applies to every party that happens to
+    // land on a wandering neutral, not just the ceiling-capable spear
+    // (which already has its own legacy single-unit-spider recruit
+    // branch below). Skip on turn 0 — the ceiling-capable branch
+    // there fires the jelly pre-buff and we don't want to short-
+    // circuit it.
+    if (!isOpeningTurn) {
+      const recruit = tryOpportunisticRecruit(state, party);
+      if (recruit) return recruit;
+    }
     if (CEILING_CAPABLE.has(party.id) && webLoc !== undefined) {
       // Turn 0: pre-buff with jelly-apply before launching the corner
       // march. Preserved exactly so the existing test still passes.
