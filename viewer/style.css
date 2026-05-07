@@ -232,6 +232,27 @@ canvas {
   color: #888;
   font-size: 12px;
 }
+#gold-indicator {
+  font-size: 12px;
+  color: #ccc;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+#gold-indicator .gold-ant {
+  color: #e85d4a;
+}
+#gold-indicator .gold-spider {
+  color: #c026d3;
+}
+#gold-indicator .gold-sep {
+  color: #555;
+}
+#gold-indicator #gold-ant,
+#gold-indicator #gold-spider {
+  color: #ffe066;
+  font-weight: 600;
+}
 
 /* ---------------------------------------------------------------------------
  * Battle play-by-play panel
