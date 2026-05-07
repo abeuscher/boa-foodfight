@@ -57,6 +57,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   closestFieldPartyId,
@@ -100,7 +101,18 @@ const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[]
   return [order];
 };
 
-export const divePlayer: AIPolicy = buildAntPolicy(
+/** Round-9 placement: keep pathfinders' forward push but step off the
+ * deep-raider's intercept window. The round-7 (5, 5) tile sits on the
+ * forward-staged deep-raider's Chebyshev-3 detection arc (the raider
+ * pre-stages to floor 8,5); landing at (4, 4) preserves one tile of
+ * slack so pathfinders reaches the launch tile and plane-switches
+ * before the raider intercepts. Inside Chebyshev-5 of storm-drain. */
+const divePlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    pathfinders: { plane: 'floor', x: 4, y: 4 },
+  });
+
+const diveCore = buildAntPolicy(
   'dive',
   (state: GameState) => {
     const webLoc = postLocation(state, SPIDER_WEB);
@@ -116,3 +128,5 @@ export const divePlayer: AIPolicy = buildAntPolicy(
   },
   queenGuardOrders,
 );
+
+export const divePlayer: AIPolicy = { ...diveCore, placement: divePlacement };

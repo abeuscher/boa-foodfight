@@ -67,8 +67,29 @@ const reduceMapAtTick = (
   let initialPosts: PostMarker[] | null = null;
   let obstacles: { plane: string; x: number; y: number }[] = [];
   const parties = new Map<string, PartyMarker>();
-  // First pass: hydrate every party from its first party-moved event's
-  // `from` (initial position). Same approach as viewer/main.js.
+  // Round-7 feature 2: prefer scenario-start.partyPositions (post-
+  // placement) when present so the renderer reflects pre-game
+  // placement even for parties that never move. Fall back to first
+  // party-moved.from for older replays.
+  for (const e of events) {
+    if (e.kind !== 'scenario-start') continue;
+    const ss = e as unknown as ScenarioStartEvent;
+    if (ss.partyPositions !== undefined) {
+      for (const entry of ss.partyPositions) {
+        if (parties.has(entry.partyId)) continue;
+        parties.set(entry.partyId, {
+          id: entry.partyId,
+          faction: guessFaction(entry.partyId),
+          plane: entry.location.plane,
+          x: entry.location.x,
+          y: entry.location.y,
+        });
+      }
+    }
+    break;
+  }
+  // Fallback / fill-in: hydrate every party from its first party-moved
+  // event's `from` (initial position). Same approach as viewer/main.js.
   for (const e of events) {
     if (e.kind !== 'party-moved') continue;
     const m = e as unknown as MoveEvent;

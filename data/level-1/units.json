@@ -345,6 +345,75 @@
         "ceiling": { "attack": 0, "armor": 0 },
         "wall": { "attack": 0, "armor": 0 }
       }
+    },
+    {
+      "id": "mouse",
+      "name": "Mouse",
+      "faction": "neutral",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 14,
+        "attack": 5,
+        "agility": 4,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 7
+      },
+      "abilities": [],
+      "tags": ["large", "mercenary"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "cockroach",
+      "name": "Cockroach",
+      "faction": "neutral",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 6,
+        "attack": 6,
+        "agility": 7,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["swarm", "ferocious"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "stinkbug",
+      "name": "Stinkbug",
+      "faction": "neutral",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 3,
+        "agility": 3,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": [],
+      "tags": ["damage-zone"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     }
   ]
 }

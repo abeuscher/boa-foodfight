@@ -76,6 +76,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
@@ -160,7 +161,19 @@ const recruitTargetAt = (state: GameState, party: Party): PartyId | undefined =>
   return undefined;
 };
 
-export const flankPlayer: AIPolicy = buildAntPolicy('flank', (state: GameState) => {
+/** Round-7 feature 2 placement: push pathfinders toward (5, 0) and
+ * vanguard-bravo toward (0, 5) — closer to the corner ladders that
+ * the corner-flank route uses. Note: flank routes ceiling-capable
+ * parties via opposite floor corners (0,9) and (9,0) — but those are
+ * outside the radius-5 window from storm-drain. So we forward-stage
+ * to the nearest in-radius tiles on the chosen flanking diagonals. */
+const flankPlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    pathfinders: { plane: 'floor', x: 5, y: 0 },
+    'vanguard-bravo': { plane: 'floor', x: 0, y: 5 },
+  });
+
+const flankCore = buildAntPolicy('flank', (state: GameState) => {
   const stageTarget = nextStageTarget(state);
   const webLoc = postLocation(state, SPIDER_WEB);
   const isOpeningTurn = state.turn === 0;
@@ -208,3 +221,5 @@ export const flankPlayer: AIPolicy = buildAntPolicy('flank', (state: GameState) 
     return { orders: [], posture: 'fight' };
   };
 });
+
+export const flankPlayer: AIPolicy = { ...flankCore, placement: flankPlacement };

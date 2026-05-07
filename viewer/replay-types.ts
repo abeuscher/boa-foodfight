@@ -21,4 +21,11 @@ export interface ScenarioStartEvent {
     readonly x: number;
     readonly y: number;
   }[];
+  /** Round-7 feature 2: post-placement initial party positions.
+   * Optional — older replays without pre-game placement omit this
+   * field, in which case viewers fall back to first `party-moved.from`. */
+  readonly partyPositions?: readonly {
+    readonly partyId: string;
+    readonly location: { readonly plane: string; readonly x: number; readonly y: number };
+  }[];
 }

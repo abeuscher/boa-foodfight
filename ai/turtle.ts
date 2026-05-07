@@ -55,6 +55,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
@@ -123,6 +124,14 @@ const prepositionLocation = (state: GameState): TileCoord | undefined => {
   return cracks[0]?.location;
 };
 
+/** Round-7 feature 2 placement: turtle keeps field parties near base.
+ * A slight forward step to (2, 2) only — the variant intent is
+ * defensive/charge-up, so we don't push hard. */
+const turtlePlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    'vanguard-alpha': { plane: 'floor', x: 2, y: 2 },
+  });
+
 export const turtlePlayer: AIPolicy = ((): AIPolicy => {
   const base = buildAntPolicy(
     'turtle',
@@ -145,6 +154,7 @@ export const turtlePlayer: AIPolicy = ((): AIPolicy => {
   return {
     name: 'turtle',
     faction: 'ant',
+    placement: turtlePlacement,
     decide(state, scenario, rng) {
       const intermediate = base.decide(state, scenario, rng);
       const chargeMax = scenario.queen.ultimate.chargeMax;

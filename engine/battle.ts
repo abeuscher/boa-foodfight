@@ -83,6 +83,9 @@ interface LiveUnit {
    * The combat formula folds `attack` into the attacker's effective
    * attack and `armor` into the defender's effective armor. */
   readonly affinity: PlaneAffinityRow;
+  /** Round-8: source templateId. Used by the cockroach friendly-fire
+   * branch (10% redirect on attack) which keys off the template. */
+  readonly templateId: UnitTemplateId;
   hp: number;
   killed: boolean;
   /** Number of upcoming rounds in which this unit cannot attack
@@ -144,6 +147,7 @@ const buildLiveUnits = (
       abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
       affinity: planeAffinityForPlane(tmpl, battlePlane),
+      templateId: u.templateId,
       hp: u.currentHp,
       killed: u.currentHp <= 0,
       immobilizedRounds: 0,
@@ -323,6 +327,30 @@ const buildModifiers = (
   };
 };
 
+const COCKROACH_TEMPLATE_ID = 'cockroach' as UnitTemplateId;
+const COCKROACH_FRIENDLY_FIRE_RATE = 0.1;
+
+/**
+ * Round-8 cockroach friendly fire. With probability 10% per cockroach
+ * attack, the attacker's blow lands on a random co-party cockroach
+ * (excluding self) instead of the original enemy target. If there is
+ * no co-party cockroach to redirect to, the attack proceeds as
+ * normal.
+ */
+const maybeRedirectCockroach = (
+  actor: LiveUnit,
+  units: readonly LiveUnit[],
+  rng: Rng,
+): LiveUnit | null => {
+  if (actor.templateId !== COCKROACH_TEMPLATE_ID) return null;
+  if (rng.next() >= COCKROACH_FRIENDLY_FIRE_RATE) return null;
+  const friends = units.filter(
+    (u) => !u.killed && u.id !== actor.id && u.templateId === COCKROACH_TEMPLATE_ID,
+  );
+  if (friends.length === 0) return null;
+  return friends[rng.int(friends.length)] ?? null;
+};
+
 const runRound = (
   index: number,
   units: readonly LiveUnit[],
@@ -353,8 +381,13 @@ const runRound = (
     const theirStrats = isAtk ? ctx.defenderStrats : ctx.attackerStrats;
     const fallbackIdx = isAtk ? targetCounter.atk++ : targetCounter.def++;
 
-    const target = pickTarget(enemies, myStrats, theirStrats, fallbackIdx);
-    if (!target) continue;
+    const originalTarget = pickTarget(enemies, myStrats, theirStrats, fallbackIdx);
+    if (!originalTarget) continue;
+    // Round-8: 10% friendly fire for cockroach attackers. Roll
+    // unconditionally for cockroach actors so RNG consumption stays
+    // deterministic across friendly-fire / no-fire branches.
+    const redirect = maybeRedirectCockroach(actor, units, ctx.damageRng);
+    const target = redirect ?? originalTarget;
 
     const dmg = computeDamage(
       actor.stats,

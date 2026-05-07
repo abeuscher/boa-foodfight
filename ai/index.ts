@@ -9,6 +9,7 @@ import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
 import { flankPlayer } from './flank.ts';
 import { jellyRushPlayer } from './jelly-rush.ts';
+import { neutralPlayer } from './neutral.ts';
 import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
 import { turtlePlayer } from './turtle.ts';
@@ -32,6 +33,7 @@ export {
   divePlayer,
   flankPlayer,
   jellyRushPlayer,
+  neutralPlayer,
   rushPlayer,
   spiderL1,
   turtlePlayer,

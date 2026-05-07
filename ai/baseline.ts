@@ -59,17 +59,20 @@
  *   - per-mage recruit attempts on isolated spiderlings; see flank.
  */
 
+import { partyHasAbility } from '../engine/abilities.ts';
 import { sameCoord } from '../engine/coord.ts';
 import type {
   AbilityId,
   AbilityOrder,
   GameState,
+  NeutralKind,
   Order,
   Party,
   PartyId,
   TileCoord,
 } from '../engine/types.ts';
 
+import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
   CEILING_CAPABLE,
@@ -79,6 +82,7 @@ import {
   PATHFINDERS,
   postLocation,
   postsOfType,
+  SOAP_DISH_TYPE,
   SPIDER_WEB,
   VANGUARD_BRAVO,
   WALL_CRACK_TYPE,
@@ -86,6 +90,48 @@ import {
 import type { AIPolicy } from './types.ts';
 
 const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
+const RECRUIT: AbilityId = 'recruit' as AbilityId;
+
+/**
+ * Round-9 neutral recruit priority. Only cockroaches are worth a
+ * recruit attempt — 8 units of attack-6/agility-7 on permanent
+ * conversion is a major firepower lift. Mice (3 units) and stinkbugs
+ * (failed attempt spawns a damage zone) are skipped: stopping to
+ * recruit costs the dive-spear party a movement turn each attempt
+ * (25% success, so ~4 turns on average), which is too expensive for
+ * a 3-unit yield. Stinkbugs are also actively dangerous on failure.
+ */
+const NEUTRAL_RECRUIT_VALUE: Readonly<Record<NeutralKind, number>> = {
+  cockroaches: 1,
+  mice: 0,
+  stinkbugs: 0,
+};
+
+/**
+ * Round-9: pick the highest-value co-located, recruitable neutral
+ * party. "Recruitable" = same tile as `party`, not already converted,
+ * not currently spider-hypnotized (engine consumes the order without
+ * effect), at least one living unit, and `kind !== 'stinkbugs'` (we
+ * skip stinkbugs to avoid the damage-zone spawn on failure). Tie-break
+ * by lex party-id for determinism.
+ */
+const pickNeutralRecruitTarget = (state: GameState, party: Party): PartyId | undefined => {
+  let best: { id: PartyId; value: number } | undefined;
+  for (const [id, candidate] of state.parties) {
+    if (candidate.faction !== 'neutral') continue;
+    if (!sameCoord(candidate.location, party.location)) continue;
+    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
+    const status = state.neutralStatus.get(id);
+    if (!status) continue;
+    if (status.hypnotizedBy === 'spider' && status.hypnoticControlRemaining > 0) continue;
+    const value = NEUTRAL_RECRUIT_VALUE[status.kind] ?? 0;
+    if (value <= 0) continue;
+    if (!best || value > best.value || (value === best.value && id < best.id)) {
+      best = { id, value };
+    }
+  }
+  return best?.id;
+};
 
 /** True iff every wall-crack POST is ant-owned. After that, vanguard-
  * alpha (the only field party not on the dive line) commits to the
@@ -96,12 +142,14 @@ const wallCracksCaptured = (state: GameState): boolean => {
   return cracks.every((p) => p.owner === 'ant');
 };
 
-/** True iff at least one wall-crack POST is ant-owned. Used as the
- * gating signal for vanguard-bravo's dive: with the canonical chain
- * partially open, the spider AI's counter-push has likely committed,
- * and bravo's dive line on the floor is no longer a suicide run. */
-const anyWallCrackCaptured = (state: GameState): boolean => {
-  for (const post of postsOfType(state, WALL_CRACK_TYPE)) {
+/** True iff at least one soap-dish POST is ant-owned. Used as a light
+ * gate on vanguard-bravo's dive: with the canonical chain just
+ * cracked open, bravo's dive timing lines up with pathfinders'
+ * launch-tile arrival — neither too early (no spider counter-push
+ * commitment yet) nor too late (the round-8 wall-crack gate left
+ * bravo trailing). */
+const anySoapDishCaptured = (state: GameState): boolean => {
+  for (const post of postsOfType(state, SOAP_DISH_TYPE)) {
     if (post.owner === 'ant') return true;
   }
   return false;
@@ -145,20 +193,54 @@ const queenGuardOrders = (state: GameState, _queenGuard: Party): readonly Order[
   return [jellyApplyOrder(PATHFINDERS)];
 };
 
-export const baselinePlayer: AIPolicy = buildAntPolicy(
+/**
+ * Round-9 placement: vanguard-alpha forward to (3, 3) for early
+ * canonical-chain capture; pathfinders forward to (4, 4) — one tile
+ * back from the round-7 (5, 5) so the dive line keeps a tile of
+ * slack from the deep-raider's forward-staged Chebyshev-3 detect arc
+ * at floor (8, 5); vanguard-bravo forward to (3, 5) on the SW row.
+ * Queen-guard stays at storm-drain (engine rejects any attempt to
+ * move it). All within Chebyshev-5 of storm-drain.
+ */
+const baselinePlacement = (state: GameState): GameState =>
+  antPlacement(state, {
+    'vanguard-alpha': { plane: 'floor', x: 3, y: 3 },
+    pathfinders: { plane: 'floor', x: 4, y: 4 },
+    'vanguard-bravo': { plane: 'floor', x: 3, y: 5 },
+  });
+
+const baselineCore: AIPolicy = buildAntPolicy(
   'baseline-staging',
   (state: GameState) => {
     const stageTarget = nextStageTarget(state);
     const webLoc = postLocation(state, SPIDER_WEB);
     const isOpeningTurn = state.turn === 0;
     const committed = wallCracksCaptured(state);
-    const bravoMayDive = anyWallCrackCaptured(state);
+    const bravoMayDive = anySoapDishCaptured(state);
     return (party) => {
       // Turn-0 freebie: ceiling-capable parties self-buff with jelly-
       // apply. Costs nothing (no movement yet) and the multiplier
       // persists into the kill battle.
       if (isOpeningTurn && CEILING_CAPABLE.has(party.id)) {
         return { orders: [jellyApplyOrder(party.id)], posture: 'fight' };
+      }
+
+      // Round-9 neutral recruit opportunity: any ant-mage-bearing
+      // party co-located with a non-stinkbug, non-hypnotized neutral
+      // tries `recruit`. 25% success → permanent conversion of the
+      // entire neutral party (cockroaches yield 8 units of attack-6/
+      // agility-7). On failure the order is consumed but no damage
+      // zone (we skip stinkbugs explicitly via NEUTRAL_RECRUIT_VALUE).
+      if (partyHasAbility(party, RECRUIT, state.unitTemplates)) {
+        const recruitTarget = pickNeutralRecruitTarget(state, party);
+        if (recruitTarget !== undefined) {
+          const order: AbilityOrder = {
+            kind: 'use-ability',
+            abilityId: RECRUIT,
+            target: recruitTarget,
+          };
+          return { orders: [order], posture: 'fight' };
+        }
       }
 
       // Coordinated kill-dive (round 6): both ceiling-capable parties
@@ -178,6 +260,12 @@ export const baselinePlayer: AIPolicy = buildAntPolicy(
           return { orders: moveToOrHold(party, target), posture: 'fight' };
         }
       }
+      // Round-9: vanguard-bravo joins the dive line earlier. The
+      // gate moves from "any wall-crack captured" (round 6) to "any
+      // soap-dish captured" (round 9) — the canonical chain's first
+      // POST flips around turn 4-5 with the round-9 forward
+      // placement, so bravo arrives at the launch tile in time to
+      // assist pathfinders rather than trailing by 4-5 turns.
       if (party.id === VANGUARD_BRAVO && bravoMayDive) {
         const target = killDiveTarget(party.location, webLoc);
         if (target !== undefined) {
@@ -209,3 +297,5 @@ export const baselinePlayer: AIPolicy = buildAntPolicy(
   },
   queenGuardOrders,
 );
+
+export const baselinePlayer: AIPolicy = { ...baselineCore, placement: baselinePlacement };

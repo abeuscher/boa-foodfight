@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { ENEMY_AIS, PLAYER_AIS } from '../ai/index.ts';
+import { ENEMY_AIS, neutralPlayer, PLAYER_AIS } from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -120,12 +120,16 @@ const main = (): void => {
 
   const startedAt = Date.now();
   for (const seed of args.seeds) {
-    const { state, data } = loadScenario(args.dataDir, seed);
+    const { state, data, neutralSpawnEvents } = loadScenario(args.dataDir, seed);
     const clock = createTickClock();
     const sink = createFileSink(path.join(args.outDir, `replay-${String(seed)}.jsonl`));
     const outcome = runScenario(state, data, createRng(seed), clock.next, {
       maxTurns: args.maxTurns,
-      policies: [player, enemy],
+      // Round 8: neutral policy runs after ant/spider so its orders
+      // see the latest decided state. Determinism is preserved by the
+      // per-policy rng fork inside `runScenario`.
+      policies: [player, enemy, neutralPlayer],
+      neutralSpawnEvents,
     });
     for (const event of outcome.events) sink.emit(event);
     sink.close();

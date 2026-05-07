@@ -73,17 +73,14 @@ describe('baselinePlayer', () => {
     }
   });
 
-  it('vanguard-bravo dive triggers once any wall-crack is captured (stages until then)', () => {
+  it('vanguard-bravo dive triggers once any soap-dish is captured (stages until then)', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
-    state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
-    state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
-    // Capture only the FIRST wall-crack so bravo's gate flips but the
-    // canonical chain isn't fully complete.
-    const cracks = postsOfType(state, WALL_CRACK_TYPE);
-    expect(cracks.length).toBeGreaterThan(0);
+    // Capture only the FIRST soap-dish so bravo's gate flips.
+    const dishes = postsOfType(state, SOAP_DISH_TYPE);
+    expect(dishes.length).toBeGreaterThan(0);
     const posts = new Map(state.posts);
-    posts.set(cracks[0]!.id, { ...cracks[0]!, owner: 'ant' });
+    posts.set(dishes[0]!.id, { ...dishes[0]!, owner: 'ant' });
     state = { ...state, posts };
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const web = state.posts.get('spider-web' as PostId)!;
@@ -112,33 +109,35 @@ describe('baselinePlayer', () => {
     expect(pfOrder.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
   });
 
-  it('after every soap-dish is owned, vanguards retarget to towel-rack', () => {
+  it('after every soap-dish is owned, vanguard-alpha retargets to towel-rack; vanguard-bravo joins the dive line', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const towel = firstPostOfType(state, TOWEL_RACK_TYPE);
-    for (const partyId of ['vanguard-alpha', 'vanguard-bravo'] as PartyId[]) {
-      const party = next.parties.get(partyId);
-      const order = party?.orders[0] as MoveOrder;
-      expect(order.kind).toBe('move-to');
-      expect(order.target).toEqual(towel.location);
-    }
+    const web = state.posts.get('spider-web' as PostId)!;
+    const alpha = next.parties.get('vanguard-alpha' as PartyId);
+    const aOrder = alpha?.orders[0] as MoveOrder;
+    expect(aOrder.kind).toBe('move-to');
+    expect(aOrder.target).toEqual(towel.location);
+    // With every soap-dish owned, bravo's dive gate has flipped.
+    const bravo = next.parties.get('vanguard-bravo' as PartyId);
+    const bOrder = bravo?.orders[0] as MoveOrder;
+    expect(bOrder.kind).toBe('move-to');
+    expect(bOrder.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
   });
 
-  it('after soap-dish + towel-rack are owned, vanguards retarget to wall-crack', () => {
+  it('after soap-dish + towel-rack are owned, vanguard-alpha retargets to wall-crack', () => {
     const initial = loadScenario(DATA_DIR, 1);
     let state = advancePastOpening(initial.state);
     state = setAllOfTypeOwned(state, SOAP_DISH_TYPE, 'ant');
     state = setAllOfTypeOwned(state, TOWEL_RACK_TYPE, 'ant');
     const next = baselinePlayer.decide(state, initial.data, createRng(1));
     const crack = firstPostOfType(state, WALL_CRACK_TYPE);
-    for (const partyId of ['vanguard-alpha', 'vanguard-bravo'] as PartyId[]) {
-      const party = next.parties.get(partyId);
-      const order = party?.orders[0] as MoveOrder;
-      expect(order.kind).toBe('move-to');
-      expect(order.target).toEqual(crack.location);
-    }
+    const alpha = next.parties.get('vanguard-alpha' as PartyId);
+    const order = alpha?.orders[0] as MoveOrder;
+    expect(order.kind).toBe('move-to');
+    expect(order.target).toEqual(crack.location);
   });
 
   it('after all foothold POSTs are owned, vanguard-alpha commits to spider-web; vanguard-bravo joins the dive line', () => {

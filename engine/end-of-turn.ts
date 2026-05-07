@@ -17,9 +17,11 @@ import { distance, sameCoord } from './coord.ts';
 import { PHASE_LENGTH } from './phase.ts';
 import type { JellyFile, QueenFile } from './schemas/index.ts';
 import type {
+  DamageZone,
   DayNightPhase,
   Faction,
   GameState,
+  NeutralStatus,
   Party,
   PartyId,
   PheroTrailEntry,
@@ -32,6 +34,9 @@ import type {
   UnitTemplate,
   UnitTemplateId,
 } from './types.ts';
+
+const HYPNOTIZE_REBOUND_IMMUNITY = 10;
+const STINKBUG_TEMPLATE_ID = 'stinkbug' as UnitTemplateId;
 
 /**
  * Maximum age (in turns) a pheromone trail entry survives before being
@@ -279,6 +284,129 @@ const checkWinner = (state: GameState): Faction | null => {
   return null;
 };
 
+/**
+ * Round 8 — return the 5-tile plus shape (center + N/S/W/E) clamped to
+ * the 10x10 plane. Tile order is deterministic.
+ */
+const zonePlusTiles = (zone: DamageZone): readonly TileCoord[] => {
+  const center: TileCoord = { plane: zone.plane, x: zone.centerX, y: zone.centerY };
+  return [
+    center,
+    { plane: zone.plane, x: zone.centerX, y: zone.centerY - 1 },
+    { plane: zone.plane, x: zone.centerX, y: zone.centerY + 1 },
+    { plane: zone.plane, x: zone.centerX - 1, y: zone.centerY },
+    { plane: zone.plane, x: zone.centerX + 1, y: zone.centerY },
+  ].filter((c) => c.x >= 0 && c.x <= 9 && c.y >= 0 && c.y <= 9);
+};
+
+interface ZoneTickOutcome {
+  readonly state: GameState;
+  readonly events: readonly ReplayEvent[];
+}
+
+const applyDamageZoneTicks = (
+  state: GameState,
+  turn: number,
+  tick: () => number,
+): ZoneTickOutcome => {
+  const events: ReplayEvent[] = [];
+  if (state.damageZones.length === 0) {
+    return { state, events };
+  }
+  // Build a per-tile damage map: tileKey -> total hp this turn.
+  // Multiple zones stack additively. Stinkbug units are immune.
+  const damagePerTile = new Map<string, number>();
+  for (const zone of state.damageZones) {
+    if (zone.turnsRemaining <= 0) continue;
+    for (const t of zonePlusTiles(zone)) {
+      const k = `${t.plane}:${String(t.x)},${String(t.y)}`;
+      damagePerTile.set(k, (damagePerTile.get(k) ?? 0) + 1);
+    }
+  }
+
+  // Apply damage to each party's units standing on a zone tile.
+  const newParties = new Map<PartyId, Party>();
+  const affectedByZoneCenter = new Map<string, UnitId[]>();
+  for (const [id, party] of state.parties) {
+    const tileKey = `${party.location.plane}:${String(party.location.x)},${String(party.location.y)}`;
+    const dmg = damagePerTile.get(tileKey) ?? 0;
+    if (dmg <= 0) {
+      newParties.set(id, party);
+      continue;
+    }
+    const newUnits: Unit[] = [];
+    for (const u of party.units) {
+      if (u.currentHp <= 0) {
+        newUnits.push(u);
+        continue;
+      }
+      // Stinkbugs are immune to damage zones (own kind).
+      const tmpl = state.unitTemplates.get(u.templateId);
+      if (tmpl?.id === STINKBUG_TEMPLATE_ID) {
+        newUnits.push(u);
+        continue;
+      }
+      const before = u.currentHp;
+      const after = Math.max(0, before - dmg);
+      newUnits.push({ ...u, currentHp: after });
+      // Bucket by tile (zone center is harder to determine when zones
+      // overlap; key the bucket by tileKey for the per-tile sum and
+      // emit a separate damage-zone-tick event per zone center).
+      void affectedByZoneCenter;
+    }
+    newParties.set(id, {
+      ...party,
+      units: newUnits,
+      leaderless: party.leaderless || newUnits.every((u) => u.currentHp <= 0),
+    });
+  }
+
+  // Emit per-zone tick events (with the units affected on that zone's
+  // tiles) and decrement turnsRemaining; drop zones that hit 0.
+  const newZones: DamageZone[] = [];
+  for (const zone of state.damageZones) {
+    const zoneTiles = zonePlusTiles(zone);
+    const tileKeys = new Set(zoneTiles.map((t) => `${t.plane}:${String(t.x)},${String(t.y)}`));
+    // Find units in the zone (post-damage) by walking parties at
+    // matching locations.
+    const affected: UnitId[] = [];
+    for (const party of state.parties.values()) {
+      const k = `${party.location.plane}:${String(party.location.x)},${String(party.location.y)}`;
+      if (!tileKeys.has(k)) continue;
+      for (const u of party.units) {
+        if (u.currentHp <= 0) continue;
+        const tmpl = state.unitTemplates.get(u.templateId);
+        if (tmpl?.id === STINKBUG_TEMPLATE_ID) continue;
+        affected.push(u.id);
+      }
+    }
+    events.push({
+      kind: 'damage-zone-tick',
+      turn,
+      tick: tick(),
+      center: { plane: zone.plane, x: zone.centerX, y: zone.centerY },
+      damage: 1,
+      affectedUnits: affected,
+    });
+    const remaining = zone.turnsRemaining - 1;
+    if (remaining > 0) {
+      newZones.push({ ...zone, turnsRemaining: remaining });
+    } else {
+      events.push({
+        kind: 'damage-zone-expired',
+        turn,
+        tick: tick(),
+        center: { plane: zone.plane, x: zone.centerX, y: zone.centerY },
+      });
+    }
+  }
+
+  return {
+    state: { ...state, parties: newParties, damageZones: newZones },
+    events,
+  };
+};
+
 export const endOfTurn = (
   state: GameState,
   input: EndOfTurnInput,
@@ -366,6 +494,53 @@ export const endOfTurn = (
     newTrails.set(id, [fresh, ...aged]);
   }
   working = { ...working, pheroTrails: newTrails };
+
+  // 5c. Round 8 — neutral hypnotize/rebound timer ticks. For every
+  //     entry in `neutralStatus`:
+  //       hypnoticControlRemaining > 0 → decrement; if it hits 0,
+  //       transition to `spiderImmunityRemaining = 10` and emit
+  //       `hypnotize-rebound-started`.
+  //       spiderImmunityRemaining > 0 (without active hypnosis) →
+  //       decrement; immunity expires when it hits 0.
+  const newStatus = new Map<PartyId, NeutralStatus>();
+  for (const [id, status] of working.neutralStatus) {
+    let next: NeutralStatus = status;
+    if (status.hypnotizedBy === 'spider' && status.hypnoticControlRemaining > 0) {
+      const remaining = status.hypnoticControlRemaining - 1;
+      if (remaining <= 0) {
+        next = {
+          ...status,
+          hypnotizedBy: null,
+          hypnoticControlRemaining: 0,
+          spiderImmunityRemaining: HYPNOTIZE_REBOUND_IMMUNITY,
+        };
+        events.push({
+          kind: 'hypnotize-rebound-started',
+          turn: currentTurn,
+          tick: tick(),
+          partyId: id,
+        });
+      } else {
+        next = { ...status, hypnoticControlRemaining: remaining };
+      }
+    } else if (status.spiderImmunityRemaining > 0) {
+      next = {
+        ...status,
+        spiderImmunityRemaining: Math.max(0, status.spiderImmunityRemaining - 1),
+      };
+    }
+    newStatus.set(id, next);
+  }
+  working = { ...working, neutralStatus: newStatus };
+
+  // 5d. Round 8 — stinkbug damage-zone ticks. For each active zone:
+  //     deal 1 hp to every non-stinkbug unit standing on a zone tile,
+  //     decrement turnsRemaining, then drop expired zones. Multiple
+  //     zones stacking on the same tile compound their damage by
+  //     adding up across iterations.
+  const zoneTickResult = applyDamageZoneTicks(working, currentTurn, tick);
+  working = zoneTickResult.state;
+  events.push(...zoneTickResult.events);
 
   // 6. Day/night phase advance. Decrement remaining-in-phase; if it
   //    hits 0, flip the phase and reset the counter to PHASE_LENGTH.
