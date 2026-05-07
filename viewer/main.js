@@ -294,6 +294,21 @@ function reduceWithInitial(events, targetTick) {
         if (pu) pu.item = null;
         break;
       }
+      case 'battle-fled': {
+        // Round 15 — fleer's location moved to the knockback tile
+        // without a `party-moved` event firing. Mirror the engine's
+        // post-battle relocation so the viewer renders the new
+        // position immediately after the flee.
+        const p = parties.get(e.partyId);
+        if (p) {
+          p.plane = e.knockbackTo.plane;
+          p.x = e.knockbackTo.x;
+          p.y = e.knockbackTo.y;
+        }
+        const pu = partyUnits.get(e.partyId);
+        if (pu) pu.location = e.knockbackTo;
+        break;
+      }
       case 'scenario-end':
         winner = e.winner;
         break;
@@ -987,6 +1002,37 @@ function flattenActions(rounds) {
   return flat;
 }
 
+/**
+ * Round 15 — pull the flee-attempt events that bracket a given
+ * battle-resolved event. The engine emits all `battle-flee-attempted`
+ * (and the optional `battle-flee-failed` / `battle-fled`) entries
+ * BEFORE the corresponding `battle-resolved` in tick order, so we
+ * walk back from the battle's tick and collect any flee rows whose
+ * partyId matches one of the battle's two participants. Used by the
+ * play-by-play log to render "X attempts flee (NN% chance, rolled R)
+ * — success/failure" rows alongside the normal action rows.
+ */
+function fleeEventsForBattle(events, battle) {
+  const out = [];
+  const atk = battle.result.attackerPartyId;
+  const def = battle.result.defenderPartyId;
+  const battleIdx = events.indexOf(battle);
+  if (battleIdx < 0) return out;
+  // Walk backward from the battle event collecting consecutive flee
+  // events on the same tick. Stop once we hit any non-flee event so
+  // we don't attribute a previous battle's flees to this one.
+  for (let i = battleIdx - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.tick !== battle.tick) break;
+    if (e.kind === 'battle-flee-attempted' || e.kind === 'battle-flee-failed') {
+      if (e.partyId === atk || e.partyId === def) out.unshift(e);
+      continue;
+    }
+    if (e.kind === 'battle-resolved') break;
+  }
+  return out;
+}
+
 /** Locate the battle-resolved event whose tick is exactly `tick`, if any. */
 function battleAtTick(events, tick) {
   for (const e of events) {
@@ -1123,6 +1169,24 @@ function renderRoster(side, partyId, participants, hps, currentAction) {
 
 function renderBattleLog(state) {
   const items = [];
+  // Round 15 — flee-attempt rows precede the per-round action rows.
+  // They reflect engine-side decisions made before any combat fires
+  // (or, on a failed flee, before the bonus round). Each row reads
+  // as "X attempts flee (NN% chance, rolled R) — success/failure".
+  for (const fe of state.fleeEvents ?? []) {
+    if (fe.kind === 'battle-flee-attempted') {
+      const pct = Math.round((fe.successProbability ?? 0) * 100);
+      const roll = (fe.roll ?? 0).toFixed(3);
+      const tag = fe.success ? 'success' : 'failure';
+      const cls = fe.success ? 'flee-ok' : 'flee-fail';
+      const msg = `${fe.partyId} attempts flee (${pct}% chance, rolled ${roll}) — ${tag}`;
+      items.push(`<li class="${cls}">${escapeHtml(msg)}</li>`);
+    } else if (fe.kind === 'battle-flee-failed') {
+      items.push(
+        `<li class="flee-fail">${escapeHtml(`${fe.partyId} flee blocked — bonus round for opponent`)}</li>`,
+      );
+    }
+  }
   let lastRound = -1;
   for (let i = 0; i < state.actions.length && i <= state.index; i++) {
     const { round, action } = state.actions[i];
@@ -1141,10 +1205,20 @@ function renderBattleLog(state) {
   if (state.index >= state.actions.length) {
     const e = state.event;
     const r = e.result;
-    const outcome =
-      r.winner === 'draw'
-        ? 'DRAW'
-        : `${r.winner} wins (${r.attackerCasualties.length} attacker / ${r.defenderCasualties.length} defender casualties)`;
+    let outcome;
+    // Round 15 — a successful flee ends the battle as a draw with
+    // `retreatTo` populated; surface that distinctly from a normal
+    // tie so the reader sees "FLED" rather than the generic "DRAW".
+    const fled = (state.fleeEvents ?? []).some(
+      (fe) => fe.kind === 'battle-flee-attempted' && fe.success,
+    );
+    if (fled) {
+      outcome = 'FLED';
+    } else if (r.winner === 'draw') {
+      outcome = 'DRAW';
+    } else {
+      outcome = `${r.winner} wins (${r.attackerCasualties.length} attacker / ${r.defenderCasualties.length} defender casualties)`;
+    }
     items.push(`<li class="outcome">▸ ${escapeHtml(outcome)}</li>`);
   }
   return items.join('');
@@ -1214,9 +1288,13 @@ function openBattlePanel(event) {
   }
   stopBattlePlayback();
   const actions = flattenActions(event.result.rounds);
+  // Round 15 — pull any flee events bracketing this battle so the log
+  // renders the "X attempts flee" rows above the action list.
+  const fleeEvents = fleeEventsForBattle(CURRENT_EVENTS, event);
   BATTLE_STATE = {
     event,
     actions,
+    fleeEvents,
     // No actions (e.g., opening volley wiped one side): jump straight
     // to the outcome line. Otherwise start at -1 so the first
     // auto-advance reveals action 0 with a beat of suspense.
@@ -1292,6 +1370,15 @@ function describeEvent(e) {
       return `${e.partyId} consumed ${e.itemId} (${e.effect})`;
     case 'item-dropped':
       return `${e.partyId} dropped ${e.itemId} @ ${e.location.plane}(${e.location.x},${e.location.y})`;
+    case 'battle-flee-attempted': {
+      const pct = Math.round((e.successProbability ?? 0) * 100);
+      const roll = (e.roll ?? 0).toFixed(3);
+      return `${e.partyId} flee ${pct}% (rolled ${roll}) → ${e.success ? 'OK' : 'FAIL'}`;
+    }
+    case 'battle-fled':
+      return `${e.partyId} fled ${e.knockbackFrom.plane}(${e.knockbackFrom.x},${e.knockbackFrom.y})→${e.knockbackTo.plane}(${e.knockbackTo.x},${e.knockbackTo.y})`;
+    case 'battle-flee-failed':
+      return `${e.partyId} flee failed`;
     default:
       return '';
   }

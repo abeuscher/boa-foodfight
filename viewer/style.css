@@ -384,3 +384,11 @@ canvas {
   margin-top: 4px;
   border-bottom: none;
 }
+#battle-log li.flee-ok {
+  color: #8cc;
+  font-style: italic;
+}
+#battle-log li.flee-fail {
+  color: #c88;
+  font-style: italic;
+}
