@@ -823,24 +823,39 @@ async function loadRuns() {
   return runs;
 }
 
+// Normalize a replay entry to { name, outcome }. Tolerant of older
+// manifests / API responses that returned bare strings.
+function normalizeReplayEntry(r) {
+  if (typeof r === 'string') return { name: r, outcome: null };
+  return { name: r.name, outcome: r.outcome ?? null };
+}
+
+const OUTCOME_TAG = {
+  ant: 'ANT WIN',
+  spider: 'SPIDER WIN',
+  timeout: 'TIMEOUT',
+};
+
 async function loadReplaysForRun(run) {
-  let replays;
+  let raw;
   if (MANIFEST) {
     const found = MANIFEST.runs.find((r) => r.name === run);
-    replays = found ? found.replays : [];
+    raw = found ? found.replays : [];
   } else {
     const res = await fetch(`/api/replays?run=${encodeURIComponent(run)}`);
-    replays = await res.json();
+    raw = await res.json();
   }
+  const replays = raw.map(normalizeReplayEntry);
   const sel = document.getElementById('replay-select');
   sel.innerHTML = '';
   for (const r of replays) {
     const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
+    opt.value = r.name;
+    const tag = r.outcome ? ` — ${OUTCOME_TAG[r.outcome] ?? r.outcome}` : '';
+    opt.textContent = `${r.name}${tag}`;
     sel.appendChild(opt);
   }
-  return replays;
+  return replays.map((r) => r.name);
 }
 
 async function loadReplay(run, name) {

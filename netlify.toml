@@ -8,7 +8,7 @@
 # To preview locally: `pnpm build:viewer && npx serve viewer/dist`
 
 [build]
-  command = "pnpm install --frozen-lockfile && pnpm build:viewer"
+  command = "pnpm install --frozen-lockfile && pnpm build:viewer --seeds 1..100"
   publish = "viewer/dist"
 
 [build.environment]

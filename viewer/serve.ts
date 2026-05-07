@@ -17,7 +17,8 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { sortReplaysBySeed } from '../harness/replay-utils.ts';
+import { readReplayOutcome, sortReplaysBySeed } from '../harness/replay-utils.ts';
+import type { ReplayOutcome } from '../harness/replay-utils.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -78,12 +79,18 @@ const findRuns = (outDir: string): readonly string[] => {
   return runs.sort();
 };
 
-const findReplays = (outDir: string, run: string): readonly string[] => {
+interface ReplayEntry {
+  readonly name: string;
+  readonly outcome: ReplayOutcome;
+}
+
+const findReplays = (outDir: string, run: string): readonly ReplayEntry[] => {
   const dir = path.join(outDir, run);
   if (!fs.existsSync(dir)) return [];
-  return sortReplaysBySeed(
+  const names = sortReplaysBySeed(
     fs.readdirSync(dir).filter((f) => f.startsWith('replay-') && f.endsWith('.jsonl')),
   );
+  return names.map((name) => ({ name, outcome: readReplayOutcome(path.join(dir, name)) }));
 };
 
 const safeJoin = (base: string, rel: string): string | null => {

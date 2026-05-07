@@ -22,7 +22,8 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { sortReplaysBySeed } from '../harness/replay-utils.ts';
+import { readReplayOutcome, sortReplaysBySeed } from '../harness/replay-utils.ts';
+import type { ReplayOutcome } from '../harness/replay-utils.ts';
 
 interface Args {
   readonly seedRange: string;
@@ -59,6 +60,11 @@ interface Summary {
   readonly avgTurnsToVictory: number | null;
 }
 
+interface ManifestReplay {
+  readonly name: string;
+  readonly outcome: ReplayOutcome;
+}
+
 interface ManifestRun {
   readonly name: string;
   readonly label: string;
@@ -67,7 +73,7 @@ interface ManifestRun {
   readonly spiderWins: number;
   readonly timeouts: number;
   readonly avgTurnsToVictory: number | null;
-  readonly replays: readonly string[];
+  readonly replays: readonly ManifestReplay[];
 }
 
 const VARIANT_LABELS: Readonly<Record<string, string>> = {
@@ -134,9 +140,13 @@ const main = (): void => {
 
     const summaryPath = path.join(runDir, 'summary.json');
     const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8')) as Summary;
-    const replays = sortReplaysBySeed(
+    const replayNames = sortReplaysBySeed(
       fs.readdirSync(runDir).filter((f) => f.startsWith('replay-') && f.endsWith('.jsonl')),
     );
+    const replays: ManifestReplay[] = replayNames.map((name) => ({
+      name,
+      outcome: readReplayOutcome(path.join(runDir, name)),
+    }));
     runs.push({
       name: variant,
       label: `${VARIANT_LABELS[variant] ?? variant} — ${(summary.antWinRate * 100).toFixed(0)}% wins`,
