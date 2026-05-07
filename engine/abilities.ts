@@ -43,6 +43,13 @@ const SPIN_WEB: AbilityId = 'spin-web' as AbilityId;
 const RECRUIT: AbilityId = 'recruit' as AbilityId;
 const SPAWN_SPIDERLINGS: AbilityId = 'spawn-spiderlings' as AbilityId;
 const SCOUT_PING: AbilityId = 'scout-ping' as AbilityId;
+const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+
+/** Round 8 hypnotize tuning. Locked by spec. */
+const HYPNOTIZE_SUCCESS_RATE = 0.8;
+const HYPNOTIZE_MIN_TURNS = 5;
+const HYPNOTIZE_MAX_TURNS = 10;
+export const HYPNOTIZE_REBOUND_IMMUNITY = 10;
 
 export const partyHasAbility = (
   party: Party,
@@ -217,6 +224,49 @@ const handleSpinWeb = (args: HandlerArgs): HandlerResult => {
 const RECRUIT_SUCCESS_RATE = 0.25;
 
 /**
+ * Round 8 — 5-tile plus shape (center + 4 neighbors), clamped to the
+ * 10x10 plane bounds. Returned ordering is deterministic (center,
+ * north, south, west, east) so replay events stay stable.
+ */
+const damageZonePlusTiles = (state: GameState, center: TileCoord): readonly TileCoord[] => {
+  const candidates: TileCoord[] = [
+    center,
+    { plane: center.plane, x: center.x, y: center.y - 1 },
+    { plane: center.plane, x: center.x, y: center.y + 1 },
+    { plane: center.plane, x: center.x - 1, y: center.y },
+    { plane: center.plane, x: center.x + 1, y: center.y },
+  ];
+  return candidates.filter((c) => state.tiles.has(coordKey(c)));
+};
+
+/**
+ * Round 8 — push a freshly-spawned damage zone onto the running list
+ * and emit the matching replay event. Shared by recruit and hypnotize
+ * stinkbug-failure branches so the spawn logic stays one place.
+ */
+const spawnStinkbugDamageZone = (
+  state: GameState,
+  center: TileCoord,
+  damageZones: DamageZone[],
+  events: ReplayEvent[],
+  tick: () => number,
+): void => {
+  damageZones.push({
+    plane: center.plane,
+    centerX: center.x,
+    centerY: center.y,
+    turnsRemaining: 5,
+  });
+  events.push({
+    kind: 'damage-zone-spawned',
+    turn: state.turn,
+    tick: tick(),
+    center: { plane: center.plane, x: center.x, y: center.y },
+    tiles: damageZonePlusTiles(state, center),
+  });
+};
+
+/**
  * Round 8 — neutral recruit branch. The ant-mage may target a neutral
  * party (mice/cockroaches/stinkbugs) at the same tile regardless of
  * unit count. On success the entire neutral party converts to faction
@@ -235,8 +285,19 @@ const recruitNeutral = (args: {
   target: Party;
   targetKind: NeutralKind;
 }): HandlerResult => {
-  const { party, slot, state, parties, webbedTiles, neutralStatus, tick, rng, target, targetKind } =
-    args;
+  const {
+    party,
+    slot,
+    state,
+    parties,
+    webbedTiles,
+    neutralStatus,
+    damageZones,
+    tick,
+    rng,
+    target,
+    targetKind,
+  } = args;
   const events: ReplayEvent[] = [];
   const success = rng.next() < RECRUIT_SUCCESS_RATE;
   events.push(abilityUsedEvent(state, party.id, RECRUIT, tick));
@@ -253,9 +314,102 @@ const recruitNeutral = (args: {
     // Convert the entire neutral party to ant. Drop neutralStatus.
     parties.set(target.id, { ...target, faction: 'ant' });
     neutralStatus.delete(target.id);
+  } else if (targetKind === 'stinkbugs') {
+    spawnStinkbugDamageZone(state, target.location, damageZones, events, tick);
   }
   // Always consume the order regardless of outcome.
   parties.set(party.id, { ...party, orders: dropOrderAt(party.orders, slot.index) });
+  return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+};
+
+/**
+ * Round 8 — hypnotize handler. Any spider unit may attempt against a
+ * neutral party at the same tile. Cost: caster's currentHp halved
+ * (rounded down). 80% success. On success the neutral gains
+ * `hypnotizedBy: 'spider'` + a 5-10 turn control counter. On failure
+ * the order is consumed; if the target is a stinkbug the caller's
+ * stage-7 wiring will spawn a damage zone (pushed onto `damageZones`
+ * here).
+ *
+ * Auto-fail (silently consume) when the neutral is currently
+ * hypnotized OR has rebound immunity remaining.
+ */
+const handleHypnotize = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
+  const { party, slot, state, parties, webbedTiles, neutralStatus, damageZones, tick, rng } = args;
+  const events: ReplayEvent[] = [];
+  if (party.faction !== 'spider') {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  // Pick the caster: leader if living, else first living unit.
+  const leader = party.units.find((u) => u.id === party.leaderId && u.currentHp > 0);
+  const caster = leader ?? party.units.find((u) => u.currentHp > 0);
+  if (!caster) {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  const target = resolveTargetParty(party, slot.order, parties);
+  const sameTile =
+    target?.location.plane === party.location.plane &&
+    target.location.x === party.location.x &&
+    target.location.y === party.location.y;
+  if (!target || !sameTile || target.faction !== 'neutral') {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  const status = neutralStatus.get(target.id);
+  if (!status) {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  // Auto-fail when already hypnotized or in the rebound immunity
+  // window. Silently consume the order — no event, no HP cost.
+  if (status.hypnotizedBy === 'spider' || status.spiderImmunityRemaining > 0) {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  // Pay the cost: halve the caster's currentHp (rounded down). The
+  // caster lives unless the halving brings them to 0 (Math.floor(0/2)
+  // = 0 already, so this only kills a 1-HP caster).
+  const casterHpBefore = caster.currentHp;
+  const casterHpAfter = Math.floor(caster.currentHp / 2);
+  const newUnits = party.units.map((u) =>
+    u.id === caster.id ? { ...u, currentHp: casterHpAfter } : u,
+  );
+  const success = rng.next() < HYPNOTIZE_SUCCESS_RATE;
+  // Compute control duration unconditionally (the RNG is consumed
+  // either way) but only apply on success. This keeps replay-stream
+  // RNG draws aligned across success/fail branches for a given seed.
+  const controlSpan = HYPNOTIZE_MAX_TURNS - HYPNOTIZE_MIN_TURNS + 1;
+  const controlTurns = HYPNOTIZE_MIN_TURNS + rng.int(controlSpan);
+  events.push(abilityUsedEvent(state, party.id, HYPNOTIZE, tick));
+  events.push({
+    kind: 'hypnotize-attempted',
+    turn: state.turn,
+    tick: tick(),
+    partyId: party.id,
+    targetId: target.id,
+    success,
+    casterHpBefore,
+    casterHpAfter,
+  });
+  // Apply HP cost + leaderless / unit liveness derivations.
+  parties.set(party.id, {
+    ...party,
+    units: newUnits,
+    leaderless: newUnits.every((u) => u.currentHp <= 0),
+    orders: dropOrderAt(party.orders, slot.index),
+  });
+  if (success) {
+    neutralStatus.set(target.id, {
+      ...status,
+      hypnotizedBy: 'spider',
+      hypnoticControlRemaining: controlTurns,
+      spiderImmunityRemaining: 0,
+    });
+  } else if (status.kind === 'stinkbugs') {
+    spawnStinkbugDamageZone(state, target.location, damageZones, events, tick);
+  }
   return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
 };
 
@@ -479,6 +633,9 @@ export const resolveAbilityOrders = (
         break;
       case SCOUT_PING:
         r = handleScoutPing(baseArgs);
+        break;
+      case HYPNOTIZE:
+        r = handleHypnotize({ ...baseArgs, rng });
         break;
       default:
         break;

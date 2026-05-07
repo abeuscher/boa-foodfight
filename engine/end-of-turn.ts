@@ -20,6 +20,7 @@ import type {
   DayNightPhase,
   Faction,
   GameState,
+  NeutralStatus,
   Party,
   PartyId,
   PheroTrailEntry,
@@ -32,6 +33,8 @@ import type {
   UnitTemplate,
   UnitTemplateId,
 } from './types.ts';
+
+const HYPNOTIZE_REBOUND_IMMUNITY = 10;
 
 /**
  * Maximum age (in turns) a pheromone trail entry survives before being
@@ -366,6 +369,44 @@ export const endOfTurn = (
     newTrails.set(id, [fresh, ...aged]);
   }
   working = { ...working, pheroTrails: newTrails };
+
+  // 5c. Round 8 — neutral hypnotize/rebound timer ticks. For every
+  //     entry in `neutralStatus`:
+  //       hypnoticControlRemaining > 0 → decrement; if it hits 0,
+  //       transition to `spiderImmunityRemaining = 10` and emit
+  //       `hypnotize-rebound-started`.
+  //       spiderImmunityRemaining > 0 (without active hypnosis) →
+  //       decrement; immunity expires when it hits 0.
+  const newStatus = new Map<PartyId, NeutralStatus>();
+  for (const [id, status] of working.neutralStatus) {
+    let next: NeutralStatus = status;
+    if (status.hypnotizedBy === 'spider' && status.hypnoticControlRemaining > 0) {
+      const remaining = status.hypnoticControlRemaining - 1;
+      if (remaining <= 0) {
+        next = {
+          ...status,
+          hypnotizedBy: null,
+          hypnoticControlRemaining: 0,
+          spiderImmunityRemaining: HYPNOTIZE_REBOUND_IMMUNITY,
+        };
+        events.push({
+          kind: 'hypnotize-rebound-started',
+          turn: currentTurn,
+          tick: tick(),
+          partyId: id,
+        });
+      } else {
+        next = { ...status, hypnoticControlRemaining: remaining };
+      }
+    } else if (status.spiderImmunityRemaining > 0) {
+      next = {
+        ...status,
+        spiderImmunityRemaining: Math.max(0, status.spiderImmunityRemaining - 1),
+      };
+    }
+    newStatus.set(id, next);
+  }
+  working = { ...working, neutralStatus: newStatus };
 
   // 6. Day/night phase advance. Decrement remaining-in-phase; if it
   //    hits 0, flip the phase and reset the counter to PHASE_LENGTH.
