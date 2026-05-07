@@ -115,6 +115,13 @@ function reduceWithInitial(events, targetTick) {
   // Updated by hypnotize-attempted (success), hypnotize-rebound-started
   // events. We track turns approximately for outline color.
   const neutralHypno = new Map();
+  // Per-party unit-level snapshot, keyed by partyId. Each value is
+  // { faction, location, leaderId, posture, jellyDoses, units: Map<unitId, {...}> }.
+  // Hydrated from scenario-start.parties; HP updates from battle-
+  // resolved (rounds[].actions[].damage) and unit-died events.
+  const partyUnits = new Map();
+  // Unit-template digest from scenario-start.unitTemplates. Keyed by id.
+  const unitTemplates = new Map();
   let turn = 0;
   let queenCharge = 0;
   let winner = null;
@@ -135,6 +142,32 @@ function reduceWithInitial(events, targetTick) {
         }));
       }
       if (Array.isArray(e.obstacles)) obstacles = e.obstacles;
+      if (Array.isArray(e.unitTemplates)) {
+        for (const t of e.unitTemplates) unitTemplates.set(t.id, t);
+      }
+      if (Array.isArray(e.parties)) {
+        for (const p of e.parties) {
+          const units = new Map();
+          for (const u of p.units) {
+            units.set(u.id, {
+              id: u.id,
+              templateId: u.templateId,
+              currentHp: u.currentHp,
+              level: u.level,
+              xp: u.xp,
+            });
+          }
+          partyUnits.set(p.id, {
+            id: p.id,
+            faction: p.faction,
+            location: p.location,
+            leaderId: p.leaderId,
+            posture: p.posture,
+            jellyDoses: p.jellyDoses,
+            units,
+          });
+        }
+      }
       continue;
     }
     if (e.tick > targetTick) break;
@@ -149,6 +182,8 @@ function reduceWithInitial(events, targetTick) {
           p.x = e.to.x;
           p.y = e.to.y;
         }
+        const pu = partyUnits.get(e.partyId);
+        if (pu) pu.location = e.to;
         break;
       }
       case 'post-captured':
@@ -156,6 +191,12 @@ function reduceWithInitial(events, targetTick) {
         break;
       case 'queen-ultimate-charged':
         queenCharge = e.charge;
+        break;
+      case 'battle-resolved':
+        applyBattleHpDeltas(partyUnits, e.result);
+        break;
+      case 'unit-died':
+        markUnitDead(partyUnits, e.unitId);
         break;
       case 'web-spun':
         webs.set(`${e.coord.plane}:${e.coord.x},${e.coord.y}`, {
@@ -195,6 +236,8 @@ function reduceWithInitial(events, targetTick) {
           // Convert the party display faction to ant.
           const p = parties.get(e.targetId);
           if (p) p.faction = 'ant';
+          const pu = partyUnits.get(e.targetId);
+          if (pu) pu.faction = 'ant';
           neutralHypno.delete(e.targetId);
         }
         break;
@@ -213,10 +256,56 @@ function reduceWithInitial(events, targetTick) {
     webs,
     damageZones,
     neutralHypno,
+    partyUnits,
+    unitTemplates,
     turn,
     queenCharge,
     winner,
   };
+}
+
+/**
+ * Apply a battle-resolved event's per-action damage to the running
+ * unit HPs. participants[] reflects HP at the START of the battle, and
+ * each action's `damage` reduces that. We honor `killed` so units that
+ * the engine marked dead end up at currentHp=0 even if rounding /
+ * thorns nudged things.
+ */
+function applyBattleHpDeltas(partyUnits, result) {
+  if (!result || !Array.isArray(result.participants)) return;
+  // Seed each unit's running HP from the participant snapshot, in case
+  // the partyUnits map is missing entries (e.g., spawned mid-game).
+  const running = new Map();
+  for (const p of result.participants) {
+    running.set(p.unitId, p.hp);
+  }
+  for (const round of result.rounds ?? []) {
+    for (const action of round.actions ?? []) {
+      const cur = running.get(action.defenderId) ?? 0;
+      running.set(action.defenderId, Math.max(0, cur - action.damage));
+    }
+  }
+  for (const [unitId, hp] of running) {
+    const owner = findPartyForUnit(partyUnits, unitId);
+    if (!owner) continue;
+    const u = owner.units.get(unitId);
+    if (!u) continue;
+    u.currentHp = hp;
+  }
+}
+
+function markUnitDead(partyUnits, unitId) {
+  const owner = findPartyForUnit(partyUnits, unitId);
+  if (!owner) return;
+  const u = owner.units.get(unitId);
+  if (u) u.currentHp = 0;
+}
+
+function findPartyForUnit(partyUnits, unitId) {
+  for (const pu of partyUnits.values()) {
+    if (pu.units.has(unitId)) return pu;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -570,6 +659,65 @@ function renderPostsPanel(state) {
     );
   });
   document.getElementById('posts-content').innerHTML = rows.join('');
+}
+
+// ---------------------------------------------------------------------------
+// Parties + units side-panel (raw JSON dump).
+//
+// Hydrated from `scenario-start.parties` (engine extension) and updated
+// every render frame from the reducer's `partyUnits` map. If a replay
+// is older and missing the field, we fall back to the position-only
+// info the reducer already tracks. The unit-template digest is shown
+// once at the top so the reader can map templateId -> baseStats.
+// ---------------------------------------------------------------------------
+
+function renderPartiesPanel(state) {
+  const partyUnits = state.partyUnits;
+  const templates = state.unitTemplates;
+  const partyCount = partyUnits.size > 0 ? partyUnits.size : state.parties.size;
+  document.getElementById('parties-count').textContent = String(partyCount);
+  let snapshot;
+  if (partyUnits.size === 0) {
+    // Fallback: replay predates the engine extension, so we only have
+    // position-level info.
+    snapshot = {
+      note: 'unit-level state requires the scenario-start engine extension; falling back to position-only data',
+      parties: [...state.parties.entries()].map(([id, p]) => ({
+        id,
+        faction: p.faction,
+        location: { plane: p.plane, x: p.x, y: p.y },
+        ...(p.neutralKind ? { neutralKind: p.neutralKind } : {}),
+        alive: p.alive,
+      })),
+    };
+  } else {
+    snapshot = {
+      unitTemplates: [...templates.values()].map((t) => ({
+        id: t.id,
+        name: t.name,
+        faction: t.faction,
+        baseStats: t.baseStats,
+        abilities: t.abilities,
+        tags: t.tags,
+      })),
+      parties: [...partyUnits.values()].map((p) => ({
+        id: p.id,
+        faction: p.faction,
+        location: p.location,
+        leaderId: p.leaderId,
+        posture: p.posture,
+        jellyDoses: p.jellyDoses,
+        units: [...p.units.values()].map((u) => ({
+          id: u.id,
+          templateId: u.templateId,
+          currentHp: u.currentHp,
+          level: u.level,
+          xp: u.xp,
+        })),
+      })),
+    };
+  }
+  document.getElementById('parties-content').textContent = JSON.stringify(snapshot, null, 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -1111,6 +1259,7 @@ function setTick(tick) {
   renderLog(CURRENT_EVENTS, t);
   renderInspect(state, CURRENT_EVENTS, t);
   renderPostsPanel(state);
+  renderPartiesPanel(state);
   maybeUpdateBattlePanelForTick(CURRENT_EVENTS, t);
   const winnerText = state.winner ? (state.winner === 'ant' ? ' — ANTS WIN' : ' — ANTS LOSE') : '';
   document.getElementById('tick-label').textContent =

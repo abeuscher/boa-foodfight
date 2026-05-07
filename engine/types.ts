@@ -362,6 +362,38 @@ export type ReplayEvent =
         readonly partyId: PartyId;
         readonly location: TileCoord;
       }[];
+      /** Unit-template digest (id, name, faction, baseStats, abilities,
+       * tags). Lets the viewer render unit-level state in the parties
+       * panel without re-loading data files. Optional: older replays
+       * omit this field and the viewer falls back to a name-only
+       * display. */
+      readonly unitTemplates?: readonly {
+        readonly id: UnitTemplateId;
+        readonly name: string;
+        readonly faction: Faction;
+        readonly baseStats: Stats;
+        readonly abilities: readonly AbilityId[];
+        readonly tags: readonly string[];
+      }[];
+      /** Initial party rosters: faction, location, leader, posture,
+       * jelly doses, and per-unit (id, templateId, currentHp, level,
+       * xp). Lets the viewer track unit-level HP/XP/level state across
+       * the scrubber. Optional for backwards compatibility. */
+      readonly parties?: readonly {
+        readonly id: PartyId;
+        readonly faction: Faction;
+        readonly location: TileCoord;
+        readonly leaderId: UnitId;
+        readonly posture: Posture;
+        readonly jellyDoses: number;
+        readonly units: readonly {
+          readonly id: UnitId;
+          readonly templateId: UnitTemplateId;
+          readonly currentHp: number;
+          readonly level: number;
+          readonly xp: number;
+        }[];
+      }[];
     })
   | (ReplayEventCommon & { readonly kind: 'turn-start' })
   | (ReplayEventCommon & {

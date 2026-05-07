@@ -261,6 +261,41 @@ export const runScenario = (
     if (!party) continue;
     partyPositionsSnapshot.push({ partyId: id, location: party.location });
   }
+  // Round-N: full per-party + per-unit snapshot so the viewer can
+  // render a parties/units side panel that updates with the scrubber.
+  // Same sort order as partyPositionsSnapshot for deterministic output.
+  const partiesSnapshot = [...working.parties.keys()]
+    .sort()
+    .map((id) => working.parties.get(id))
+    .filter((p): p is Party => p !== undefined)
+    .map((p) => ({
+      id: p.id,
+      faction: p.faction,
+      location: p.location,
+      leaderId: p.leaderId,
+      posture: p.posture,
+      jellyDoses: p.jellyDoses,
+      units: p.units.map((u) => ({
+        id: u.id,
+        templateId: u.templateId,
+        currentHp: u.currentHp,
+        level: u.level,
+        xp: u.xp,
+      })),
+    }));
+  // Unit-template digest. Sort by id for deterministic output.
+  const templatesSnapshot = [...working.unitTemplates.keys()]
+    .sort()
+    .map((id) => working.unitTemplates.get(id))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined)
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      faction: t.faction,
+      baseStats: t.baseStats,
+      abilities: t.abilities,
+      tags: t.tags,
+    }));
   events.push({
     kind: 'scenario-start',
     turn: 0,
@@ -269,6 +304,8 @@ export const runScenario = (
     posts: postsSnapshot,
     obstacles: obstaclesSnapshot,
     partyPositions: partyPositionsSnapshot,
+    parties: partiesSnapshot,
+    unitTemplates: templatesSnapshot,
   });
   // Round 8: emit one `neutral-spawned` event per spawned neutral
   // party. These follow `scenario-start` (same turn 0) so a viewer
