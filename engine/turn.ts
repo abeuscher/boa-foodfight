@@ -17,7 +17,7 @@ import { resolveMovement } from './movement.ts';
 import { containsQueen } from './parties.ts';
 import { applyPlacement } from './placement.ts';
 import { postAt, resolveCaptures } from './posts.ts';
-import type { ScenarioData } from './state.ts';
+import type { NeutralSpawnEvent, ScenarioData } from './state.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
 export interface TurnOutcome {
@@ -196,6 +196,13 @@ export interface RunScenarioOptions {
   readonly maxTurns: number;
   /** Optional AI policies. Each runs once per turn before movement resolves. */
   readonly policies?: readonly PolicyHandle[];
+  /**
+   * Round-8 neutral-spawn payloads to emit alongside `scenario-start`.
+   * The driver attaches `turn`/`tick` and emits one `neutral-spawned`
+   * event per entry. Optional: omitted means no neutrals were spawned
+   * (e.g., legacy harness callers).
+   */
+  readonly neutralSpawnEvents?: readonly NeutralSpawnEvent[];
 }
 
 export interface ScenarioOutcome {
@@ -263,6 +270,20 @@ export const runScenario = (
     obstacles: obstaclesSnapshot,
     partyPositions: partyPositionsSnapshot,
   });
+  // Round 8: emit one `neutral-spawned` event per spawned neutral
+  // party. These follow `scenario-start` (same turn 0) so a viewer
+  // replaying the log can render the neutrals with the rest of the
+  // initial board state.
+  for (const ev of options.neutralSpawnEvents ?? []) {
+    events.push({
+      kind: 'neutral-spawned',
+      turn: 0,
+      tick: tick(),
+      partyId: ev.partyId,
+      neutralKind: ev.neutralKind,
+      location: ev.location,
+    });
+  }
   events.push({ kind: 'turn-start', turn: 1, tick: tick() });
 
   let turnsPlayed = 0;

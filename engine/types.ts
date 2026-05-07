@@ -248,6 +248,41 @@ export interface PheroTrailEntry {
   readonly ageInTurns: number;
 }
 
+/**
+ * Neutral-party type tag (round 8). Used by the engine and AI to
+ * dispatch type-specific behavior (mice never plane-switch, cockroaches
+ * have friendly fire, stinkbugs spawn damage zones on failed
+ * recruit/hypnotize).
+ */
+export type NeutralKind = 'mice' | 'cockroaches' | 'stinkbugs';
+
+/**
+ * Per-neutral-party control state (round 8). Empty/missing means the
+ * neutral party is uncontrolled (default random walk). Spider hypnotize
+ * sets `hypnotizedBy: 'spider'` and a control-turn counter; when that
+ * runs out it transitions to `spiderImmunityRemaining: 10` for the
+ * rebound window.
+ */
+export interface NeutralStatus {
+  readonly hypnotizedBy: 'spider' | null;
+  readonly hypnoticControlRemaining: number;
+  readonly spiderImmunityRemaining: number;
+  readonly kind: NeutralKind;
+}
+
+/**
+ * One stinkbug damage zone (round 8). Spawned at the stinkbug's tile
+ * on a failed recruit/hypnotize attempt. 5-tile plus shape (center +
+ * 4 neighbors), shrunk by map bounds. Persists for 5 turns ticking
+ * down at end-of-turn; deals 1 hp/turn to non-stinkbug units.
+ */
+export interface DamageZone {
+  readonly plane: Plane;
+  readonly centerX: number;
+  readonly centerY: number;
+  readonly turnsRemaining: number;
+}
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -280,6 +315,18 @@ export interface GameState {
    * spider AI consumes this as the *only* visibility into ant
    * positions. Ants see the world directly. */
   readonly pheroTrails: ReadonlyMap<PartyId, readonly PheroTrailEntry[]>;
+  /**
+   * Per-neutral-party control / immunity status (round 8). Keyed by
+   * the neutral PartyId. Non-neutral parties never appear here. When a
+   * neutral converts to ant via recruit, its entry is dropped.
+   */
+  readonly neutralStatus: ReadonlyMap<PartyId, NeutralStatus>;
+  /**
+   * Active stinkbug damage zones (round 8). Each is a 5-tile plus
+   * (center + 4 neighbors). Multiple zones may stack on the same tile;
+   * end-of-turn ticks each independently and damage is additive.
+   */
+  readonly damageZones: readonly DamageZone[];
   readonly winner: Faction | null;
 }
 
@@ -388,6 +435,46 @@ export type ReplayEvent =
       readonly partyId: PartyId;
       readonly abilityId: AbilityId;
       readonly phase: DayNightPhase;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'neutral-spawned';
+      readonly partyId: PartyId;
+      readonly neutralKind: NeutralKind;
+      readonly location: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'hypnotize-attempted';
+      readonly partyId: PartyId;
+      readonly targetId: PartyId;
+      readonly success: boolean;
+      readonly casterHpBefore: number;
+      readonly casterHpAfter: number;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'hypnotize-rebound-started';
+      readonly partyId: PartyId;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'recruit-attempted-neutral';
+      readonly partyId: PartyId;
+      readonly targetId: PartyId;
+      readonly targetType: NeutralKind;
+      readonly success: boolean;
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'damage-zone-spawned';
+      readonly center: TileCoord;
+      readonly tiles: readonly TileCoord[];
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'damage-zone-tick';
+      readonly center: TileCoord;
+      readonly damage: number;
+      readonly affectedUnits: readonly UnitId[];
+    })
+  | (ReplayEventCommon & {
+      readonly kind: 'damage-zone-expired';
+      readonly center: TileCoord;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 

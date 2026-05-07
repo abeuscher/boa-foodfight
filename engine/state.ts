@@ -11,7 +11,9 @@ import path from 'node:path';
 
 import { coordKey } from './coord.ts';
 import { generateRandomMap } from './map-gen.ts';
+import { spawnNeutrals } from './neutrals.ts';
 import { PHASE_LENGTH } from './phase.ts';
+import { createRng } from './rng.ts';
 import {
   abilitiesFileSchema,
   dialogueFileSchema,
@@ -40,22 +42,37 @@ import type {
   AbilityId,
   FogTile,
   GameState,
+  NeutralKind,
+  NeutralStatus,
   Party,
   PartyId,
   Post,
   PostId,
   Terrain,
   Tile,
+  TileCoord,
   Unit,
   UnitId,
   UnitTemplate,
   UnitTemplateId,
 } from './types.ts';
 
+export interface NeutralSpawnEvent {
+  readonly partyId: PartyId;
+  readonly neutralKind: NeutralKind;
+  readonly location: TileCoord;
+}
+
 export interface LoadedScenario {
   readonly state: GameState;
   /** Original validated data, kept for ability/balance lookups during the run. */
   readonly data: ScenarioData;
+  /**
+   * Neutral-spawn replay payloads (round 8). The driver attaches the
+   * common `turn` / `tick` fields and emits one `neutral-spawned`
+   * event per entry alongside `scenario-start`.
+   */
+  readonly neutralSpawnEvents: readonly NeutralSpawnEvent[];
 }
 
 export interface ScenarioData {
@@ -214,7 +231,23 @@ const buildInitialFog = (tiles: ReadonlyMap<string, Tile>): ReadonlyMap<string, 
   return fog;
 };
 
-export const buildInitialState = (data: ScenarioData, seed: number): GameState => {
+export interface BuildInitialStateResult {
+  readonly state: GameState;
+  readonly neutralSpawnEvents: readonly NeutralSpawnEvent[];
+}
+
+export const buildInitialStateWithEvents = (
+  data: ScenarioData,
+  seed: number,
+): BuildInitialStateResult => {
+  const inner = buildInitialStateInternal(data, seed);
+  return inner;
+};
+
+export const buildInitialState = (data: ScenarioData, seed: number): GameState =>
+  buildInitialStateInternal(data, seed).state;
+
+const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildInitialStateResult => {
   const unitTemplates = buildUnitTemplates(data.units);
   // Per-seed map randomization: each scenario gets its own POST layout
   // (3-5 mid-POSTs subject to ≤2 per plane) and obstacle clusters
@@ -223,10 +256,30 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
   const randomizedMap = generateRandomMap({ seed, base: data.map });
   const tiles = buildTiles(randomizedMap);
   const posts = buildPosts(randomizedMap);
-  const parties = buildParties(data.rosters, unitTemplates);
+  const baseParties = buildParties(data.rosters, unitTemplates);
   const fog = buildInitialFog(tiles);
 
-  return {
+  // Round 8: spawn three neutral parties (one each mice/cockroaches/
+  // stinkbugs) on distinct planes via a seeded RNG fork. Mice are
+  // restricted to floor/ceiling. Spawn tiles avoid POSTs, obstacles,
+  // and the ant queen's queen-guard tile.
+  const neutralRng = createRng(seed).fork('neutrals-spawn');
+  const postLocations = [...posts.values()].map((p) => p.location);
+  const spawnResult = spawnNeutrals(
+    {
+      tiles,
+      templates: unitTemplates,
+      existingParties: baseParties,
+      postLocations,
+    },
+    neutralRng,
+  );
+  const parties = new Map<PartyId, Party>(baseParties);
+  const neutralStatus = new Map<PartyId, NeutralStatus>();
+  for (const p of spawnResult.parties) parties.set(p.id, p);
+  for (const s of spawnResult.statuses) neutralStatus.set(s.partyId, s.status);
+
+  const state: GameState = {
     turn: 0,
     seed,
     tiles,
@@ -241,12 +294,20 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
     phase: 'day',
     phaseTurnsRemaining: PHASE_LENGTH,
     pheroTrails: new Map(),
+    neutralStatus,
+    damageZones: [],
     winner: null,
   };
+  const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({
+    partyId: e.partyId,
+    neutralKind: e.kind,
+    location: e.location,
+  }));
+  return { state, neutralSpawnEvents };
 };
 
 export const loadScenario = (dataDir: string, seed: number): LoadedScenario => {
   const data = loadScenarioData(dataDir);
-  const state = buildInitialState(data, seed);
-  return { state, data };
+  const built = buildInitialStateWithEvents(data, seed);
+  return { state: built.state, data, neutralSpawnEvents: built.neutralSpawnEvents };
 };
