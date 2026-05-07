@@ -303,6 +303,17 @@ export interface DamageZone {
   readonly turnsRemaining: number;
 }
 
+/**
+ * Round 12 — per-player gold totals. Both factions start at 0 and earn
+ * gold from POST captures and battle kills (see `engine/gold-table.ts`).
+ * Gold is pure tracking — it has no in-scenario effect on combat math
+ * or AI policy and is keyed per-faction (player-scoped), not per-party.
+ */
+export interface PlayerGold {
+  readonly ant: number;
+  readonly spider: number;
+}
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -347,6 +358,13 @@ export interface GameState {
    * end-of-turn ticks each independently and damage is additive.
    */
   readonly damageZones: readonly DamageZone[];
+  /**
+   * Round 12 — per-faction gold totals (player-scoped). Earned by
+   * capturing mid-POSTs and by winning battles (each casualty on the
+   * losing side credits the winning faction). No in-scenario function
+   * yet; pure tracking.
+   */
+  readonly playerGold: PlayerGold;
   readonly winner: Faction | null;
 }
 
@@ -527,6 +545,26 @@ export type ReplayEvent =
   | (ReplayEventCommon & {
       readonly kind: 'damage-zone-expired';
       readonly center: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 12 — gold credited to a faction. Sources:
+       *   - `'post'`: a `post-captured` event just fired and the
+       *     captured POST's type pays a fixed gold amount. `sourceId`
+       *     carries the captured PostId.
+       *   - `'kill'`: a unit died during a battle and the battle's
+       *     winning faction is credited the dead unit's bounty.
+       *     `sourceId` carries the dead unit's UnitTemplateId.
+       * `newTotal` reflects the faction's gold AFTER the gain so a
+       * viewer can render the running total without re-summing the
+       * stream.
+       */
+      readonly kind: 'gold-earned';
+      readonly faction: 'ant' | 'spider';
+      readonly source: 'post' | 'kill';
+      readonly sourceId: PostId | UnitTemplateId;
+      readonly amount: number;
+      readonly newTotal: number;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 

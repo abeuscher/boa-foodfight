@@ -8,6 +8,7 @@
  */
 
 import { sameCoord } from './coord.ts';
+import { goldForPostCapture } from './gold-table.ts';
 import type { Faction, GameState, Party, Post, PostId, ReplayEvent, TileCoord } from './types.ts';
 
 /** Returns the Post located at `coord`, or undefined if none. */
@@ -65,16 +66,41 @@ export const setPostOwner = (
   const updated: Post = { ...existing, owner: newOwner };
   const nextPosts = new Map<PostId, Post>(state.posts);
   nextPosts.set(postId, updated);
-  const nextState: GameState = { ...state, posts: nextPosts };
-
-  const event: ReplayEvent = {
-    kind: 'post-captured',
-    turn: state.turn,
-    tick: tick(),
-    postId,
-    newOwner,
-  };
-  return { state: nextState, events: [event] };
+  const events: ReplayEvent[] = [
+    {
+      kind: 'post-captured',
+      turn: state.turn,
+      tick: tick(),
+      postId,
+      newOwner,
+    },
+  ];
+  // Round 12 — POST-capture gold. Faction-locked POSTs (storm-drain,
+  // spider-web) award 0 by spec. Neutral captures (which don't happen
+  // in practice but are technically allowed by the type) credit
+  // nobody. We still emit the post-captured event regardless.
+  let nextState: GameState = { ...state, posts: nextPosts };
+  if (newOwner !== 'neutral') {
+    const gold = goldForPostCapture(postId);
+    if (gold > 0) {
+      const newTotal = nextState.playerGold[newOwner] + gold;
+      nextState = {
+        ...nextState,
+        playerGold: { ...nextState.playerGold, [newOwner]: newTotal },
+      };
+      events.push({
+        kind: 'gold-earned',
+        turn: state.turn,
+        tick: tick(),
+        faction: newOwner,
+        source: 'post',
+        sourceId: postId,
+        amount: gold,
+        newTotal,
+      });
+    }
+  }
+  return { state: nextState, events };
 };
 
 /**

@@ -124,6 +124,10 @@ function reduceWithInitial(events, targetTick) {
   const unitTemplates = new Map();
   let turn = 0;
   let queenCharge = 0;
+  // Round 12 — running per-faction gold totals. Replays without
+  // `gold-earned` events leave these at 0 (backwards-compat).
+  let antGold = 0;
+  let spiderGold = 0;
   let winner = null;
   for (const e of events) {
     // scenario-start carries the initial map state. Its emit tick (1)
@@ -241,6 +245,10 @@ function reduceWithInitial(events, targetTick) {
           neutralHypno.delete(e.targetId);
         }
         break;
+      case 'gold-earned':
+        if (e.faction === 'ant') antGold = e.newTotal;
+        else if (e.faction === 'spider') spiderGold = e.newTotal;
+        break;
       case 'scenario-end':
         winner = e.winner;
         break;
@@ -260,6 +268,8 @@ function reduceWithInitial(events, targetTick) {
     unitTemplates,
     turn,
     queenCharge,
+    antGold,
+    spiderGold,
     winner,
   };
 }
@@ -1198,6 +1208,8 @@ function describeEvent(e) {
       return `${e.center.plane}(${e.center.x},${e.center.y}) dmg=${e.damage} units=${e.affectedUnits.length}`;
     case 'damage-zone-expired':
       return `${e.center.plane}(${e.center.x},${e.center.y})`;
+    case 'gold-earned':
+      return `${e.faction} +${String(e.amount)} (${e.source}: ${e.sourceId}) → ${String(e.newTotal)}`;
     default:
       return '';
   }
@@ -1370,6 +1382,11 @@ function setTick(tick) {
   const winnerText = state.winner ? (state.winner === 'ant' ? ' — ANTS WIN' : ' — ANTS LOSE') : '';
   document.getElementById('tick-label').textContent =
     `tick ${t} / ${MAX_TICK} — turn ${state.turn}${winnerText}`;
+  // Round 12 — gold counters in the header. Reducer tracks `antGold` /
+  // `spiderGold` from `gold-earned` events; on a fresh replay both are
+  // 0 until the first POST capture or kill.
+  document.getElementById('gold-ant').textContent = String(state.antGold ?? 0);
+  document.getElementById('gold-spider').textContent = String(state.spiderGold ?? 0);
 }
 
 function togglePlay() {
