@@ -221,3 +221,29 @@ Recs 1.1 (parallel capture chain) and 2.2 (civic slots) are the next tier — hi
 - [Civilization IV: Beyond the Sword — Civilization Wiki](https://civilization.fandom.com/wiki/Civilization_IV:_Beyond_the_Sword)
 - [Civ IV BtS Hands-On — Espionage, Corporations, and More (GameSpot)](https://www.gamespot.com/articles/civilization-iv-beyond-the-sword-hands-on-espionage-corporations-and-more/1100-6172983/)
 - [Victory in Civ IV — Civilization Wiki](<https://civilization.fandom.com/wiki/Victory_(Civ4)>)
+
+---
+
+## Section 5 — User-authored expansion specs (for a later phase)
+
+These are queued, not implemented. The current immediate work is the top-3 plus rec 1.5.
+
+### 5.1 Worker barriers + arachnoram
+
+- Worker ants gain a `build-barrier` 3-turn ability.
+- Barriers occupy a tile, block movement.
+- Barriers can only be broken by a new spider unit, the **arachnoram**: strong against buildings (POSTs treated as buildings for this niche), weak against infantry / foot soldiers.
+- **Open design points** to resolve before implementation: hard "only-arachnoram-can-break" rule risks unwinnable states; need placement constraints (probably adjacent to worker, never on POST/queen tiles); decide whether arachnoram also accelerates POST capture.
+
+### 5.2 Neutral parties
+
+- 3 neutral parties per scenario, never spawning on the same plane (one per surface, mice restricted to floor/ceiling).
+- Three types:
+  - **Mice** (3 units): large; floor + ceiling only; no plane-switching (cannot move off spawn plane).
+  - **Cockroaches** (8 units): ferocious fighters; 10% chance per attack to hit own party.
+  - **Stinkbugs** (2 units): on failed recruit/hypnotize, leave a 5-tile damage block (1 hp/turn to all non-stinkbug units, decays 1 hp/turn over 5 rounds).
+- **Recruit (ants):** ant-mage uses the existing `recruit` ability; permanent conversion. Same 25% success rate as spiderling recruit.
+- **Hypnotize (spiders):** any spider unit may attempt; costs the caster half its current HP. 80% success rate. Roll % between 5 and 10 turns of spider control.
+- After hypnosis ends, neutral becomes immune from spider hypnosis for 10 turns and tries to escape from spider parties (creates ant-recruit window).
+- Default behavior: random walk on spawn plane.
+- While hypnotized: seeks out and fights ants.
