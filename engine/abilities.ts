@@ -40,7 +40,7 @@ const SPIN_WEB: AbilityId = 'spin-web' as AbilityId;
 const RECRUIT: AbilityId = 'recruit' as AbilityId;
 const SPAWN_SPIDERLINGS: AbilityId = 'spawn-spiderlings' as AbilityId;
 
-const partyHasAbility = (
+export const partyHasAbility = (
   party: Party,
   abilityId: AbilityId,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,

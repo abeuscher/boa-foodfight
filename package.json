@@ -27,6 +27,7 @@
     "test:viewer": "playwright test --config viewer/playwright.config.ts",
     "critic:metrics": "tsx critics/metrics.ts",
     "critic:spec": "tsx critics/spec-compliance.ts",
+    "critic:interest": "tsx harness/critic-interest.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm duplication && pnpm test && pnpm reconcile",
     "prepare": "husky"
   },

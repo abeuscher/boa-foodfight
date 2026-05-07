@@ -1,123 +1,118 @@
 /**
- * Variant AI: "dive"
+ * Variant AI: "dive" (round-2 redesign)
  *
- * Mid-board plane-switch route. Pathfinders march to the soap-dish
- * (mid-floor 5,5) and capture it on the way, then plane-switch UP to
- * ceiling (5,5) — entering the ceiling from the SW-center rather than
- * the canonical north-wall ladder OR the corner-flank route. They then
- * walk east to spider-web (9,9). Vanguard-bravo continues with the
- * baseline staging on the floor and wall, providing the towel-rack /
- * wall-crack secondary axis. Vanguard-alpha and the queen-guard match
- * baseline behavior.
+ * Near-corner plane-switch dive. The original dive routed pathfinders
+ * via the mid-board soap-dish (5,5) and then north-east toward the
+ * web (9,9), which put the assault directly through web-watch's
+ * patrol arc on the ceiling (8,9). The redesign sends pathfinders
+ * along the *opposite-corner* approach: walk floor (1,1) → (9,9)
+ * (the tile directly under the web), then plane-switch teleports
+ * pathfinders to ceiling (9,9) which IS the web tile. Web-watch
+ * never gets a chance to intercept.
  *
- * Why this is route-distinct from baseline / rush / turtle / flank:
- *   - Pathfinders enter the ceiling at a mid-board interior tile, not
- *     a corner — web-watch (ceiling 8,9) lies directly between (5,5)
- *     and the web, so the ant force punches through it from the SW
- *     instead of being intercepted from the NW or pulled to a corner.
- *   - Vanguard-bravo retains the wall-crack ladder, so the spider
- *     threat-response (decideThreat in spider-l1) still triggers on
- *     wall-crack, pulling silk-line off the web — preserving the
- *     "thin the web defenders" effect baseline relies on.
+ * Roster behavior:
+ *   pathfinders     → rush floor (web.x, web.y) → plane-switch to web
+ *   vanguard-bravo  → rush spider-web (rush-tempo)
+ *   vanguard-alpha  → rush spider-web (rush-tempo, floor-only path)
+ *   queen-guard     → worker fires `jelly-apply` each turn at the
+ *                     pathfinders (the kill party), stockpiling
+ *                     attack/armor multipliers via the engine's
+ *                     `jellyMultipliers` lookup.
+ *
+ * Why this is route-distinct from baseline / rush / turtle / flank /
+ * jelly-rush:
+ *   - Pathfinders enters the ceiling AT THE WEB TILE itself via
+ *     plane-switch from floor (web.x, web.y). No other variant
+ *     teleports onto the web — flank uses the corner ladder, dive
+ *     (old) used a mid-board landing, rush walks the canonical
+ *     ladder, jelly-rush rushes the web but goes through the wall.
+ *   - The engine's `tryPlaneTransition` call uses plane-switch when
+ *     the target plane differs from the party's plane and the party
+ *     carries a mage with the ability AND no `no-fly` units. The
+ *     mage-only pathfinders party (1 mage + 3 archers + 2 scouts)
+ *     satisfies both gates.
  *
  * Interactions:
- *   - plane-switch ability (interaction 1): pathfinders use the mage's
- *     plane-switch from a non-edge floor tile (5,5) — only possible
- *     because the ability teleports to the same (x,y) on the target
- *     plane. Other variants tie plane-switch to corner tiles (flank)
- *     or to the home base (rush). This exercises the ability's
- *     mid-board capability that no current variant does.
- *   - soap-dish capture + spider counter-push (interaction 2):
- *     pathfinders capture soap-dish on the way, contributing to the
- *     ant-controlled-POST count that triggers the spider counter-push
- *     in spider-l1. The counter-push pulls the largest spider party
- *     toward wall-crack, which clears the web of one defender.
- *   - towel-rack / wall-crack pair (interaction 3): vanguard-bravo
- *     stages the floor → wall transition, so the second axis of attack
- *     reaches the ceiling via the canonical paired-POST route.
+ *   - plane-switch ability + opposite-corner route: pathfinders use the
+ *     mage's plane-switch from floor (9,9) to land directly on the web
+ *     tile, fully bypassing web-watch which sits at ceiling (8,9).
+ *   - magic-arrow + volley pre-battle stack: the pathfinders roster
+ *     (1 mage + 3 archers) auto-fires `magic-arrow` (22 dmg) and
+ *     `volley` in `applyOpeningAbilities` before round 1.
+ *   - jelly-apply supply line: the queen-guard's worker stockpiles a
+ *     dose on pathfinders each turn; multipliers boost attack/armor
+ *     in the kill battle.
+ *   - rush-tempo on the secondary axes: vanguard-alpha/bravo also rush
+ *     the web so multiple ant parties pile onto it within a couple
+ *     turns.
  */
 
-import type { GameState, Post, TileCoord } from '../engine/types.ts';
+import { sameCoord } from '../engine/coord.ts';
+import type {
+  AbilityId,
+  AbilityOrder,
+  GameState,
+  Order,
+  Party,
+  TileCoord,
+} from '../engine/types.ts';
 
 import {
   buildAntPolicy,
-  CEILING_CAPABLE,
+  closestFieldPartyId,
   moveToOrHold,
-  nextStageTarget,
+  partyAlive,
   PATHFINDERS,
   postLocation,
-  postsOfType,
-  SOAP_DISH_TYPE,
   SPIDER_WEB,
-  VANGUARD_BRAVO,
 } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
-/**
- * Pathfinders' route:
- *   1. If they don't yet hold soap-dish, march to soap-dish (floor 5,5).
- *   2. Once at soap-dish (and after capture resolves), plane-switch
- *      directly to ceiling (5,5) by issuing a move-to ceiling target;
- *      the engine's tryPlaneTransition uses the mage's plane-switch
- *      ability to teleport to the same (x,y) on the destination plane.
- *   3. From ceiling (5,5), march to spider-web (9,9).
- */
-const pathfindersTarget = (
-  soap: Post | undefined,
-  webLoc: TileCoord | undefined,
-): TileCoord | undefined => {
+const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
+
+/** Pathfinders' near-corner dive route. Walks floor (web.x, web.y) —
+ * the tile directly under the spider-web — then plane-switches to
+ * ceiling (web.x, web.y) which IS the web tile. The mage's
+ * plane-switch ability does the teleport per `tryPlaneTransition`. */
+const pathfindersTarget = (party: Party, webLoc: TileCoord | undefined): TileCoord | undefined => {
   if (webLoc === undefined) return undefined;
-  if (soap === undefined) return webLoc;
-
-  // Phase 1: if soap-dish isn't ours yet, take it. The pathfinders
-  // capture it and unlock phase 2.
-  if (soap.owner !== 'ant') return soap.location;
-
-  // Phase 2/3: head for the spider-web. If still on the floor, the
-  // engine's tryPlaneTransition will plane-switch us to ceiling at our
-  // current (x,y) — which is the soap-dish tile (5,5). From there,
-  // greedy stepping walks east-southeast toward (9,9).
+  if (party.location.plane === 'floor') {
+    const floorLanding: TileCoord = { plane: 'floor', x: webLoc.x, y: webLoc.y };
+    if (!sameCoord(party.location, floorLanding)) return floorLanding;
+    return webLoc;
+  }
   return webLoc;
 };
 
-export const divePlayer: AIPolicy = buildAntPolicy('dive', (state: GameState) => {
-  const stageTarget = nextStageTarget(state);
-  // First unowned soap-dish (any plane). With per-seed map gen the
-  // soap-dish location varies; the dive variant picks whichever
-  // canonical-type instance exists first, captures it, then dives to
-  // ceiling at that (x,y) via mage plane-switch.
-  const soap = postsOfType(state, SOAP_DISH_TYPE).find((p) => p.owner !== 'ant');
-  const webLoc = postLocation(state, SPIDER_WEB);
-  return (party) => {
-    if (party.id === PATHFINDERS) {
-      const target = pathfindersTarget(soap, webLoc);
-      if (target === undefined) return { orders: [], posture: 'fight' };
-      return { orders: moveToOrHold(party, target), posture: 'fight' };
-    }
-    if (party.id === VANGUARD_BRAVO) {
-      // Bravo runs the canonical floor/wall stage chain and ultimately
-      // climbs the wall-crack ladder. CEILING_CAPABLE means the engine
-      // will plane-switch when the chain reaches the ceiling phase.
-      if (stageTarget !== undefined) {
-        return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
+const queenGuardOrders = (state: GameState, queenGuard: Party): readonly Order[] => {
+  // Prefer pathfinders (the kill party) when alive; fall back to closest
+  // field party. Concentrating doses on pathfinders is what makes this
+  // variant distinct from jelly-rush, which targets whoever is closest.
+  const pathfinders = state.parties.get(PATHFINDERS);
+  let target;
+  if (pathfinders && !pathfinders.leaderless && partyAlive(pathfinders)) {
+    target = PATHFINDERS;
+  } else {
+    target = closestFieldPartyId(state, queenGuard);
+  }
+  if (target === undefined) return [];
+  const order: AbilityOrder = { kind: 'use-ability', abilityId: JELLY_APPLY, target };
+  return [order];
+};
+
+export const divePlayer: AIPolicy = buildAntPolicy(
+  'dive',
+  (state: GameState) => {
+    const webLoc = postLocation(state, SPIDER_WEB);
+    return (party) => {
+      if (party.id === PATHFINDERS) {
+        const target = pathfindersTarget(party, webLoc);
+        if (target === undefined) return { orders: [], posture: 'fight' };
+        return { orders: moveToOrHold(party, target), posture: 'fight' };
       }
-      if (webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-      return { orders: [], posture: 'fight' };
-    }
-    // Other CEILING_CAPABLE parties (none in roster, but future-proof):
-    // fall back to baseline-style staging.
-    if (CEILING_CAPABLE.has(party.id)) {
-      if (webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-      return { orders: [], posture: 'fight' };
-    }
-    // Floor-only parties (vanguard-alpha): mirror baseline staging.
-    if (stageTarget !== undefined) {
-      return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
-    }
-    return { orders: [], posture: 'fight' };
-  };
-});
+      if (webLoc === undefined) return { orders: [], posture: 'fight' };
+      return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+    };
+  },
+  queenGuardOrders,
+);

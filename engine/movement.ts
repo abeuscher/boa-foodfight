@@ -264,13 +264,14 @@ const resolveParty = (
   }
 
   let allowance = baseMovementAllowance(partyIn, state.unitTemplates);
-  // Asymmetric wall traversal: spiders climb walls fluently (2
-  // tiles/turn) while ants struggle (1 tile/turn). Floor and ceiling
-  // keep the default allowance from `baseMovementAllowance`. Determined
-  // by the *starting* plane this turn — a party that crosses onto a
-  // wall mid-step uses the budget it had before crossing.
+  // Asymmetric wall traversal: spiders climb walls fluently while
+  // ants struggle. Initial Phase-1 ratio of 2:1 was structurally
+  // hostile to baseline (which routes through wall-crack); softened
+  // to 3:2 in Phase 4 so the asymmetry is real but doesn't hard-
+  // counter the locked baseline player. Floor and ceiling keep the
+  // default allowance from `baseMovementAllowance`.
   if (isWallPlane(partyIn.location.plane)) {
-    allowance = partyIn.faction === 'spider' ? 2 : 1;
+    allowance = partyIn.faction === 'spider' ? 3 : 2;
   }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];

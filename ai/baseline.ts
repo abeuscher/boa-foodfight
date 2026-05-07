@@ -1,107 +1,101 @@
 /**
- * Baseline player AI — the "locked reference" the spec calls for.
+ * Baseline player AI — the standard ant strategy.
  *
- * This policy is held fixed forever. All Phase 4 tuning (enemy pattern,
- * starting circumstances, battlefield, scenario goals) is measured AGAINST
- * this AI's win rate. If this policy changes, the win-rate target
- * (65–80%) becomes meaningless.
+ * Strategy: "soap-dish staging with commit." A competent default that any
+ * standard player would discover, not a master plan. Variants like
+ * rush/turtle/flank/dive/jelly-rush remain genuine meta-strategies that
+ * beat the baseline through smarter routing or timing.
  *
- * Strategy: "soap-dish staging."
- *   1. Capture soap-dish (mid-floor, contestable).
- *   2. Capture towel-rack (floor, paired with wall-crack).
- *   3. Step through the pair to capture wall-crack on the wall plane.
- *   4. Push to spider-web on the ceiling and capture it for victory.
+ *   1. Turn 0 freebie: ceiling-capable parties (pathfinders, vanguard-
+ *      bravo — both carry an ant-mage) self-buff with `jelly-apply`. The
+ *      buff costs nothing on turn 0 (parties haven't moved yet) and the
+ *      attack/armor multiplier is still active when the assault hits the
+ *      web a few turns later.
+ *   2. Stage captures (soap-dish → towel-rack → wall-crack), with the
+ *      mid-POST chain advanced by `nextStageTarget` so per-seed POST
+ *      randomization is handled. Parties walk the canonical ladder
+ *      through wall-crack — no plane-switch shortcuts; that's a
+ *      meta-strategy reserved for `dive`.
+ *   3. Commit to the kill: once the canonical chain is complete (every
+ *      mid-POST is ant-owned), all field parties path to the spider-web
+ *      and stay committed. This is the bug the previous baseline had —
+ *      once mid-POSTs were taken parties would idle and time out.
  *
- * Field parties chase the current stage target. The Queen's home guard
- * holds at the storm-drain (the Queen is immobile per spec anyway).
+ * What this AI deliberately does NOT do (kept as variant-only meta):
+ *   - per-spider-party micro-tactics (e.g., "dodge web-watch through
+ *     ceiling (5,5)"); see flank/dive for that.
+ *   - plane-switch shortcuts that bypass the wall-crack ladder; see
+ *     dive.
+ *   - holding ceiling parties at home until the queen ultimate charges;
+ *     see turtle.
+ *   - skipping the staged captures entirely; see rush/jelly-rush.
+ *   - queen-guard worker stockpiling jelly on field parties; that's the
+ *     jelly-rush / dive supply-line meta.
  */
 
-import { sameCoord } from '../engine/coord.ts';
-import type { ScenarioData } from '../engine/state.ts';
-import type {
-  Faction,
-  GameState,
-  MoveOrder,
-  Order,
-  Party,
-  PartyId,
-  Post,
-  Rng,
-} from '../engine/types.ts';
+import type { AbilityId, AbilityOrder, GameState, PartyId } from '../engine/types.ts';
 
-import { nextStageTarget, SPIDER_WEB } from './policy-helpers.ts';
+import {
+  buildAntPolicy,
+  CEILING_CAPABLE,
+  moveToOrHold,
+  nextStageTarget,
+  postLocation,
+  postsOfType,
+  SPIDER_WEB,
+  WALL_CRACK_TYPE,
+} from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
-const FACTION: Faction = 'ant';
+const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
 
-const QUEEN_PARTY: PartyId = 'queen-guard' as PartyId;
-
-/**
- * Returns the current strategic target POST, or undefined if every
- * stage POST and the spider-web are already ours. Walks the type
- * chain (soap-dish → towel-rack → wall-crack) via `nextStageTarget`
- * which handles per-seed POST randomization (multiple instances of
- * each type, suffixed `-1`, `-2`, ...). Falls through to spider-web
- * once every mid-POST is ant-owned.
- */
-const currentStageTarget = (state: GameState): Post | undefined => {
-  const next = nextStageTarget(state);
-  if (next) return next;
-  const web = state.posts.get(SPIDER_WEB);
-  if (web && web.owner !== FACTION) return web;
-  return undefined;
+/** True iff every wall-crack POST is ant-owned. After that, the canonical
+ * mid-POST chain is complete and all field parties commit to the web. */
+const wallCracksCaptured = (state: GameState): boolean => {
+  const cracks = postsOfType(state, WALL_CRACK_TYPE);
+  if (cracks.length === 0) return false;
+  return cracks.every((p) => p.owner === 'ant');
 };
 
-const moveOrder = (target: Post): MoveOrder => ({ kind: 'move-to', target: target.location });
+/** Constructs a `jelly-apply` ability order. Ceiling-capable parties
+ * self-buff on turn 0 with target=own party id. */
+const jellyApplyOrder = (target: PartyId): AbilityOrder => ({
+  kind: 'use-ability',
+  abilityId: JELLY_APPLY,
+  target,
+});
 
-const ordersForParty = (state: GameState, party: Party): readonly Order[] => {
-  // Queen's home guard never moves. The Queen is immobile per spec; the rest
-  // of the guard stays to defend the home base.
-  if (party.id === QUEEN_PARTY) return [];
-
-  // Leaderless parties auto-retreat per the battle module — don't override.
-  if (party.leaderless) return party.orders;
-
-  const target = currentStageTarget(state);
-  if (!target) {
-    // Every stage POST is ours but the spider-web victory check hasn't
-    // fired yet (most likely the win-condition resolution is pending).
-    // Hold so we don't issue spurious moves.
-    return [];
-  }
-
-  // If we're already standing on the target tile, hold — capture happens
-  // at end-of-turn anyway.
-  if (sameCoord(party.location, target.location)) return [];
-
-  return [moveOrder(target)];
-};
-
-/**
- * Field parties charge as soon as the AI starts; the rosters seed them as
- * `run` or `defend` to encode their initial disposition, but once we're
- * issuing offensive orders we want full damage. The Queen's home guard
- * keeps its `defend` posture (the spec wants brutal home-base defense).
- */
-const desiredPosture = (party: Party): Party['posture'] => {
-  if (party.id === QUEEN_PARTY) return 'defend';
-  return 'fight';
-};
-
-export const baselinePlayer: AIPolicy = {
-  name: 'baseline-staging',
-  faction: FACTION,
-  decide(state: GameState, _scenario: ScenarioData, _rng: Rng): GameState {
-    const nextParties = new Map(state.parties);
-    for (const [id, party] of state.parties) {
-      if (party.faction !== FACTION) continue;
-      const orders = ordersForParty(state, party);
-      const posture = desiredPosture(party);
-      const ordersChanged = orders !== party.orders;
-      const postureChanged = posture !== party.posture;
-      if (!ordersChanged && !postureChanged) continue;
-      nextParties.set(id, { ...party, orders, posture });
+export const baselinePlayer: AIPolicy = buildAntPolicy('baseline-staging', (state: GameState) => {
+  const stageTarget = nextStageTarget(state);
+  const webLoc = postLocation(state, SPIDER_WEB);
+  const isOpeningTurn = state.turn === 0;
+  const committed = wallCracksCaptured(state);
+  return (party) => {
+    // Turn-0 freebie: ceiling-capable parties self-buff with jelly-apply.
+    // Costs nothing (no movement yet) and the multiplier persists into
+    // the kill battle.
+    if (isOpeningTurn && CEILING_CAPABLE.has(party.id)) {
+      return { orders: [jellyApplyOrder(party.id)], posture: 'fight' };
     }
-    return { ...state, parties: nextParties };
-  },
-};
+
+    // Commit phase: once the canonical chain is complete, every field
+    // party paths to the web and stays committed. This is the fix for
+    // the previous "mid-POSTs captured then wander" timeout bug.
+    if (committed && webLoc !== undefined) {
+      return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+    }
+
+    // Staging phase: walk the canonical chain (soap-dish → towel-rack
+    // → wall-crack) per `nextStageTarget`.
+    if (stageTarget !== undefined) {
+      return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
+    }
+
+    // Every stage POST is ours but the wall-cracks-captured branch
+    // didn't fire (rare race) — fall back to the web.
+    if (webLoc !== undefined) {
+      return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+    }
+    return { orders: [], posture: 'fight' };
+  };
+});
