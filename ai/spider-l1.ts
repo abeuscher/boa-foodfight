@@ -73,12 +73,14 @@ import type {
 } from '../engine/types.ts';
 
 import {
+  getSpiderVisibleAntTrail,
   postsOfType,
   SPIDER_WEB,
   STORM_DRAIN,
   SOAP_DISH_TYPE,
   TOWEL_RACK_TYPE,
   WALL_CRACK_TYPE,
+  type SpiderVisibleTrailEntry,
 } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
@@ -155,16 +157,33 @@ const allPostsOfTypeOwnedByAnt = (state: GameState, type: string): boolean => {
 const moveTo = (target: TileCoord): Order => ({ kind: 'move-to', target });
 
 /**
- * Closest Chebyshev distance from any threat-eligible ant to the given coord.
- * Cross-plane distances are Infinity (engine/coord.ts), which is what we
- * want: a wall-plane ant cannot directly threaten a floor POST.
+ * Stale-entry weight for the spider's trail-based scans (rec 1.5).
+ * The trail carries entries aged 0..3. The spider AI trusts the most
+ * recent observation fully and adds 1 phantom tile of distance per
+ * turn of staleness; an age-3 entry is treated as 3 tiles farther
+ * than its raw Chebyshev distance suggests. This keeps the AI honest
+ * (it can't read minds) without making old breadcrumbs useless.
+ */
+const STALE_PENALTY_PER_TURN = 1;
+
+const trailDistance = (target: TileCoord, entry: SpiderVisibleTrailEntry): number => {
+  if (entry.plane !== target.plane) return Number.POSITIVE_INFINITY;
+  const dx = Math.abs(entry.x - target.x);
+  const dy = Math.abs(entry.y - target.y);
+  return Math.max(dx, dy) + STALE_PENALTY_PER_TURN * entry.ageInTurns;
+};
+
+/**
+ * Closest weighted Chebyshev distance from any ant trail entry to the
+ * given coord. Cross-plane is Infinity. Uses pheromone trails (rec
+ * 1.5) instead of live ant positions — the spider AI's only sanctioned
+ * window into ant locations.
  */
 const closestAntDistance = (state: GameState, target: TileCoord): number => {
+  const trail = getSpiderVisibleAntTrail(state);
   let best = Number.POSITIVE_INFINITY;
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (party.units.length === 0) continue;
-    const d = distance(party.location, target);
+  for (const entry of trail) {
+    const d = trailDistance(target, entry);
     if (d < best) best = d;
   }
   return best;
@@ -305,46 +324,98 @@ const pickResponder = (
   target: TileCoord,
 ): Party | null => closestPartyTo(eligibleResponders(state, scoutId), target);
 
-const samePlaneAntParties = function* (
+/**
+ * Pick the lowest-weighted-distance trail entry on the same plane as
+ * `from`. Returns null if no entry exists on that plane. Used as the
+ * trail-driven analogue of "closest same-plane ant party". Tiebreak
+ * is by lexical PartyId so the choice is deterministic across seed
+ * replays.
+ */
+const closestTrailEntryOnPlane = (
   state: GameState,
   plane: TileCoord['plane'],
-): Iterable<Party> {
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (party.units.length === 0) continue;
-    if (party.location.plane !== plane) continue;
-    yield party;
+  from: TileCoord,
+): SpiderVisibleTrailEntry | null => {
+  const trail = getSpiderVisibleAntTrail(state);
+  let best: { entry: SpiderVisibleTrailEntry; d: number } | null = null;
+  for (const entry of trail) {
+    if (entry.plane !== plane) continue;
+    const d = trailDistance(from, entry);
+    if (best === null || d < best.d || (d === best.d && entry.partyId < best.entry.partyId)) {
+      best = { entry, d };
+    }
   }
+  return best?.entry ?? null;
 };
 
 /**
- * Closest threat-eligible ant party to `from` (Chebyshev, same-plane only).
- * Returns null if no eligible ant is on the same plane.
+ * Closest *trail-derived* ant location to `from` on the same plane.
+ * Returns null if no entry exists on that plane. The shape mirrors
+ * the live-position helper this replaced (rec 1.5): callers see a
+ * Party-shaped result built from the trail's reported partyId/loc, so
+ * the existing `chase the closest ant` logic continues to compile.
  */
-const closestAntPartyOnPlane = (state: GameState, from: TileCoord): Party | null =>
-  closestPartyTo(samePlaneAntParties(state, from.plane), from);
+const closestAntPartyOnPlane = (state: GameState, from: TileCoord): Party | null => {
+  const entry = closestTrailEntryOnPlane(state, from.plane, from);
+  if (!entry) return null;
+  // The spider AI doesn't actually consume the Party-level structure
+  // beyond `id` and `location`. We synthesize a stub from the trail —
+  // note this *does not* leak live HP/units; the spider AI must treat
+  // the trail as a position-only signal.
+  const stub: Party = {
+    id: entry.partyId,
+    faction: 'ant',
+    units: [],
+    leaderId: '' as Party['leaderId'],
+    location: { plane: entry.plane, x: entry.x, y: entry.y },
+    orders: [],
+    posture: 'fight',
+    strategyModifiers: [],
+    jellyDoses: 0,
+    leaderless: false,
+  };
+  return stub;
+};
 
 /**
- * Closest ant party (lex-id tiebreak) on a specific plane. Returns null
- * if no ant is on that plane. Used by the deep-raider to detect
- * approaches on touching floor/ceiling planes without needing to be
- * there itself; absolute position tracked, distance computed by caller
- * against a chosen door tile.
+ * Closest trail entry on a specific plane, returned with its derived
+ * location. Used by the deep-raider's interceptor logic — it needs
+ * to pick the door tile on the touching plane.
  */
 const closestAntOnPlane = (
   state: GameState,
   plane: TileCoord['plane'],
 ): { party: Party; loc: TileCoord } | null => {
-  let best: { party: Party; loc: TileCoord } | null = null;
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (party.units.length === 0) continue;
-    if (party.location.plane !== plane) continue;
-    if (best === null || party.id < best.party.id) {
-      best = { party, loc: party.location };
+  // Pick the freshest entry on the plane (age 0 first, then by lex
+  // partyId). Distance from "any reference" doesn't matter here — the
+  // raider just wants to know if there's *anyone* recently sighted.
+  const trail = getSpiderVisibleAntTrail(state);
+  let best: SpiderVisibleTrailEntry | null = null;
+  for (const entry of trail) {
+    if (entry.plane !== plane) continue;
+    if (
+      best === null ||
+      entry.ageInTurns < best.ageInTurns ||
+      (entry.ageInTurns === best.ageInTurns && entry.partyId < best.partyId)
+    ) {
+      best = entry;
     }
   }
-  return best;
+  if (!best) return null;
+  const loc: TileCoord = { plane: best.plane, x: best.x, y: best.y };
+  const stub: Party = {
+    id: best.partyId,
+    faction: 'ant',
+    units: [],
+    leaderId: '' as Party['leaderId'],
+    location: loc,
+    orders: [],
+    posture: 'fight',
+    strategyModifiers: [],
+    jellyDoses: 0,
+    leaderless: false,
+  };
+  return { party: stub, loc };
 };
 
 /**
@@ -495,8 +566,21 @@ export const spiderL1: AIPolicy = {
     // an ant party at < 50% effective HP. If found, the closest non-
     // queen-bearing non-scout/non-raider spider is redirected to pursue
     // it. The POST-ownership gate is >= 2.
+    //
+    // Position lookup uses the pheromone trail (rec 1.5) — the ant
+    // party's *most recent* breadcrumb (lowest `ageInTurns`) stands in
+    // for live position. HP fraction stays as the trigger because the
+    // spider AI's "is this party hurt?" signal is preserved by spec
+    // (rec 1.5 only constrains *position* visibility, not full state).
     let pursueTarget: { antPartyId: PartyId; loc: TileCoord } | null = null;
     if (state.turn >= 4 && antControlledPostCount(state) >= 2) {
+      const trail = getSpiderVisibleAntTrail(state);
+      const freshestByParty = new Map<PartyId, SpiderVisibleTrailEntry>();
+      for (const entry of trail) {
+        const prior = freshestByParty.get(entry.partyId);
+        if (!prior || entry.ageInTurns < prior.ageInTurns)
+          freshestByParty.set(entry.partyId, entry);
+      }
       let weakest: { partyId: PartyId; hpFrac: number; loc: TileCoord } | null = null;
       for (const party of state.parties.values()) {
         if (party.faction !== 'ant') continue;
@@ -509,8 +593,11 @@ export const spiderL1: AIPolicy = {
         if (maxHp <= 0) continue;
         const frac = livingHp / maxHp;
         if (frac >= 0.5) continue;
+        const fresh = freshestByParty.get(party.id);
+        if (!fresh) continue; // No trail yet (turn 0); skip pursuit.
+        const trailLoc: TileCoord = { plane: fresh.plane, x: fresh.x, y: fresh.y };
         if (!weakest || frac < weakest.hpFrac) {
-          weakest = { partyId: party.id, hpFrac: frac, loc: party.location };
+          weakest = { partyId: party.id, hpFrac: frac, loc: trailLoc };
         }
       }
       if (weakest) pursueTarget = { antPartyId: weakest.partyId, loc: weakest.loc };

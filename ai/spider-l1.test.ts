@@ -10,6 +10,7 @@ import type {
   MoveOrder,
   Party,
   PartyId,
+  PheroTrailEntry,
   Post,
   PostId,
   TileCoord,
@@ -35,7 +36,22 @@ const replaceParty = (state: GameState, party: Party): GameState => {
 const moveAntPartyTo = (state: GameState, partyId: PartyId, location: TileCoord): GameState => {
   const party = state.parties.get(partyId);
   if (!party) throw new Error(`unknown party ${String(partyId)}`);
-  return replaceParty(state, { ...party, location });
+  let next = replaceParty(state, { ...party, location });
+  // Seed a fresh pheromone trail at the new location so the spider
+  // AI's trail-based scans (rec 1.5) can see this party. Without
+  // this, tests that bypass end-of-turn would leave the trail empty.
+  if (party.faction === 'ant') {
+    const fresh: PheroTrailEntry = {
+      plane: location.plane,
+      x: location.x,
+      y: location.y,
+      ageInTurns: 0,
+    };
+    const trails = new Map(next.pheroTrails);
+    trails.set(partyId, [fresh]);
+    next = { ...next, pheroTrails: trails };
+  }
+  return next;
 };
 
 /** Move every ant party far from any plane-transition POST so no threat triggers. */

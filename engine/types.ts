@@ -235,6 +235,19 @@ export interface FogTile {
  */
 export type DayNightPhase = 'day' | 'night';
 
+/**
+ * One pheromone breadcrumb left behind by an ant party (rec 1.5).
+ * Spiders see the trail of (plane, x, y, age) entries — they don't
+ * see live positions; ants see everything. Decay is age-based: an
+ * entry older than 3 turns is dropped from the trail at end-of-turn.
+ */
+export interface PheroTrailEntry {
+  readonly plane: Plane;
+  readonly x: number;
+  readonly y: number;
+  readonly ageInTurns: number;
+}
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -260,6 +273,13 @@ export interface GameState {
    * when it would hit 0, the phase flips and the counter resets to
    * `PHASE_LENGTH`. */
   readonly phaseTurnsRemaining: number;
+  /** Per-ant-party pheromone trails (rec 1.5). Each entry is a
+   * decaying breadcrumb of the party's recent location. End-of-turn
+   * appends the current location with `ageInTurns: 0` and ages all
+   * existing entries; entries older than 3 turns are dropped. The
+   * spider AI consumes this as the *only* visibility into ant
+   * positions. Ants see the world directly. */
+  readonly pheroTrails: ReadonlyMap<PartyId, readonly PheroTrailEntry[]>;
   readonly winner: Faction | null;
 }
 

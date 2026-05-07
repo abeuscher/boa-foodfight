@@ -240,6 +240,7 @@ export const buildInitialState = (data: ScenarioData, seed: number): GameState =
     buttons: 0,
     phase: 'day',
     phaseTurnsRemaining: PHASE_LENGTH,
+    pheroTrails: new Map(),
     winner: null,
   };
 };
