@@ -174,7 +174,12 @@ describe('resolveBattle: smoke', () => {
     const def = baseSpiderParty('beefy-def', spiders, spiders[0]!.id);
     const state = installParties(base, [atk, def]);
     const out = resolveBattle(state, neutralInput(atk, def), createRng(99), makeTickClock());
-    expect(out.result.rounds.length).toBeGreaterThanOrEqual(3);
+    // Spider-queen HP has been tuned by coevolution to ≈34 in Phase 4
+    // round 1, so a 2-queen-vs-2-queen battle can wrap in 2 rounds when
+    // ant-queen (atk 20) lands clean rolls; relax the lower bound so the
+    // test reflects the broader "doesn't run to maxRounds without an
+    // early wipe" intent rather than a fixed 3-round floor.
+    expect(out.result.rounds.length).toBeGreaterThanOrEqual(2);
     expect(out.result.rounds.length).toBeLessThanOrEqual(5);
   });
 });
