@@ -18,6 +18,7 @@ import {
   type StrategyMultipliers,
 } from './combat.ts';
 import { inPlaneNeighbors } from './coord.ts';
+import { goldForKill } from './gold-table.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
@@ -559,6 +560,54 @@ export const resolveBattle = (
     events.push({ kind: 'leader-died', turn, tick: tick(), partyId: defender.id });
   }
 
+  // Round 12 — gold credit for kills inside this battle. Per-kill model:
+  // walk every `killed` action across the rounds and credit the killer's
+  // faction with the dead unit's bounty (see `engine/gold-table.ts`).
+  // Cockroach friendly fire (attacker and defender on the same side) is
+  // skipped — the spec says FF deaths credit no one. Neutral-faction
+  // kills also credit nobody (only ant/spider have gold totals).
+  let postBattleState: GameState = state;
+  const sideById = new Map<UnitId, Side>();
+  for (const u of live) sideById.set(u.id, u.side);
+  const sideToFaction: Record<Side, Faction> = {
+    attacker: attacker.faction,
+    defender: defender.faction,
+  };
+  const templateById = new Map<UnitId, UnitTemplateId>();
+  for (const u of attacker.units) templateById.set(u.id, u.templateId);
+  for (const u of defender.units) templateById.set(u.id, u.templateId);
+  for (const round of rounds) {
+    for (const action of round.actions) {
+      if (!action.killed) continue;
+      const attackerSide = sideById.get(action.attackerId);
+      const defenderSide = sideById.get(action.defenderId);
+      if (attackerSide === undefined || defenderSide === undefined) continue;
+      // Friendly fire: no gold credit (spec).
+      if (attackerSide === defenderSide) continue;
+      const killerFaction = sideToFaction[attackerSide];
+      if (killerFaction !== 'ant' && killerFaction !== 'spider') continue;
+      const deadTemplate = templateById.get(action.defenderId);
+      if (!deadTemplate) continue;
+      const amount = goldForKill(deadTemplate);
+      if (amount <= 0) continue;
+      const newTotal = postBattleState.playerGold[killerFaction] + amount;
+      postBattleState = {
+        ...postBattleState,
+        playerGold: { ...postBattleState.playerGold, [killerFaction]: newTotal },
+      };
+      events.push({
+        kind: 'gold-earned',
+        turn,
+        tick: tick(),
+        faction: killerFaction,
+        source: 'kill',
+        sourceId: deadTemplate,
+        amount,
+        newTotal,
+      });
+    }
+  }
+
   // XP: surviving winners gain XP_WIN; losers (and draws) gain XP_LOSE.
   const attackerXp = winner === attacker.id ? XP_WIN : XP_LOSE;
   const defenderXp = winner === defender.id ? XP_WIN : XP_LOSE;
@@ -585,5 +634,9 @@ export const resolveBattle = (
   newParties.set(attacker.id, newAttacker);
   newParties.set(defender.id, newDefender);
 
-  return { state: { ...state, parties: newParties }, result, events };
+  return {
+    state: { ...postBattleState, parties: newParties },
+    result,
+    events,
+  };
 };
