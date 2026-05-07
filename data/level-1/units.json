@@ -30,7 +30,7 @@
         "hp": 6,
         "attack": 7,
         "agility": 5,
-        "armor": 1,
+        "armor": 2,
         "intelligence": 1,
         "constitution": 7
       },
@@ -48,7 +48,7 @@
         "hp": 5,
         "attack": 5,
         "agility": 7,
-        "armor": 0,
+        "armor": 1,
         "intelligence": 2,
         "constitution": 6
       },
@@ -120,7 +120,7 @@
         "hp": 5,
         "attack": 6,
         "agility": 5,
-        "armor": 0,
+        "armor": 1,
         "intelligence": 8,
         "constitution": 6
       },

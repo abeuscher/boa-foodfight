@@ -47,7 +47,11 @@ const ABILITIES_PATH = 'data/level-1/abilities.json';
 // intentionally NOT locked — adding a new variant requires registering
 // it there, so strategy designers must be allowed to edit the export
 // table. Designer rubric tells them to keep that edit minimal.
-const STRATEGY_LOCKED_PATHS = new Set(['ai/baseline.ts', 'ai/policy-helpers.ts', 'ai/types.ts']);
+//
+// Phase 4 round 3: ai/baseline.ts unlocked by explicit user authorization
+// to allow modest baseline-AI improvements. Policy-helpers and types
+// remain locked to keep the variant API stable.
+const STRATEGY_LOCKED_PATHS = new Set(['ai/policy-helpers.ts', 'ai/types.ts']);
 
 const ANT_VARIANT_PREFIXES = ['ai/rush', 'ai/turtle', 'ai/flank'];
 
