@@ -2,6 +2,7 @@ export * from './common.ts';
 export * from './abilities.ts';
 export * from './dialogue.ts';
 export * from './formations.ts';
+export * from './items.ts';
 export * from './jelly.ts';
 export * from './leaders.ts';
 export * from './map.ts';

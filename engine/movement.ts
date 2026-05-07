@@ -35,6 +35,7 @@
 
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
 import { edgeAnchor, edgeNeighbor, isCornerCross } from './edges.ts';
+import { ITEM_MOVEMENT_CAP, partyItemOffset } from './item-effects.ts';
 import { baseMovementAllowance } from './parties.ts';
 import type {
   AbilityId,
@@ -324,6 +325,13 @@ const resolveParty = (
   // regardless of plane. Spider-scout parties do NOT trigger this.
   if (scoutMajorityAnt(partyIn, state.unitTemplates)) {
     if (allowance < 3) allowance = 3;
+  }
+  // Round 14: boots item gives +1 movement allowance, then we cap the
+  // total at ITEM_MOVEMENT_CAP=4 so a scout-majority + boots party
+  // doesn't reach 5 (preserving the round-7 ceiling).
+  const itemMoveBonus = partyItemOffset(partyIn).movement;
+  if (itemMoveBonus > 0) {
+    allowance = Math.min(ITEM_MOVEMENT_CAP, allowance + itemMoveBonus);
   }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];

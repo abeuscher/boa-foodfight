@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { coordKey } from './coord.ts';
+import { spawnItems } from './items.ts';
 import { generateRandomMap } from './map-gen.ts';
 import { spawnNeutrals } from './neutrals.ts';
 import { PHASE_LENGTH } from './phase.ts';
@@ -18,6 +19,7 @@ import {
   abilitiesFileSchema,
   dialogueFileSchema,
   formationsFileSchema,
+  itemsFileSchema,
   jellyFileSchema,
   leadersFileSchema,
   mapFileSchema,
@@ -30,6 +32,7 @@ import type {
   AbilitiesFile,
   DialogueFile,
   FormationsFile,
+  ItemsFile,
   JellyFile,
   LeadersFile,
   MapFile,
@@ -42,6 +45,7 @@ import type {
   AbilityId,
   FogTile,
   GameState,
+  ItemSpawn,
   NeutralKind,
   NeutralStatus,
   Party,
@@ -63,6 +67,17 @@ export interface NeutralSpawnEvent {
   readonly location: TileCoord;
 }
 
+/**
+ * Round 14 — payload for one `item-spawned` replay event. The driver
+ * attaches `turn`/`tick` and emits one event per entry alongside
+ * `scenario-start`.
+ */
+export interface ItemSpawnEvent {
+  readonly itemId: ItemSpawn['itemId'];
+  readonly location: TileCoord;
+  readonly buried: boolean;
+}
+
 export interface LoadedScenario {
   readonly state: GameState;
   /** Original validated data, kept for ability/balance lookups during the run. */
@@ -73,6 +88,11 @@ export interface LoadedScenario {
    * event per entry alongside `scenario-start`.
    */
   readonly neutralSpawnEvents: readonly NeutralSpawnEvent[];
+  /**
+   * Round 14 — item-spawn replay payloads. Same pattern as
+   * neutralSpawnEvents.
+   */
+  readonly itemSpawnEvents: readonly ItemSpawnEvent[];
 }
 
 export interface ScenarioData {
@@ -86,6 +106,7 @@ export interface ScenarioData {
   readonly shop: ShopFile;
   readonly dialogue: DialogueFile;
   readonly rosters: readonly RosterFile[];
+  readonly items: ItemsFile;
 }
 
 const readJson = <T>(file: string, parse: (raw: unknown) => T): T => {
@@ -107,6 +128,7 @@ export const loadScenarioData = (dataDir: string): ScenarioData => ({
     readJson(path.join(dataDir, 'roster-ants.json'), (v) => rosterFileSchema.parse(v)),
     readJson(path.join(dataDir, 'roster-spiders.json'), (v) => rosterFileSchema.parse(v)),
   ],
+  items: readJson(path.join(dataDir, 'items.json'), (v) => itemsFileSchema.parse(v)),
 });
 
 const buildUnitTemplates = (units: UnitsFile): ReadonlyMap<UnitTemplateId, UnitTemplate> => {
@@ -234,6 +256,7 @@ const buildInitialFog = (tiles: ReadonlyMap<string, Tile>): ReadonlyMap<string, 
 export interface BuildInitialStateResult {
   readonly state: GameState;
   readonly neutralSpawnEvents: readonly NeutralSpawnEvent[];
+  readonly itemSpawnEvents: readonly ItemSpawnEvent[];
 }
 
 export const buildInitialStateWithEvents = (
@@ -279,6 +302,12 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   for (const p of spawnResult.parties) parties.set(p.id, p);
   for (const s of spawnResult.statuses) neutralStatus.set(s.partyId, s.status);
 
+  // Round 14: item drops. 4 spawns total via a dedicated RNG fork so
+  // the item placement stream is independent of neutrals/movement
+  // entropy. Persistence/discoverability is handled at end-of-turn.
+  const itemRng = createRng(seed).fork('items-spawn');
+  const itemSpawnList = spawnItems({ tiles, posts, itemsFile: data.items }, itemRng);
+
   const state: GameState = {
     turn: 0,
     seed,
@@ -297,6 +326,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     neutralStatus,
     damageZones: [],
     playerGold: { ant: 0, spider: 0 },
+    itemSpawns: itemSpawnList,
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({
@@ -304,11 +334,21 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     neutralKind: e.kind,
     location: e.location,
   }));
-  return { state, neutralSpawnEvents };
+  const itemSpawnEvents: ItemSpawnEvent[] = itemSpawnList.map((s) => ({
+    itemId: s.itemId,
+    location: s.location,
+    buried: s.buried,
+  }));
+  return { state, neutralSpawnEvents, itemSpawnEvents };
 };
 
 export const loadScenario = (dataDir: string, seed: number): LoadedScenario => {
   const data = loadScenarioData(dataDir);
   const built = buildInitialStateWithEvents(data, seed);
-  return { state: built.state, data, neutralSpawnEvents: built.neutralSpawnEvents };
+  return {
+    state: built.state,
+    data,
+    neutralSpawnEvents: built.neutralSpawnEvents,
+    itemSpawnEvents: built.itemSpawnEvents,
+  };
 };

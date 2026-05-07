@@ -19,6 +19,7 @@ import {
 } from './combat.ts';
 import { inPlaneNeighbors } from './coord.ts';
 import { goldForKill } from './gold-table.ts';
+import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
@@ -131,20 +132,24 @@ const buildLiveUnits = (
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
   battlePlane: Plane,
   phase: DayNightPhase,
-): LiveUnit[] =>
-  party.units.map((u) => {
+): LiveUnit[] => {
+  // Round 14: equipped persistent item buffs the whole party's stats
+  // additively (brass-knuckles +1 atk, leather-pad +1 armor,
+  // scout-lens +1 agility). Applied AFTER phase, BEFORE the
+  // multiplicative posture/jelly/queen stack — same lane as plane
+  // affinity / phase offsets so a +1 from items never doubles into
+  // 1.5-2x reach.
+  const itemOffset = partyItemOffset(party);
+  return party.units.map((u) => {
     const tmpl = templates.get(u.templateId);
     if (!tmpl) throw new Error(`battle: unknown templateId '${u.templateId}' for unit '${u.id}'`);
-    // Phase offset applies to stats so the agility-order step (which
-    // reads `stats.agility`) and damage-roll attack both pick it up.
-    // Plane affinity is a separate flat add — it stacks atop this so a
-    // night spider on the ceiling gets its full +2 attack reach.
     const phaseOffset = phaseStatOffsetFor(tmpl, phase);
     const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
+    const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
     return {
       id: u.id,
       side,
-      stats: phaseAdjusted,
+      stats: itemAdjusted,
       abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
       affinity: planeAffinityForPlane(tmpl, battlePlane),
@@ -155,6 +160,7 @@ const buildLiveUnits = (
       snareUsed: false,
     };
   });
+};
 
 const livingOnSide = (units: readonly LiveUnit[], side: Side): readonly LiveUnit[] =>
   units.filter((u) => !u.killed && u.side === side);
