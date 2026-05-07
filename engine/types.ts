@@ -15,6 +15,8 @@ export type PartyId = string & { readonly __brand: 'PartyId' };
 export type PostId = string & { readonly __brand: 'PostId' };
 export type AbilityId = string & { readonly __brand: 'AbilityId' };
 export type UnitTemplateId = string & { readonly __brand: 'UnitTemplateId' };
+/** Round 14 — items. Identifies one of the templates in items.json. */
+export type ItemId = string & { readonly __brand: 'ItemId' };
 
 // ---------------------------------------------------------------------------
 // World
@@ -184,6 +186,11 @@ export interface Party {
    * decision. Only meaningful for ant parties carrying both ant-scout
    * and ant-mage. */
   readonly neutralDecision?: NeutralDecision;
+  /** Round 14 — equipped persistent item, or `null` if the slot is
+   * empty. Consumable items fire on pickup and never occupy this slot.
+   * Optional for backwards compatibility: a missing field is equivalent
+   * to `null` (no equipped item). */
+  readonly item?: ItemId | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +321,20 @@ export interface PlayerGold {
   readonly spider: number;
 }
 
+/**
+ * Round 14 — one item dropped into the world at scenario start.
+ * Hidden until discovered by an ant or spider party. The `discovered`
+ * flag becomes true on pickup and the spawn is removed from the
+ * undiscovered pool (consumed if the item is consumable, or carried
+ * on `Party.item` if persistent).
+ */
+export interface ItemSpawn {
+  readonly itemId: ItemId;
+  readonly location: TileCoord;
+  readonly buried: boolean;
+  readonly discovered: boolean;
+}
+
 export interface GameState {
   readonly turn: number;
   readonly seed: number;
@@ -365,6 +386,15 @@ export interface GameState {
    * yet; pure tracking.
    */
   readonly playerGold: PlayerGold;
+  /**
+   * Round 14 — items dropped on the map at scenario start. 4 spawns
+   * per scenario (3 normal + 1 buried). Hidden until an ant/spider
+   * party rolls discovery within Chebyshev 1 at end-of-turn.
+   * Persistent items become `Party.item`; consumables fire and
+   * vanish. `discovered: true` entries are kept for replay
+   * provenance but no longer eligible for pickup.
+   */
+  readonly itemSpawns: readonly ItemSpawn[];
   readonly winner: Faction | null;
 }
 
@@ -565,6 +595,51 @@ export type ReplayEvent =
       readonly sourceId: PostId | UnitTemplateId;
       readonly amount: number;
       readonly newTotal: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 14 — emitted at scenario-start, one per spawned item.
+       * Lets the viewer render the muted "?" markers for hidden items
+       * and provides provenance for telemetry.
+       */
+      readonly kind: 'item-spawned';
+      readonly itemId: ItemId;
+      readonly location: TileCoord;
+      readonly buried: boolean;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 14 — emitted when an ant or spider party rolls discovery
+       * on a hidden item at end-of-turn. The viewer uses this to drop
+       * the marker. For consumables, `item-consumed` follows in the
+       * same tick; for persistents, `Party.item` is now set.
+       */
+      readonly kind: 'item-discovered';
+      readonly partyId: PartyId;
+      readonly itemId: ItemId;
+      readonly location: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 14 — fired when a consumable item resolves its effect
+       * on pickup (`heal` for mead, `jelly` for royal-jelly-vial).
+       * No `Party.item` is set; the slot stays empty.
+       */
+      readonly kind: 'item-consumed';
+      readonly partyId: PartyId;
+      readonly itemId: ItemId;
+      readonly effect: 'heal' | 'jelly';
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 14 — emitted when a party with a full slot picks up a
+       * higher-priority item and drops the previously-equipped one
+       * back at the discovery tile (now discoverable again).
+       */
+      readonly kind: 'item-dropped';
+      readonly partyId: PartyId;
+      readonly itemId: ItemId;
+      readonly location: TileCoord;
     })
   | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
 
