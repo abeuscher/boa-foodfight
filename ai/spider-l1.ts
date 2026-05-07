@@ -297,6 +297,34 @@ export const spiderL1: AIPolicy = {
     const responderTarget = threat.defend ?? webLoc;
     const responder = pickResponder(state, scout?.id ?? null, responderTarget);
 
+    // Phase-3 pursuit: once we're past the early rush window, look for
+    // an ant party at < 50% effective HP. If found, the closest non-
+    // queen-bearing non-scout spider on the same plane is redirected to
+    // pursue it. Gated on `state.turn >= 4` and ant POST ownership ≥ 1
+    // so rush (which doesn't capture POSTs) can't be hard-countered.
+    let pursueTarget: { antPartyId: PartyId; loc: TileCoord } | null = null;
+    if (state.turn >= 4 && antControlledPostCount(state) >= 1) {
+      let weakest: { partyId: PartyId; hpFrac: number; loc: TileCoord } | null = null;
+      for (const party of state.parties.values()) {
+        if (party.faction !== 'ant') continue;
+        if (party.id === ('queen-guard' as PartyId)) continue;
+        const livingHp = party.units.reduce((s, u) => s + Math.max(0, u.currentHp), 0);
+        const maxHp = party.units.reduce((s, u) => {
+          const tmpl = state.unitTemplates.get(u.templateId);
+          return s + (tmpl?.baseStats.hp ?? 0);
+        }, 0);
+        if (maxHp <= 0) continue;
+        const frac = livingHp / maxHp;
+        if (frac >= 0.5) continue;
+        if (!weakest || frac < weakest.hpFrac) {
+          weakest = { partyId: party.id, hpFrac: frac, loc: party.location };
+        }
+      }
+      if (weakest) pursueTarget = { antPartyId: weakest.partyId, loc: weakest.loc };
+    }
+    const pursuer =
+      pursueTarget !== null ? pickResponder(state, scout?.id ?? null, pursueTarget.loc) : null;
+
     // Counter-push: if ants dominate the floor, pick the largest non-scout
     // spider party to break formation and head for the storm-drain.
     const counterPushActive = antControlledPostCount(state) >= ANT_DOMINANCE_THRESHOLD;
@@ -353,6 +381,10 @@ export const spiderL1: AIPolicy = {
         nextOrders = sameCoord(party.location, counterPushTargetLoc)
           ? []
           : [moveTo(counterPushTargetLoc)];
+      } else if (pursuer !== null && id === pursuer.id && pursueTarget !== null) {
+        // Pursue the weakened ant party. If we're already on its tile,
+        // hold (engine collision triggers a battle).
+        nextOrders = sameCoord(party.location, pursueTarget.loc) ? [] : [moveTo(pursueTarget.loc)];
       } else if (isOnWeb(party, webLoc)) {
         nextOrders = [];
       } else if (id === scout?.id) {
