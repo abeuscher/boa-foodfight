@@ -6,6 +6,7 @@ import { endOfTurn } from './end-of-turn.ts';
 import { loadScenario } from './state.ts';
 import type {
   GameState,
+  NeutralDecision,
   Party,
   PartyId,
   Post,
@@ -429,5 +430,90 @@ describe('endOfTurn: pheromone trails (rec 1.5)', () => {
       (v) => v.plane === liveTile.plane && v.x === liveTile.x && v.y === liveTile.y,
     );
     expect(matchesLive).toBe(false);
+  });
+});
+
+describe('endOfTurn: neutralDecision tick (round 11)', () => {
+  const partyId = 'pathfinders' as PartyId;
+
+  const setNeutralDecision = (state: GameState, decision: NeutralDecision): GameState => {
+    const party = state.parties.get(partyId);
+    if (!party) throw new Error('test fixture: pathfinders missing');
+    return updateParty(state, partyId, { neutralDecision: decision });
+  };
+
+  it('decrements turnsRemaining by 1 each tick and preserves the rest of the field', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const cockroachId = 'neutral-cockroaches' as PartyId;
+    expect(state.parties.has(cockroachId)).toBe(true);
+    const seeded = setNeutralDecision(state, {
+      kind: 'pursue',
+      targetPartyId: cockroachId,
+      turnsRemaining: 5,
+    });
+    const out = endOfTurn(seeded, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.neutralDecision).toEqual({
+      kind: 'pursue',
+      targetPartyId: cockroachId,
+      turnsRemaining: 4,
+    });
+  });
+
+  it('drops the field when turnsRemaining hits 0', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const seeded = setNeutralDecision(state, { kind: 'ignore', turnsRemaining: 1 });
+    const out = endOfTurn(seeded, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.neutralDecision).toBeUndefined();
+  });
+
+  it('drops a pursue decision early when the target party is no longer in state', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const ghostId = 'never-existed' as PartyId;
+    const seeded = setNeutralDecision(state, {
+      kind: 'pursue',
+      targetPartyId: ghostId,
+      turnsRemaining: 5,
+    });
+    const out = endOfTurn(seeded, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.neutralDecision).toBeUndefined();
+  });
+
+  it('drops a pursue decision early when the target party is leaderless / wiped', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // Add a placeholder neutral party with all units at HP 0 so the
+    // tick's "alive?" check fails.
+    const cockroachId = 'placeholder-cockroaches' as PartyId;
+    const sample = state.parties.values().next().value!;
+    const placeholder: Party = {
+      ...sample,
+      id: cockroachId,
+      faction: 'neutral',
+      units: sample.units.map((u) => ({ ...u, currentHp: 0 })),
+      leaderless: true,
+      orders: [],
+    };
+    const parties = new Map(state.parties);
+    parties.set(cockroachId, placeholder);
+    let working: GameState = { ...state, parties };
+    working = setNeutralDecision(working, {
+      kind: 'pursue',
+      targetPartyId: cockroachId,
+      turnsRemaining: 5,
+    });
+    const out = endOfTurn(working, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.neutralDecision).toBeUndefined();
+  });
+
+  it('leaves parties without a neutralDecision untouched', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const before = state.parties.get(partyId);
+    expect(before?.neutralDecision).toBeUndefined();
+    const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const after = out.state.parties.get(partyId);
+    expect(after?.neutralDecision).toBeUndefined();
   });
 });

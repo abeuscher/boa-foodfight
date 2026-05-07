@@ -65,20 +65,29 @@ import type {
   AbilityId,
   AbilityOrder,
   GameState,
-  NeutralKind,
   Order,
   Party,
   PartyId,
+  Rng,
   TileCoord,
 } from '../engine/types.ts';
 
+import {
+  decideNeutralFollow,
+  findRecruitableNeutralNear,
+  partyHasScoutAndMage,
+  pursueStep,
+  RECRUIT_ABILITY,
+  tryOpportunisticRecruit,
+} from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
-  buildAntPolicy,
+  buildAntPolicyWithRng,
   CEILING_CAPABLE,
   moveToOrHold,
   nextStageTarget,
   partyAlive,
+  type PartyDecision,
   PATHFINDERS,
   postLocation,
   postsOfType,
@@ -90,48 +99,6 @@ import {
 import type { AIPolicy } from './types.ts';
 
 const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
-const RECRUIT: AbilityId = 'recruit' as AbilityId;
-
-/**
- * Round-9 neutral recruit priority. Only cockroaches are worth a
- * recruit attempt — 8 units of attack-6/agility-7 on permanent
- * conversion is a major firepower lift. Mice (3 units) and stinkbugs
- * (failed attempt spawns a damage zone) are skipped: stopping to
- * recruit costs the dive-spear party a movement turn each attempt
- * (25% success, so ~4 turns on average), which is too expensive for
- * a 3-unit yield. Stinkbugs are also actively dangerous on failure.
- */
-const NEUTRAL_RECRUIT_VALUE: Readonly<Record<NeutralKind, number>> = {
-  cockroaches: 1,
-  mice: 0,
-  stinkbugs: 0,
-};
-
-/**
- * Round-9: pick the highest-value co-located, recruitable neutral
- * party. "Recruitable" = same tile as `party`, not already converted,
- * not currently spider-hypnotized (engine consumes the order without
- * effect), at least one living unit, and `kind !== 'stinkbugs'` (we
- * skip stinkbugs to avoid the damage-zone spawn on failure). Tie-break
- * by lex party-id for determinism.
- */
-const pickNeutralRecruitTarget = (state: GameState, party: Party): PartyId | undefined => {
-  let best: { id: PartyId; value: number } | undefined;
-  for (const [id, candidate] of state.parties) {
-    if (candidate.faction !== 'neutral') continue;
-    if (!sameCoord(candidate.location, party.location)) continue;
-    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
-    const status = state.neutralStatus.get(id);
-    if (!status) continue;
-    if (status.hypnotizedBy === 'spider' && status.hypnoticControlRemaining > 0) continue;
-    const value = NEUTRAL_RECRUIT_VALUE[status.kind] ?? 0;
-    if (value <= 0) continue;
-    if (!best || value > best.value || (value === best.value && id < best.id)) {
-      best = { id, value };
-    }
-  }
-  return best?.id;
-};
 
 /** True iff every wall-crack POST is ant-owned. After that, vanguard-
  * alpha (the only field party not on the dive line) commits to the
@@ -163,6 +130,18 @@ const jellyApplyOrder = (target: PartyId): AbilityOrder => ({
   abilityId: JELLY_APPLY,
   target,
 });
+
+/** True iff a living spider party occupies the same tile as `party`.
+ * Used by the round-10 detour branch to avoid pulling a party off the
+ * tile where a kill battle is about to resolve. */
+const coLocatedWithSpider = (state: GameState, party: Party): boolean => {
+  for (const candidate of state.parties.values()) {
+    if (candidate.faction !== 'spider') continue;
+    if (candidate.units.every((u) => u.currentHp <= 0)) continue;
+    if (sameCoord(candidate.location, party.location)) return true;
+  }
+  return false;
+};
 
 /** Kill-dive target for a ceiling-capable party. The dive walks the
  * floor tile directly under the web (the "launch tile"); from the
@@ -209,14 +188,76 @@ const baselinePlacement = (state: GameState): GameState =>
     'vanguard-bravo': { plane: 'floor', x: 3, y: 5 },
   });
 
-const baselineCore: AIPolicy = buildAntPolicy(
+/**
+ * Bundle of derived per-turn state passed to the main-strategy helper
+ * so the round-11 layered branches don't recompute it. Single struct
+ * instead of four parameters keeps the helper's signature short.
+ */
+interface MainStrategyContext {
+  readonly stageTarget: ReturnType<typeof nextStageTarget>;
+  readonly webLoc: TileCoord | undefined;
+  readonly committed: boolean;
+  readonly bravoMayDive: boolean;
+}
+
+/**
+ * The pre-round-11 baseline order-pick: kill-dive for ceiling parties,
+ * web-commit / staging-walk for vanguard-alpha. Returns the orders +
+ * posture exactly as the policy-helpers framework expects. Pulled out
+ * into a helper so the round-11 commit-or-abandon branches can fall
+ * through to it after stashing an `ignore` decision.
+ */
+const mainStrategyOrders = (party: Party, ctx: MainStrategyContext): PartyDecision => {
+  const { webLoc, committed, bravoMayDive, stageTarget } = ctx;
+  // Coordinated kill-dive (round 6): both ceiling-capable parties
+  // (pathfinders, vanguard-bravo) run the floor (web.x, web.y) →
+  // ceiling (web.x, web.y) plane-switch route from turn 1 onward.
+  if (party.id === PATHFINDERS) {
+    const target = killDiveTarget(party.location, webLoc);
+    if (target !== undefined) {
+      return { orders: moveToOrHold(party, target), posture: 'fight' };
+    }
+  }
+  // Round-9: vanguard-bravo joins the dive line earlier — gate flips
+  // on any soap-dish captured.
+  if (party.id === VANGUARD_BRAVO && bravoMayDive) {
+    const target = killDiveTarget(party.location, webLoc);
+    if (target !== undefined) {
+      return { orders: moveToOrHold(party, target), posture: 'fight' };
+    }
+  }
+  // Commit phase: every wall-crack ant-owned → vanguard-alpha walks
+  // the canonical ladder to the web.
+  if (committed && webLoc !== undefined) {
+    return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+  }
+  // Staging phase: walk the canonical chain (soap-dish → towel-rack
+  // → wall-crack) per `nextStageTarget`.
+  if (stageTarget !== undefined) {
+    return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
+  }
+  // Every stage POST is ours but the wall-cracks-captured branch
+  // didn't fire (rare race) — fall back to the web.
+  if (webLoc !== undefined) {
+    return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
+  }
+  return { orders: [], posture: 'fight' };
+};
+
+const baselineCore: AIPolicy = buildAntPolicyWithRng(
   'baseline-staging',
-  (state: GameState) => {
-    const stageTarget = nextStageTarget(state);
-    const webLoc = postLocation(state, SPIDER_WEB);
+  (state: GameState, rng: Rng) => {
+    const ctx: MainStrategyContext = {
+      stageTarget: nextStageTarget(state),
+      webLoc: postLocation(state, SPIDER_WEB),
+      committed: wallCracksCaptured(state),
+      bravoMayDive: anySoapDishCaptured(state),
+    };
     const isOpeningTurn = state.turn === 0;
-    const committed = wallCracksCaptured(state);
-    const bravoMayDive = anySoapDishCaptured(state);
+    // Round-11 dice fork. One stream per turn (forked off the policy
+    // rng) so the per-party rolls are deterministic and don't share
+    // entropy with battle/movement subsystems.
+    const decisionRng = rng.fork('neutral-decision');
     return (party) => {
       // Turn-0 freebie: ceiling-capable parties self-buff with jelly-
       // apply. Costs nothing (no movement yet) and the multiplier
@@ -225,74 +266,79 @@ const baselineCore: AIPolicy = buildAntPolicy(
         return { orders: [jellyApplyOrder(party.id)], posture: 'fight' };
       }
 
-      // Round-9 neutral recruit opportunity: any ant-mage-bearing
-      // party co-located with a non-stinkbug, non-hypnotized neutral
-      // tries `recruit`. 25% success → permanent conversion of the
-      // entire neutral party (cockroaches yield 8 units of attack-6/
-      // agility-7). On failure the order is consumed but no damage
-      // zone (we skip stinkbugs explicitly via NEUTRAL_RECRUIT_VALUE).
-      if (partyHasAbility(party, RECRUIT, state.unitTemplates)) {
-        const recruitTarget = pickNeutralRecruitTarget(state, party);
-        if (recruitTarget !== undefined) {
-          const order: AbilityOrder = {
-            kind: 'use-ability',
-            abilityId: RECRUIT,
-            target: recruitTarget,
-          };
-          return { orders: [order], posture: 'fight' };
+      // Round-11 neutral-recruit "commit-or-abandon" mechanic
+      // (baseline only). Three layered branches:
+      //
+      //   (a) Opportunistic recruit — always fires when co-located
+      //       with a recruitable neutral (cockroaches/mice; stinkbugs
+      //       skipped to avoid the damage-zone spawn on failure).
+      //       Independent of any pursue/ignore decision.
+      //
+      //   (b) Active pursue — if the party is currently committed to a
+      //       `pursue` decision, walk one tile toward the target each
+      //       turn until co-located, the target dies/converts, or the
+      //       5-turn window expires (engine end-of-turn tick).
+      //
+      //   (c) New-decision roll — if the party is eligible (carries
+      //       both ant-scout and ant-mage), no active decision, and a
+      //       recruitable neutral sits within Chebyshev-3 on the same
+      //       plane, roll 1-in-3:
+      //         pursue → 5-turn detour toward the spotted target.
+      //         ignore → 5-turn suppression of any further detour.
+      //       This replaces round 10's per-turn detour-or-not flip
+      //       (which was dragging baseline off-task on every cockroach
+      //       random walk).
+      //
+      // Variants run only branch (a) so dive/rush/turtle/flank/jelly-
+      // rush keep their primary strategies intact.
+      const recruit = tryOpportunisticRecruit(state, party);
+      if (recruit) return recruit;
+
+      // Branch (b): an active `pursue` decision overrides all other
+      // movement targets until it expires or the target is gone.
+      if (party.neutralDecision?.kind === 'pursue') {
+        const step = pursueStep(state, party, party.neutralDecision);
+        if (step !== null) {
+          return { orders: moveToOrHold(party, step), posture: 'fight' };
+        }
+        // Target gone or co-located — fall through. The end-of-turn
+        // tick will drop the modifier next turn.
+      }
+
+      // Branch (c): roll a fresh decision. Eligible parties only
+      // (scout + mage in the roster), no active decision, no enemy
+      // spider co-located (a battle this turn outranks neutral
+      // chasing), and a recruitable neutral within Chebyshev-3.
+      // Active-ignore parties skip this block entirely (their decision
+      // is non-undefined so the gate fails fast).
+      const hasRecruit = partyHasAbility(party, RECRUIT_ABILITY, state.unitTemplates);
+      if (
+        hasRecruit &&
+        party.neutralDecision === undefined &&
+        partyHasScoutAndMage(party, state.unitTemplates) &&
+        !coLocatedWithSpider(state, party)
+      ) {
+        const spotted = findRecruitableNeutralNear(state, party);
+        if (spotted !== undefined) {
+          const decision = decideNeutralFollow(decisionRng, spotted.partyId);
+          if (decision.kind === 'pursue') {
+            // Step toward the just-committed target this turn.
+            const step = pursueStep(state, party, decision);
+            return {
+              orders: step !== null ? moveToOrHold(party, step) : [],
+              posture: 'fight',
+              setNeutralDecision: true,
+              neutralDecision: decision,
+            };
+          }
+          // Ignore: stash the 5-turn modifier and fall through to the
+          // main strategy below this turn.
+          const main = mainStrategyOrders(party, ctx);
+          return { ...main, setNeutralDecision: true, neutralDecision: decision };
         }
       }
 
-      // Coordinated kill-dive (round 6): both ceiling-capable parties
-      // (pathfinders, vanguard-bravo) run the floor (web.x, web.y) →
-      // ceiling (web.x, web.y) plane-switch route from turn 1 onward.
-      // Each mage's `ant-plane-switch` (uses=1) is reserved for the
-      // kill-jump rather than spent on staging. The two parties
-      // arrive at the launch tile within a turn of each other so the
-      // kill battle is two-on-many, not one-on-many. The bravo dive
-      // line is a floor approach, so the round-3 deep-raider spider
-      // party on east-wall (5,5) cannot intercept; the deep-raider
-      // awareness from round 3 (a wall-crack-ladder detour) is no
-      // longer needed.
-      if (party.id === PATHFINDERS) {
-        const target = killDiveTarget(party.location, webLoc);
-        if (target !== undefined) {
-          return { orders: moveToOrHold(party, target), posture: 'fight' };
-        }
-      }
-      // Round-9: vanguard-bravo joins the dive line earlier. The
-      // gate moves from "any wall-crack captured" (round 6) to "any
-      // soap-dish captured" (round 9) — the canonical chain's first
-      // POST flips around turn 4-5 with the round-9 forward
-      // placement, so bravo arrives at the launch tile in time to
-      // assist pathfinders rather than trailing by 4-5 turns.
-      if (party.id === VANGUARD_BRAVO && bravoMayDive) {
-        const target = killDiveTarget(party.location, webLoc);
-        if (target !== undefined) {
-          return { orders: moveToOrHold(party, target), posture: 'fight' };
-        }
-      }
-
-      // Commit phase: once the canonical chain is complete, vanguard-
-      // alpha (the only field party not on the dive line) walks the
-      // canonical wall-crack ladder via the paired-POST shortcut at
-      // towel-rack to the spider-web.
-      if (committed && webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-
-      // Staging phase: walk the canonical chain (soap-dish → towel-
-      // rack → wall-crack) per `nextStageTarget`.
-      if (stageTarget !== undefined) {
-        return { orders: moveToOrHold(party, stageTarget.location), posture: 'fight' };
-      }
-
-      // Every stage POST is ours but the wall-cracks-captured branch
-      // didn't fire (rare race) — fall back to the web.
-      if (webLoc !== undefined) {
-        return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
-      }
-      return { orders: [], posture: 'fight' };
+      return mainStrategyOrders(party, ctx);
     };
   },
   queenGuardOrders,

@@ -26,6 +26,7 @@
 import type { GameState } from '../engine/types.ts';
 import type { AbilityId, AbilityOrder, Order, Party } from '../engine/types.ts';
 
+import { tryOpportunisticRecruit } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
@@ -68,6 +69,12 @@ const jellyRushCore = buildAntPolicy(
   (state: GameState) => {
     const webLoc = postLocation(state, SPIDER_WEB);
     return (party) => {
+      // Round-10 opportunistic neutral recruit. Fires only when a
+      // rush-tempo party happens to land on a wandering cockroach or
+      // mouse; never detours from the web. Stinkbugs are filtered
+      // out by the helper to avoid the damage-zone-on-failure trap.
+      const recruit = tryOpportunisticRecruit(state, party);
+      if (recruit) return recruit;
       if (webLoc === undefined) return { orders: [], posture: 'fight' };
       return { orders: moveToOrHold(party, webLoc), posture: 'fight' };
     };

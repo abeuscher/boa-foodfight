@@ -407,6 +407,58 @@ const applyDamageZoneTicks = (
   };
 };
 
+/**
+ * Round 11 — true iff the target party is a valid pursue target: it
+ * exists in `state.parties`, is not leaderless, and has at least one
+ * living unit. Used by the neutral-decision tick to drop stale
+ * `pursue` modifiers as soon as the target disappears (recruited,
+ * killed, or otherwise gone).
+ */
+const pursueTargetAlive = (state: GameState, targetId: PartyId | undefined): boolean => {
+  if (targetId === undefined) return false;
+  const target = state.parties.get(targetId);
+  if (!target) return false;
+  if (target.leaderless) return false;
+  return target.units.some((u) => u.currentHp > 0);
+};
+
+/**
+ * Round 11 — decrement every ant party's `neutralDecision.turnsRemaining`
+ * by 1; drop the field when it hits 0 or when a `pursue` decision's
+ * target is gone. Non-ant parties carry no decision (the AI never sets
+ * one) so are skipped without inspection.
+ */
+const applyNeutralDecisionTick = (state: GameState): GameState => {
+  const next = new Map<PartyId, Party>();
+  let changed = false;
+  for (const [id, party] of state.parties) {
+    if (!party.neutralDecision) {
+      next.set(id, party);
+      continue;
+    }
+    const decision = party.neutralDecision;
+    // Drop early if pursuing a target that is no longer reachable.
+    if (decision.kind === 'pursue' && !pursueTargetAlive(state, decision.targetPartyId)) {
+      const { neutralDecision: _drop, ...rest } = party;
+      void _drop;
+      next.set(id, rest);
+      changed = true;
+      continue;
+    }
+    const remaining = decision.turnsRemaining - 1;
+    if (remaining <= 0) {
+      const { neutralDecision: _drop, ...rest } = party;
+      void _drop;
+      next.set(id, rest);
+      changed = true;
+      continue;
+    }
+    next.set(id, { ...party, neutralDecision: { ...decision, turnsRemaining: remaining } });
+    changed = true;
+  }
+  return changed ? { ...state, parties: next } : state;
+};
+
 export const endOfTurn = (
   state: GameState,
   input: EndOfTurnInput,
@@ -532,6 +584,14 @@ export const endOfTurn = (
     newStatus.set(id, next);
   }
   working = { ...working, neutralStatus: newStatus };
+
+  // 5c-bis. Round 11 — neutral-decision tick on ant parties. For each
+  //         party with a `neutralDecision`: drop a `pursue` decision
+  //         immediately if the target is dead/leaderless/missing;
+  //         otherwise decrement `turnsRemaining` and drop the field
+  //         when it hits 0. The mechanic is "decide once, commit for
+  //         5 turns" — this tick is the commit clock.
+  working = applyNeutralDecisionTick(working);
 
   // 5d. Round 8 — stinkbug damage-zone ticks. For each active zone:
   //     deal 1 hp to every non-stinkbug unit standing on a zone tile,

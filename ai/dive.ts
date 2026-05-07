@@ -57,6 +57,7 @@ import type {
   TileCoord,
 } from '../engine/types.ts';
 
+import { tryOpportunisticRecruit } from './neutral-recruit-helper.ts';
 import { antPlacement } from './placement-helpers.ts';
 import {
   buildAntPolicy,
@@ -117,6 +118,16 @@ const diveCore = buildAntPolicy(
   (state: GameState) => {
     const webLoc = postLocation(state, SPIDER_WEB);
     return (party) => {
+      // Round-10 opportunistic recruit: any ant-mage-bearing party
+      // co-located with a recruitable neutral (cockroach/mouse, never
+      // stinkbug — see neutral-recruit-helper) fires `recruit` instead
+      // of moving this turn. 25% success on permanent conversion;
+      // failure consumes the order with no damage zone since stinkbugs
+      // are filtered out. Doesn't change the dive line — only fires
+      // when the dive party happens to land on the same tile as a
+      // wandering neutral.
+      const recruit = tryOpportunisticRecruit(state, party);
+      if (recruit) return recruit;
       if (party.id === PATHFINDERS) {
         const target = pathfindersTarget(party, webLoc);
         if (target === undefined) return { orders: [], posture: 'fight' };
