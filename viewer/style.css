@@ -405,3 +405,24 @@ canvas {
   color: #c88;
   font-style: italic;
 }
+/* Round 27 — hover tooltip showing the parties on the cursor's tile.
+   Hidden by default; the mousemove handler toggles `.visible` and
+   updates the inline left/top from the cursor position. */
+.tile-tooltip {
+  position: fixed;
+  background: rgba(20, 20, 20, 0.95);
+  color: #eee;
+  padding: 6px 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: ui-sans-serif, system-ui;
+  pointer-events: none;
+  z-index: 100;
+  max-width: 250px;
+  white-space: pre-line;
+  display: none;
+}
+.tile-tooltip.visible {
+  display: block;
+}
