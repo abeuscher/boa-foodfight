@@ -1,5 +1,20 @@
 # SPEC A: Food Fight — Battle of the Ants
 
+> **Current build status (post-round-18)**: Level 1 is implemented and
+> passing the gate at ~57% baseline ant win rate (within the spec's
+> 65-80% range when L1 is targeted at 75% per `docs/roadmap-tier-1.md`).
+> Mechanics in place: per-seed map randomization, plane affinity,
+> asymmetric plane-switch, day/night cycle, pheromone trail, neutral
+> parties (mice/cockroaches/stinkbugs) with recruit + hypnotize, gold
+> tracking, items (6 templates with stat buffs), retreat/flee with
+> pre-battle threat assessment, POST 2-turn capture hold, spider
+> heal-priority web defense, pre-game placement, scout-majority speed
+> bonus. See `STATUS.md` for round-by-round detail.
+>
+> **Tier-1 execution plan**: `docs/roadmap-tier-1.md` is the authoritative
+> roadmap for Levels 1–10. This spec defines the static game model;
+> the roadmap defines how to introduce mechanics across the tier.
+
 ## Project framing
 
 Food Fight is a turn-based single-player strategy game inspired by Ogre Battle. The player controls a colony of ants commanded by their Queen, deploying parties across multi-plane environments (floor / wall / ceiling, and others as scenarios scale up) to capture strategic positions and defeat opposing factions. The campaign begins in a single bathroom and escalates over the course of dozens of scenarios to encompass houses, yards, neighborhoods, and eventually a city block — with new mechanics, units, and command-scale paradigms introduced at each tier.
@@ -179,28 +194,41 @@ On player victory, the spider queen swears fealty. Spider units join the player'
 
 ## Open design questions for the agent system
 
-The following are deliberately left open for the design agents to propose. Player-locked design principles above constrain the space.
+Most originally-open items have been answered through the build process
+(`STATUS.md`) and locked into data files (`data/level-1/`). Items still
+genuinely open for the agent system to propose:
 
-- Specific stat values for all Level 1 units
-- Specific battle resolution math (formula for damage, agility ordering, posture modifier values)
-- Specific cooperative ant attack implementation (formation bonuses, lift mechanics, threshold rules)
-- Specific Queen ultimate ability behavior and charge time
-- Specific Royal Jelly numbers (production rate, capacity, duration, effect magnitude)
-- Full unit roster for ants (beyond the seed: footman, archer, Queen, plus suggested potato bug, mouse-as-tank, water unit)
-- Full unit roster for spiders
-- Specific POST defensive bonus values and special properties
-- Specific terrain types and modifiers
-- Leader class bonuses
-- Out-of-battle ability list and effects
-- Shop inventory and pricing
-- Specific level-up stat curves
-- Class change trees (deferred)
-- Specific scenario layout (parties' starting positions, terrain features) within the 10×10 plane structure
-- Sergeant Antonio's voice and dialogue
+- Leader class bonuses (deferred — leaders exist but party-wide bonus
+  effects are not yet implemented).
+- Specific level-up stat curves (deferred to world loop / Phase B per
+  roadmap).
+- Class-change trees: bio-evolution tree shape (caterpillar → butterfly
+  family). Trigger debut at L3 is locked; specific trees are PA-authored.
+- Specific terrain types and modifiers (plane affinity exists; per-tile
+  terrain types like grass/water/mud do not).
+- Sergeant Antonio's voice and grasshopper-shop dialogue (writing task).
+- Per-scenario POST flavor for L2–L10 (Level PA per roadmap §4.1).
+
+Items previously listed but now answered (see `data/level-1/` for current
+values):
+
+- Specific stat values for all Level 1 units → `units.json`
+- Specific battle resolution math → `engine/combat.ts`
+- Cooperative ant mechanic → jelly + queen-proximity stack
+- Queen ultimate behavior and charge time → `queen.json`
+- Royal Jelly numbers → `jelly.json`
+- Full unit roster for ants and spiders → `roster-ants.json`,
+  `roster-spiders.json`
+- POST defensive bonus values → `map.json`
+- Out-of-battle ability list → `abilities.json` (17 abilities)
+- Shop inventory and pricing → roadmap §6.5 (between-scenario shops
+  spec'd; specific pricing TBD by Gameplay PA)
+- Scenario layout → per-seed randomization (`engine/map-gen.ts`) plus
+  pre-game placement (round-7 mechanic)
 
 ## Success criteria for Level 1
 
-- **Win rate:** A locked baseline player AI should win Level 1 65-80% of the time against the designed enemy AI. (Higher = too easy; lower = too hard.)
+- **Win rate:** A locked baseline player AI should win Level 1 65-80% of the time against the designed enemy AI. (Higher = too easy; lower = too hard.) Per `docs/roadmap-tier-1.md` §5, L1 is targeted at the **top of this range (~75%)** because the Tier-1 win-rate curve runs from ~75% at L1 down to ~50% by L10.
 - **Luck factor:** Across 100 simulated runs of identical conditions, win-rate variance should be measurable but not dominant. (Wins should reflect strategy, not coin flips.)
 - **Route diversity:** At least three meaningfully different strategic approaches should produce wins (e.g., direct rush via towel-rack/wall-crack; soap-dish staging then ceiling assault; defensive turtle until Queen ultimate triggers).
 - **Watchability:** Read playtest transcripts. Decisions should be articulate-able and the game should be interesting to read about, not just to track.

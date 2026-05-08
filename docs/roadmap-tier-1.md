@@ -208,6 +208,10 @@ Specifically called out by the user:
 4. **The win-rate curve in §5 trumps mechanic placement.** If shipping
    mechanic X at scenario N pushes the win rate outside the curve target,
    the PA reschedules.
+5. **Biological evolution lands in Tier 1, debut L3.** Locked. Specific
+   evolution trees (caterpillar → butterfly etc.) are still PA-authored,
+   but the L3 debut is fixed. Equipment-progression class change can land
+   anywhere from L3 onward.
 
 ---
 
@@ -247,21 +251,21 @@ The user added a logical-progression idea:
 ### 4.1 Proposed 10-room sequence
 
 Treat this as a strong recommendation that the Level Progression Agent
-refines but does not throw out wholesale. Each entry sketches geometry and
-distinguishing POST flavor.
+refines but does not throw out wholesale. Each entry sketches geometry,
+distinguishing POST flavor, and the scenario's win condition.
 
-| #   | Room        | Geometry                                                                                               | POST flavor (replaces / extends spec POSTs)                                                       | Distinguishing setting mechanic                                                         |
-| --- | ----------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| L1  | Bathroom    | 10×10, six planes, near-square. Spec-locked layout.                                                    | Storm Drain, Soap Dish, Towel Rack, Wall Crack, Spider Web (per `game-outline.md`)                | Baseline. Spec-faithful.                                                                |
-| L2  | Pipe        | Long narrow tube — 4×16, two planes (inner-floor, inner-ceiling). Cross-room passage shape.            | Pipe-Joint (T-intersection POST), Drain-Cap, Trap (the U-bend) — chokepoints, not strongholds.    | One-dimensional combat. Plane-switch is the only flank. Pheromone-erasure intro.        |
-| L3  | Kitchen     | 10×10 with a center "island" (impassable cluster). Two rooms-worth of POSTs.                           | Crumb-Pile (Soap-Dish equivalent), Counter-Edge (height-advantage POST), Sink-Drain (transition). | Class-change groundwork: first promotion-eligible units appear here.                    |
-| L4  | Hallway     | Long rectangle 6×16. Two ceiling planes, one floor. POSTs randomized within constrained regions.       | Doorway POSTs (multiple), Light-Switch (a flip-state POST that toggles a global modifier).        | **POST randomization debuts** here. POSTs land in fixed regions, randomized within.     |
-| L5  | Bedroom     | 10×10 with a bed (large impassable region splitting plane).                                            | Under-Bed (concealment POST: occupants fog-immune), Pillow-Fort (high def-bonus POST).            | First "concealment" POST type — adds an info-asymmetry knob.                            |
-| L6  | Stairs      | Vertical traversal level. 4-wide stack of 5 floor planes. Movement up/down restricted by unit type.    | Step-Landings (one per stair). No conventional POSTs; each landing IS a POST.                     | **Vertical traversal** as a setting mechanic. Flying / climbing units strongly favored. |
-| L7  | Living room | Large 14×14, irregular L-shape, three furniture clusters (couch, coffee table, TV stand) as obstacles. | Couch-Cushion (large defensive POST), Remote (a "currency" POST awarding bonus gold per turn).    | First map larger than 10×10. Cards economy starts paying off here.                      |
-| L8  | Attic       | Cramped 8×8, low ceiling clipped to 5×5 ceiling plane. Boxes everywhere. Heavy obstacle density.       | Trunk (treasure-style POST), Rafter-Beam (unique ceiling POST), Skylight (one-way plane transit). | Variety bookend #1. Unit-size cost penalties for large units.                           |
-| L9  | Basement    | 12×12, dim. Pools-of-water hazard tiles. Underfloor plane introduced (spec future plane).              | Boiler (hazard-emitting POST), Workbench, Sump-Pump (water-control POST flips hazards on/off).    | Variety bookend #2. First scenario with a player-controllable environment mechanic.     |
-| L10 | Garage      | 16×12 climax map. Multi-cluster geometry (workbench, car, shelving). All Tier-1 mechanics active.      | Tool-Rack (shop-extension POST), Garage-Door (large transition POST), Engine-Block (boss-arena).  | Tier-1 finale. All systems on. Day/night cycle activates here.                          |
+| #   | Room        | Geometry                                                                                               | POST flavor                                                                                      | Distinguishing setting mechanic                                                                | Win condition                                               |
+| --- | ----------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| L1  | Bathroom    | 10×10, six planes, near-square. Spec-locked layout.                                                    | Storm Drain, Soap Dish, Towel Rack, Wall Crack, Spider Web (per `game-outline.md`)               | Baseline. Spec-faithful.                                                                       | Capture spider-web (defended POST template)                 |
+| L2  | Pipe        | Long narrow tube — 4×16, two planes (inner-floor, inner-ceiling). Cross-room passage shape.            | Pipe-Joint, Drain-Cap, Trap (U-bend) — chokepoints, not strongholds.                             | One-dimensional combat. Plane-switch is the only flank. Pheromone-erasure intro.               | **Escort: Aunt Ant** (see §4.3.1)                           |
+| L3  | Kitchen     | 10×10 with a center "island" (impassable cluster). Two rooms-worth of POSTs.                           | Crumb-Pile, Counter-Edge (height-advantage), Sink-Drain (transition).                            | Class-change groundwork: first promotion-eligible units appear here. **Bio-evolution debuts.** | Capture defended POST                                       |
+| L4  | Hallway     | Long rectangle 6×16. Two ceiling planes, one floor. POSTs randomized within constrained regions.       | Doorway POSTs (multiple), Light-Switch (a flip-state POST that toggles a global modifier).       | **POST randomization debuts** here. POSTs land in fixed regions, randomized within.            | Capture defended POST                                       |
+| L5  | Bedroom     | 10×10 with a bed (large impassable region splitting plane).                                            | Under-Bed (concealment POST: occupants fog-immune), Pillow-Fort (high def-bonus POST).           | First "concealment" POST type — adds an info-asymmetry knob.                                   | Capture defended POST                                       |
+| L6  | Stairs      | Vertical traversal level. 4-wide stack of 5 floor planes. Movement up/down restricted by unit type.    | Step-Landings (one per stair). No conventional POSTs; each landing IS a POST.                    | **Vertical traversal** as a setting mechanic. Flying / climbing units strongly favored.        | **Eradication: kill all spider parties** (see §4.3.2)       |
+| L7  | Living room | Large 14×14, irregular L-shape, three furniture clusters (couch, coffee table, TV stand) as obstacles. | Couch-Cushion (large defensive POST), Remote (a "currency" POST awarding bonus gold per turn).   | First map larger than 10×10. Cards economy starts paying off here.                             | Capture defended POST                                       |
+| L8  | Attic       | Cramped 8×8, low ceiling clipped to 5×5 ceiling plane. Boxes everywhere. Heavy obstacle density.       | Trunk (treasure POST), Rafter-Beam (unique ceiling POST), Skylight (one-way plane transit).      | Variety bookend #1. Unit-size cost penalties for large units. **High cockroach density.**      | **Recruit ≥4 cockroach parties without dying** (see §4.3.3) |
+| L9  | Basement    | 12×12, dim. Pools-of-water hazard tiles. Underfloor plane introduced (spec future plane).              | Boiler (hazard-emitting POST), Workbench, Sump-Pump (water-control POST flips hazards on/off).   | Variety bookend #2. First scenario with a player-controllable environment mechanic.            | Capture defended POST                                       |
+| L10 | Garage      | 16×12 climax map. Multi-cluster geometry (workbench, car, shelving). All Tier-1 mechanics active.      | Tool-Rack (shop-extension POST), Garage-Door (large transition POST), Engine-Block (boss-arena). | Tier-1 finale. All systems on. Day/night cycle activates here.                                 | Capture defended POST (Engine-Block)                        |
 
 Two design notes:
 
@@ -275,6 +279,61 @@ Two design notes:
   passage motif. The narrative bridge from L1 (spider queen swears fealty,
   helps relocate the Ant Queen) is now "the colony moves through the wall
   pipe to the kitchen sink."
+
+### 4.3 Special-objective scenarios
+
+Seven of ten scenarios use the standard "capture a far-away well-defended
+POST" template. Three are exceptions:
+
+#### 4.3.1 L2 (Pipe) — Escort Aunt Ant
+
+A unique character, **Aunt Ant**, debuts in L2 as a separate party. She is
+the future queen of the kitchen (L3). The player must escort her safely
+from one end of the pipe to the other; reaching the exit POST wins the
+scenario.
+
+- **Aunt Ant's stats**: queen-tier HP, no attack — non-combatant. Moves
+  with one of the player's escort parties (occupies a 4-slot mount in the
+  party, conceptually similar to the home-base queen but mobile).
+- **Lose conditions**: Aunt Ant dies, OR Ant Queen dies (the home-base
+  queen rule still applies — she's at one end of the pipe).
+- **Spider defense**: requires deliberate design — the spider AI in this
+  scenario should hold pinch-points and try to overwhelm the escort
+  rather than racing to the player's home base. Hypnotize is particularly
+  threatening here (a hypnotized escort party is catastrophic).
+- **Optional 1–2 mid-pipe POSTs**: capturable for tactical advantage but
+  not required for victory.
+- **Win**: Aunt Ant's party reaches the exit POST.
+
+#### 4.3.2 L6 (Stairs) — Total spider eradication
+
+Win condition: kill every spider party on the board. No POSTs to capture
+for victory; spider-web equivalent (if present) is a target but not the
+win trigger.
+
+- Encourages aggressive play — turtling does nothing.
+- Vertical traversal compounds the difficulty: spider parties scattered
+  across 5 stair planes mean the player must climb to engage.
+- Map design should have NO timeout-style escape (the ant queen-base is
+  on the bottom landing; spider parties on upper landings can't reach
+  her in 30 turns, so the timeout logic needs a different default — likely
+  "ant loss on timeout" since the offensive burden is on the ants).
+
+#### 4.3.3 L8 (Attic) — Cockroach recruit-or-die
+
+Win condition: recruit at least 4 cockroach parties (the existing R8/R10
+neutral-recruit mechanic) WITHOUT having the ant queen killed by
+hypnotized cockroaches that the spiders have weaponized.
+
+- The attic spawns **many** cockroach parties (e.g., 8 instead of the
+  standard 1) — recruit count is the resource.
+- Spider AI prioritizes hypnotize over offensive moves; the player races
+  the spiders to flip cockroaches first.
+- Hypnotized cockroaches charge the ant queen — defense is the secondary
+  challenge.
+- **Win**: ant party-count of recruited cockroaches reaches 4.
+- **Lose**: ant queen dies (standard) OR all ant-mage parties die (no
+  more recruits possible).
 
 ### 4.2 Per-scenario setting deliverables
 
@@ -426,6 +485,21 @@ User's plan (verbatim):
 >
 > Throughput is not the bottleneck; quality of the resulting progression is.
 
+**Debate-termination policy (resolved):** the Gameplay PA cuts off
+debate when EITHER condition holds, whichever comes first:
+
+1. Both the **fun critic** (`critics/fun-rubric.md`) AND the **interest
+   critic** (`harness/critic-interest.ts`) score the proposed scenario
+   ≥75/100, OR
+2. The faction sub-agents have exchanged 6 arguments total (3 per side,
+   alternating).
+
+After cutoff, the Gameplay PA renders a final decision based on the
+accumulated arguments and current critic scores. If both critics report
+≥75 the final decision is "ship the proposal as-is"; if the 6-exchange
+cap fires before consensus, the Gameplay PA picks the position that
+scored highest on the most recent critic-eval pass.
+
 #### Level Progression Agent — solo
 
 User's plan (verbatim):
@@ -478,6 +552,42 @@ _environment_-progression patterns — the existing memos cover unit and
 faction mechanics well but weren't framed around environment progression.
 That memo feeds the Level PA.
 
+### 6.5 World-loop shop schedule (resolved)
+
+Between-scenario rest points (the **grasshopper shop** from
+`game-outline.md`'s "Shops" section) appear after the following
+scenarios only:
+
+| After scenario | Shop available                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| L1             | No — deliberate. The first reward landing is post-L2 so the player feels concrete progression after their first real test. |
+| L2             | Yes — first shop introduction.                                                                                             |
+| L3             | Yes                                                                                                                        |
+| L4             | Yes                                                                                                                        |
+| L5             | No                                                                                                                         |
+| L6             | Yes                                                                                                                        |
+| L7             | No                                                                                                                         |
+| L8             | Yes                                                                                                                        |
+| L9             | Yes                                                                                                                        |
+| L10            | No (tier finale)                                                                                                           |
+
+Each shop offers three kinds of action:
+
+1. **Items** — sells the items roster (R14 mechanic). Future expansion
+   adds the Risk-2210-style commander cards (Mechanics memo §1.3).
+2. **Recruits** — units available for purchase that the player can add
+   to existing parties or use to spawn new parties (within the 8-slot
+   party cap of Tier 1).
+3. **Party rearrangement** — between-scenario only. Player can rebuild
+   parties from their roster: move units between parties, swap leaders,
+   create new parties from idle units. No combat, no battles — pure
+   bookkeeping.
+
+The grasshopper itself remains a story detail (no graphics in the
+planning phase per spec). Sergeant Antonio's voice handles dialogue;
+the grasshopper's voice is left for the Level PA / writer agent in
+Phase D.
+
 ---
 
 ## 7. Tensions resolved
@@ -524,27 +634,23 @@ resolution:
    within the §3.4 constraints.
 2. **Specific room geometry per level** — proposed in §4.1; refined by the
    Level PA.
-3. **Per-scenario win condition variety.** Spec calls out spider-web
-   capture as the L1 win condition. Should each L2–L10 have a unique
-   objective, or do they all reduce to "destroy enemy stronghold"? This is
-   an open question for the user (the obvious candidates: stairs as
-   "reach the top," basement as "control the sump-pump for N turns,"
-   garage as a multi-objective finale).
-4. **Class-change tree shape.** Spec defers ("specific class trees are TBD
-   by design agents"); mechanics memo §1.4 proposes charisma-gated
-   single-step promotion as the v1 ceiling. The Gameplay PA picks the L3
-   debut tree. Left open: whether biological-evolution (caterpillar →
-   butterfly) lands in Tier 1 or waits for Tier 2.
-5. **Currency continuity.** Gold tracking is in (R12); commander-cards
-   shop (mechanics memo §1.3) is the v1 sink. Open question: do shops
-   exist in the world loop between scenarios in Tier 1 (spec mentions a
-   grasshopper shoebox shop in the ceiling at L1) or only inside
-   scenarios? Resolution probably: yes, between-scenario shops exist;
-   they're a world-loop feature.
-6. **Faction sub-agent termination criterion.** The user plan says the
-   Gameplay PA "has authority to cut off debate and decide when it's heard
-   enough." The PA needs an explicit policy here — open question for the
-   PA's prompt design.
+
+### Resolved (user input, post-draft)
+
+- **Win-condition variety**: 7 of 10 scenarios (L1, L3, L4, L5, L7, L9, L10)
+  use the "capture far-away defended POST" template. L2, L6, L8 have
+  custom objectives — see §4.3.
+- **Class-change**: biological evolution lands in Tier 1, debuts L3.
+  Specific tree shapes are still left to the Gameplay PA but the L3 trigger
+  is locked.
+- **Currency / shops**: between-scenario grasshopper shops exist, but
+  appear after L2, L3, L4, L6, L8, L9 only — not after L1 (deliberate
+  delayed introduction so progression has a tangible "first reward"
+  moment), L5, L7, or L10. Each shop sells items + recruits + offers
+  party rearrangement at the same rest point. See §6.4.
+- **PA debate termination**: faction sub-agents debate ends when EITHER
+  both fun-critic AND interest-critic scores are ≥75/100, OR 6 exchanges
+  have occurred — whichever happens first. See §6.2.
 
 ---
 
