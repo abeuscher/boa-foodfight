@@ -155,6 +155,32 @@ export interface Unit {
    * optional / absent for unaffected units.
    */
   readonly tangleTurnsRemaining?: number;
+  /**
+   * Round 26 — charisma-gated promotion (mechanics memo §1.4, Ogre
+   * Battle inspired). Per-unit dynamic stat (range [0, 100]) that
+   * rises and falls based on the unit's engagement choices in
+   * battle: +5 for engaging a larger party (underdog), +1 for
+   * parity, -3 for engaging a smaller party (overdog), -5 for
+   * fleeing, +20 for landing the killing blow on an enemy queen.
+   * Initialized to 50 at scenario start for every promotable unit
+   * (queens and specialty templates — workers, tanks, potato-bugs,
+   * spiderlings, mice, cockroaches, stinkbugs — never carry charisma
+   * since they can't promote). At `>= 70` the unit is eligible for
+   * promotion; promotion fires automatically at end-of-turn when an
+   * eligible unit is on its faction's home POST tile (storm-drain
+   * for ants, spider-web for spiders). Optional for backwards
+   * compatibility: a missing field is treated as "not eligible for
+   * the promotion track" by the engine.
+   */
+  readonly charisma?: number;
+  /**
+   * Round 26 — set to `true` once the unit promotes via charisma
+   * (mechanics memo §1.4). Each unit can promote at most once per
+   * scenario; a second eligibility window is a no-op when this
+   * field is set. Optional: a missing field is equivalent to
+   * `false` (never promoted).
+   */
+  readonly promoted?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1114,6 +1140,41 @@ export type ReplayEvent =
       readonly kind: 'market-refreshed';
       readonly newCard: CardId;
       readonly position: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 26 — charisma-gated promotion (mechanics memo §1.4).
+       * Emitted whenever a battle resolution adjusts a unit's charisma.
+       * `oldCharisma` and `newCharisma` are the values BEFORE and AFTER
+       * the clamp to [0, 100]. `reason` carries the trigger:
+       *   - `'underdog'`: attacker engaged a larger party (≥2 slots)
+       *   - `'parity'`: attacker engaged a same-size party (≤1 slot diff)
+       *   - `'overdog'`: attacker engaged a smaller party (≥2 slots)
+       *   - `'flee'`: party retreated via the round-15 flee mechanic
+       *   - `'queen-kill'`: this unit landed the killing blow on the
+       *     enemy queen
+       */
+      readonly kind: 'charisma-changed';
+      readonly partyId: PartyId;
+      readonly unitId: UnitId;
+      readonly oldCharisma: number;
+      readonly newCharisma: number;
+      readonly reason: 'underdog' | 'parity' | 'overdog' | 'flee' | 'queen-kill';
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 26 — charisma-gated promotion (mechanics memo §1.4). A
+       * unit at home base with `charisma >= 70` promotes to its
+       * paired template at end-of-turn. Single-step, one-time per
+       * unit per scenario. The viewer / critics can attribute the
+       * stat bump (+2 hp + per-template increments) by joining
+       * `fromTemplate` and `toTemplate` against the templates digest.
+       */
+      readonly kind: 'unit-promoted';
+      readonly partyId: PartyId;
+      readonly unitId: UnitId;
+      readonly fromTemplate: UnitTemplateId;
+      readonly toTemplate: UnitTemplateId;
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

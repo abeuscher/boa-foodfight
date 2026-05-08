@@ -14,6 +14,7 @@
  */
 
 import { decayCardBuffs } from './cards.ts';
+import { applyCharismaPromotions } from './charisma.ts';
 import { distance, sameCoord } from './coord.ts';
 import { discoverItems } from './items.ts';
 import { PHASE_LENGTH } from './phase.ts';
@@ -557,6 +558,17 @@ export const endOfTurn = (
       events.push(...fireResult.events);
     }
   }
+
+  // 2c. Round 26 — charisma-gated promotion (mechanics memo §1.4).
+  //     Walk every party at home base; promote any unit whose
+  //     charisma reached the threshold (and hasn't already
+  //     promoted) to its paired template. Single-step, automatic,
+  //     one-time per unit per scenario. Fires before jelly /
+  //     production / win-check so a freshly-promoted unit's stats
+  //     are visible the moment the new turn starts.
+  const promoOutcome = applyCharismaPromotions(working, currentTurn, tick);
+  working = promoOutcome.state;
+  events.push(...promoOutcome.events);
 
   // 3. Royal Jelly production (silent).
   working = applyJellyProduction(working, input.jelly);

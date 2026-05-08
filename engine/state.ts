@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { buildInitialMarket } from './cards.ts';
+import { INITIAL_CHARISMA, isPromotableTemplate } from './charisma.ts';
 import { coordKey } from './coord.ts';
 import { assignFormation } from './formation.ts';
 import { spawnItems } from './items.ts';
@@ -230,6 +231,14 @@ const buildParties = (
           const mpSlotsField = isCasterTemplate(tmpl, abilities)
             ? { mpSlots: INITIAL_MP_SLOTS }
             : {};
+          // Round 26 — charisma-gated promotion (mechanics memo §1.4).
+          // Seed `charisma: 50` only on promotable templates (the 8
+          // listed in `PROMOTION_TREE`). Queens, neutrals, and
+          // specialty units (worker / tank / potato-bug / spiderling)
+          // never carry charisma since they can't promote — the
+          // missing field is read by the engine as "outside the
+          // promotion track."
+          const charismaField = isPromotableTemplate(tmpl.id) ? { charisma: INITIAL_CHARISMA } : {};
           units.push({
             id: `u${String(unitCounter).padStart(4, '0')}-${entry.templateId}` as UnitId,
             templateId: tmpl.id,
@@ -237,6 +246,7 @@ const buildParties = (
             level: 1,
             xp: 0,
             ...mpSlotsField,
+            ...charismaField,
           });
         }
       }
