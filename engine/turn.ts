@@ -18,6 +18,7 @@ import { containsQueen } from './parties.ts';
 import { applyPlacement } from './placement.ts';
 import { resolvePostCapture } from './post-capture.ts';
 import { postAt } from './posts.ts';
+import { scoreScenario, winnerFromScore } from './score.ts';
 import type { ItemSpawnEvent, NeutralSpawnEvent, ScenarioData } from './state.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
@@ -423,6 +424,25 @@ export const runScenario = (
     working = outcome.state;
     events.push(...outcome.events);
     turnsPlayed += 1;
+  }
+
+  // Round 19 — score-based timeout resolution (mechanics memo §1.6).
+  // If the loop exited at `maxTurns` without a decisive winner, score
+  // both factions and award the win to the higher score; ties go to
+  // spider (defender bias). The engine emits a `scenario-end` event
+  // with the score breakdown attached so the harness / viewer / critics
+  // can attribute the win to the score path.
+  if (working.winner === null) {
+    const breakdown = scoreScenario(working);
+    const winner = winnerFromScore(breakdown);
+    working = { ...working, winner };
+    events.push({
+      kind: 'scenario-end',
+      turn: working.turn,
+      tick: tick(),
+      winner,
+      scoreBreakdown: breakdown,
+    });
   }
 
   return { finalState: working, events, turnsPlayed };

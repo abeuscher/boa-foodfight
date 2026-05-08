@@ -805,7 +805,37 @@ export type ReplayEvent =
       readonly enemyPartyId?: PartyId;
       readonly lossProbability?: number;
     })
-  | (ReplayEventCommon & { readonly kind: 'scenario-end'; readonly winner: Faction });
+  | (ReplayEventCommon & {
+      readonly kind: 'scenario-end';
+      readonly winner: Faction;
+      /**
+       * Round 19 — score breakdown for timeout-resolved scenarios
+       * (mechanics memo §1.6). Present when the engine awarded the
+       * win at `maxTurns` via `scoreScenario`; undefined for
+       * decisive wins (queen kill, spider-web capture, field-force
+       * wipe). The `total` per faction sums the per-component
+       * fields (posts, queen, webProgress, hp, charisma); ties go
+       * to spider per the defender-bias rule.
+       */
+      readonly scoreBreakdown?: {
+        readonly ant: {
+          readonly posts: number;
+          readonly queen: number;
+          readonly webProgress: number;
+          readonly hp: number;
+          readonly charisma: number;
+          readonly total: number;
+        };
+        readonly spider: {
+          readonly posts: number;
+          readonly queen: number;
+          readonly webProgress: number;
+          readonly hp: number;
+          readonly charisma: number;
+          readonly total: number;
+        };
+      };
+    });
 
 // ---------------------------------------------------------------------------
 // Determinism
