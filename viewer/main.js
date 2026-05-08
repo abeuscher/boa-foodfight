@@ -287,18 +287,34 @@ function reduceWithInitial(events, targetTick) {
       case 'hypnotize-attempted':
         if (e.success) {
           neutralHypno.set(e.targetId, { state: 'hypnotized' });
+          // Round 27 — controlled-neutral inner dot. While hypnotized,
+          // the party's display faction stays 'neutral' (gray outer
+          // circle) but `controlledBy` flags the spider as the
+          // controller so the renderer draws an inner spider-color dot.
+          const p = parties.get(e.targetId);
+          if (p) p.controlledBy = 'spider';
         }
         break;
       case 'hypnotize-rebound-started':
         neutralHypno.set(e.partyId, { state: 'rebound' });
+        // Round 27 — rebound clears spider control: the neutral has
+        // shaken off the hypnosis and is acting on its own again.
+        // Outer ring stays neutral-gray; inner dot is removed.
+        {
+          const p = parties.get(e.partyId);
+          if (p) p.controlledBy = null;
+        }
         break;
       case 'recruit-attempted-neutral':
         if (e.success) {
-          // Convert the party display faction to ant.
+          // Round 27 — keep the party's display faction as 'neutral'
+          // (so the outer circle stays gray) but mark `controlledBy`
+          // so the renderer draws an inner ant-color dot. Older
+          // round-8 behavior flipped p.faction = 'ant' outright; the
+          // new representation preserves the "still a neutral type,
+          // now ant-controlled" intent.
           const p = parties.get(e.targetId);
-          if (p) p.faction = 'ant';
-          const pu = partyUnits.get(e.targetId);
-          if (pu) pu.faction = 'ant';
+          if (p) p.controlledBy = 'ant';
           neutralHypno.delete(e.targetId);
         }
         break;
@@ -749,6 +765,18 @@ function drawParties(ctx, plane, parties, neutralHypno, area, followPartyId) {
       ctx.arc(cx + dx, cy + dy, radius, 0, Math.PI * 2);
       ctx.fillStyle = FACTION_COLOR[p.faction] ?? '#888';
       ctx.fill();
+      // Round 27 — controlled-neutral inner dot. When a neutral party
+      // has been hypnotized (spider) or recruited (ant), the OUTER
+      // circle stays neutral-gray to signal "still a neutral kind",
+      // but an inner dot at 50% radius is drawn in the controlling
+      // faction's color. Hypno-rebound clears `controlledBy` so the
+      // dot disappears once the neutral shakes off the spell.
+      if (p.faction === 'neutral' && p.controlledBy) {
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, radius * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = FACTION_COLOR[p.controlledBy] ?? '#888';
+        ctx.fill();
+      }
       // Round 8 — outline color flags hypnotize state for neutrals:
       //   hypnotized: bright purple ring (spider-controlled).
       //   rebound:    cyan ring (spider-immune, fleeing).
@@ -994,6 +1022,10 @@ function renderPartiesPanel(state) {
 
 let SELECTED_TILE = null;
 
+// Round 27 — shared helper used by both the click handler (toggles
+// focus mode + selected tile) and the mousemove handler (drives the
+// hover tooltip). Resolves a MouseEvent to a (plane, x, y) tile or
+// null when the cursor is outside any rendered plane area.
 function tileAtClick(canvas, evt) {
   const rect = canvas.getBoundingClientRect();
   const cx = ((evt.clientX - rect.left) * canvas.width) / rect.width;
@@ -1019,6 +1051,56 @@ function partiesAtTile(state, tile) {
     }
   }
   return out;
+}
+
+// Round 27 — count living units for a party. Prefer the unit-level
+// `partyUnits` snapshot (HPs are walked from battle-resolved); fall
+// back to the party's bare `units` array (older replays without the
+// scenario-start engine extension). Returns `{ alive, total }` so the
+// tooltip can render "5/6" style fractions.
+function unitCountsForParty(state, partyId) {
+  const pu = state.partyUnits.get(partyId);
+  if (pu && pu.units && pu.units.size > 0) {
+    let alive = 0;
+    for (const u of pu.units.values()) {
+      if (u.currentHp > 0) alive += 1;
+    }
+    return { alive, total: pu.units.size };
+  }
+  return { alive: 0, total: 0 };
+}
+
+// Round 27 — render the hover tooltip listing parties on the tile
+// under the cursor. Empty tile -> hide. Otherwise build one line per
+// party in the form: `<id> (<faction>, <alive>/<total>)`. Position
+// follows the cursor with a small offset so it never sits under the
+// pointer.
+function updateTileTooltip(state, evt, tile) {
+  const tooltip = document.getElementById('tile-tooltip');
+  if (!tooltip) return;
+  if (!tile) {
+    tooltip.classList.remove('visible');
+    return;
+  }
+  const parties = partiesAtTile(state, tile);
+  if (parties.length === 0) {
+    tooltip.classList.remove('visible');
+    return;
+  }
+  const lines = parties.map((p) => {
+    const counts = unitCountsForParty(state, p.id);
+    const factionLabel = p.controlledBy
+      ? `${p.faction}, controlled by ${p.controlledBy}`
+      : p.faction;
+    if (counts.total > 0) {
+      return `${p.id} (${factionLabel}, ${String(counts.alive)}/${String(counts.total)} units alive)`;
+    }
+    return `${p.id} (${factionLabel})`;
+  });
+  tooltip.textContent = lines.join('\n');
+  tooltip.style.left = `${String(evt.clientX + 12)}px`;
+  tooltip.style.top = `${String(evt.clientY + 12)}px`;
+  tooltip.classList.add('visible');
 }
 
 function postAtTile(state, tile) {
@@ -1552,6 +1634,10 @@ function describeEvent(e) {
 let CURRENT_EVENTS = [];
 let MAX_TICK = 0;
 let PLAY_TIMER = null;
+// Round 27 — cache the most-recent reduced state so the hover-tooltip
+// mousemove handler can read parties-on-tile without re-walking the
+// event log on every pixel of cursor movement.
+let CURRENT_STATE = null;
 
 let MANIFEST = null; // populated when manifest.json loads
 
@@ -1686,6 +1772,7 @@ function setTick(tick) {
   const t = Math.max(0, Math.min(MAX_TICK, tick));
   document.getElementById('scrubber').value = t;
   const state = reduceWithInitial(CURRENT_EVENTS, t);
+  CURRENT_STATE = state;
   // Follow mode: if a party is being followed, slave the focused plane
   // to wherever that party is right now. Dead parties keep their last
   // known plane (we only update when we have a current location).
@@ -1748,6 +1835,19 @@ async function init() {
       FOCUSED_PLANE = FOCUSED_PLANE === tile.plane ? null : tile.plane;
     }
     setTick(Number(document.getElementById('scrubber').value));
+  });
+  // Round 27 — hover tooltip. Reuses tileAtClick for the cursor->tile
+  // mapping (works in both the 6-grid and focused-plane layouts) and
+  // hides whenever the cursor leaves the canvas or hovers an empty
+  // tile. Cheap enough to run on every mousemove (innerText + position).
+  board.addEventListener('mousemove', (e) => {
+    if (!CURRENT_STATE) return;
+    const tile = tileAtClick(board, e);
+    updateTileTooltip(CURRENT_STATE, e, tile);
+  });
+  board.addEventListener('mouseleave', () => {
+    const tooltip = document.getElementById('tile-tooltip');
+    if (tooltip) tooltip.classList.remove('visible');
   });
   document.getElementById('focus-reset').addEventListener('click', () => {
     // Clearing focus also exits follow mode — otherwise the next render
