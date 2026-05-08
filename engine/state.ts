@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { buildInitialMarket } from './cards.ts';
 import { coordKey } from './coord.ts';
 import { assignFormation } from './formation.ts';
 import { spawnItems } from './items.ts';
@@ -331,6 +332,13 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const itemRng = createRng(seed).fork('items-spawn');
   const itemSpawnList = spawnItems({ tiles, posts, itemsFile: data.items }, itemRng);
 
+  // Round 25 — commander cards (mechanics memo §1.3). Build the
+  // public market + deck split via a dedicated RNG fork so the deck
+  // shuffle is independent of map / neutrals / items entropy. Both
+  // factions start with empty hands.
+  const cardsRng = createRng(seed).fork('cards-deck');
+  const initialMarket = buildInitialMarket(cardsRng);
+
   const state: GameState = {
     turn: 0,
     seed,
@@ -350,6 +358,9 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     damageZones: [],
     playerGold: { ant: 0, spider: 0 },
     itemSpawns: itemSpawnList,
+    cardMarket: initialMarket.cardMarket,
+    cardHand: { ant: [], spider: [] },
+    cardDeck: initialMarket.cardDeck,
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({

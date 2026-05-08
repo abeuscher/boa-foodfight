@@ -245,6 +245,15 @@ const queenGuardOrdersEqual = (a: readonly Order[], b: readonly Order[]): boolea
       if (x.target !== y.target) return false;
     } else if (x.kind === 'move-to' && y.kind === 'move-to') {
       if (!sameCoord(x.target, y.target)) return false;
+    } else if (
+      (x.kind === 'buy-card' && y.kind === 'buy-card') ||
+      (x.kind === 'play-card' && y.kind === 'play-card')
+    ) {
+      // Round 25 — never treat card orders as equal across turns.
+      // The engine consumes them each turn, so writing them again is
+      // idempotent but conceptually a fresh order; force the policy
+      // framework to refresh the queue.
+      return false;
     }
   }
   return true;

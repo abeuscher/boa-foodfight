@@ -13,6 +13,7 @@
  * surface and is expected to come from the shared replay tick clock.
  */
 
+import { decayCardBuffs } from './cards.ts';
 import { distance, sameCoord } from './coord.ts';
 import { discoverItems } from './items.ts';
 import { PHASE_LENGTH } from './phase.ts';
@@ -518,6 +519,12 @@ export const endOfTurn = (
   //     bookkeeping; no event emitted (the combo-fired event already
   //     captured the application).
   working = applyTangleDecay(working);
+
+  // 1c. Round 25 — commander-card buff decay (mechanics memo §1.3).
+  //     Per-party `cardBuffs.bonusTurnsRemaining` decrements by 1;
+  //     reaches 0 → buffs cleared. Forced-march clears each turn (it's
+  //     a one-shot movement bonus). Pure bookkeeping; no event.
+  working = decayCardBuffs(working);
 
   // 2. Queen ultimate charge. Only emit if the value actually changed —
   //    once the cap is hit, repeated charge=cap events are pure noise.

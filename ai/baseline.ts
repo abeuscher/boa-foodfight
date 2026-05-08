@@ -77,6 +77,7 @@ import type {
   UnitTemplateId,
 } from '../engine/types.ts';
 
+import { buyCardOrderFor, playCardOrderFor } from './card-helpers.ts';
 import {
   decideNeutralFollow,
   findRecruitableNeutralNear,
@@ -190,11 +191,25 @@ const killDiveTarget = (
 /** Queen-guard hook (round 6): each turn, the queen-guard worker
  * fires a `jelly-apply` at pathfinders so doses stack / refresh.
  * Returns `[]` if pathfinders is missing, leaderless, or dead. The
- * engine routes the order via `jellyMultipliers`. */
+ * engine routes the order via `jellyMultipliers`.
+ *
+ * Round 25 — also hosts the ant faction's commander-card buy / play
+ * orders (mechanics memo §1.3). The queen-guard is idle by spec so
+ * appending faction-level card orders here doesn't displace any
+ * existing tactical work. The engine resolves card orders in a
+ * separate pass before abilities / movement, so mixing card orders
+ * with the jelly-apply order in one queue is safe. */
 const queenGuardOrders = (state: GameState, _queenGuard: Party): readonly Order[] => {
+  const orders: Order[] = [];
+  const buy = buyCardOrderFor(state, 'ant');
+  if (buy) orders.push(buy);
+  const play = playCardOrderFor(state, 'ant');
+  if (play) orders.push(play);
   const pf = state.parties.get(PATHFINDERS);
-  if (!pf || pf.leaderless || !partyAlive(pf)) return [];
-  return [jellyApplyOrder(PATHFINDERS)];
+  if (pf && !pf.leaderless && partyAlive(pf)) {
+    orders.push(jellyApplyOrder(PATHFINDERS));
+  }
+  return orders;
 };
 
 /**

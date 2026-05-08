@@ -44,6 +44,41 @@ export const slotsUsed = (
 /** True iff the unit has currentHp > 0. */
 export const isAlive = (unit: Unit): boolean => unit.currentHp > 0;
 
+/**
+ * Round 25 — heal each living unit by up to `amount` HP, capped at
+ * the unit's template max. Returns the new unit list plus a per-unit
+ * (id, hpBefore, hpAfter) breakdown and the cumulative HP delta. Pure
+ * helper; does not mutate the party. Used by `engine/cards.ts`'s
+ * `mass-heal` and `engine/abilities.ts`'s `web-mend` so the per-unit
+ * cap math doesn't duplicate across both call sites.
+ */
+export const healUnits = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  amount: number,
+): {
+  units: readonly Unit[];
+  perUnit: readonly { unitId: Unit['id']; hpBefore: number; hpAfter: number }[];
+  totalHealed: number;
+} => {
+  let totalHealed = 0;
+  const perUnit: { unitId: Unit['id']; hpBefore: number; hpAfter: number }[] = [];
+  const units = party.units.map((u) => {
+    if (u.currentHp <= 0) return u;
+    const tmpl = templates.get(u.templateId);
+    if (!tmpl) return u;
+    const cap = tmpl.baseStats.hp;
+    if (u.currentHp >= cap) return u;
+    const after = Math.min(cap, u.currentHp + amount);
+    const delta = after - u.currentHp;
+    if (delta <= 0) return u;
+    perUnit.push({ unitId: u.id, hpBefore: u.currentHp, hpAfter: after });
+    totalHealed += delta;
+    return { ...u, currentHp: after };
+  });
+  return { units, perUnit, totalHealed };
+};
+
 /** Living members of the party, in roster order. Empty if all dead. */
 export const livingUnits = (party: Party): readonly Unit[] => party.units.filter(isAlive);
 
