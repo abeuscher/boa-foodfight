@@ -227,7 +227,7 @@ const gate = (round: number): void => {
 
   // Read per-variant summaries.
   const variants: { variant: string; summary: DiversitySummary }[] = [];
-  for (const variant of ['baseline', 'rush', 'turtle', 'flank']) {
+  for (const variant of ['baseline', 'rush', 'turtle', 'flank', 'jelly-rush', 'dive']) {
     const summary = JSON.parse(
       fs.readFileSync(repoPath(`out/diversity/${variant}/summary.json`), 'utf8'),
     ) as DiversitySummary;
