@@ -16,7 +16,8 @@ import { endOfTurn } from './end-of-turn.ts';
 import { resolveMovement } from './movement.ts';
 import { containsQueen } from './parties.ts';
 import { applyPlacement } from './placement.ts';
-import { postAt, resolveCaptures } from './posts.ts';
+import { resolvePostCapture } from './post-capture.ts';
+import { postAt } from './posts.ts';
 import type { ItemSpawnEvent, NeutralSpawnEvent, ScenarioData } from './state.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
@@ -192,8 +193,13 @@ export const runTurn = (
     events.push(...outcome.events);
   }
 
-  // 3. POST capture: friendly party sitting on a non-friendly POST takes it.
-  const captureOutcome = resolveCaptures(working, tick);
+  // 3. Round 17 — POST hold mechanic. Replaces the round-1 instant
+  //    `resolveCaptures` rule. Trigger phase: any non-owner party on
+  //    a capturable POST starts (or swaps) a 2-turn capture. Tick
+  //    phase: decrement / finalize / abort based on co-location. The
+  //    flip emits the existing `post-captured` (and `gold-earned`)
+  //    events only when ownership actually changes hands.
+  const captureOutcome = resolvePostCapture(working, tick);
   working = captureOutcome.state;
   events.push(...captureOutcome.events);
 
