@@ -19,6 +19,7 @@
 
 import { coordKey } from './coord.ts';
 import { assignFormation } from './formation.ts';
+import { canCastTier, spendSlot, tierForAbility } from './mp-tiers.ts';
 import type { AbilitiesFile, JellyFile } from './schemas/index.ts';
 import type {
   AbilityId,
@@ -174,6 +175,88 @@ const abilityUsedEvent = (
   partyId,
   abilityId,
 });
+
+/**
+ * Round 21 — pick the caster unit for an MP-spending dispatch. Tries
+ * two passes:
+ *   (a) the first living unit whose template carries `abilityId` AND
+ *       whose `mpSlots` pool has a slot remaining at the tier;
+ *   (b) the first living unit with a slot remaining at the tier
+ *       (regardless of template ability list) — handles faction-wide
+ *       abilities like `hypnotize` that are NOT listed on any
+ *       template but are gated only on faction inside the handler.
+ *
+ * Returns `undefined` when no eligible caster is found (caller
+ * silently consumes the order — same back-pressure shape as the
+ * legacy `uses: N` cap).
+ */
+const pickMpCaster = (
+  party: Party,
+  abilityId: AbilityId,
+  tier: 1 | 2 | 3 | null,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): Unit | undefined => {
+  // Pass (a): caster knows the ability via template.
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    const tmpl = templates.get(u.templateId);
+    if (!tmpl) continue;
+    if (!tmpl.abilities.includes(abilityId)) continue;
+    if (!canCastTier(u, tier)) continue;
+    return u;
+  }
+  // Pass (b): faction-wide ability fallback. Pick any caster-eligible
+  // (has an `mpSlots` pool) unit with a slot at this tier; skip
+  // non-casters (no pool) so we don't accidentally let a footman fire
+  // hypnotize. If none qualify return undefined — same outcome as
+  // tier-exhausted: silent consume.
+  for (const u of party.units) {
+    if (u.currentHp <= 0) continue;
+    if (!u.mpSlots) continue;
+    if (!canCastTier(u, tier)) continue;
+    return u;
+  }
+  return undefined;
+};
+
+/**
+ * Round 21 — apply the MP-slot decrement to `casterUnit` inside the
+ * party currently in `parties.get(partyId)`. Used by the post-handler
+ * dispatch step after a successful cast (`ability-used` was emitted).
+ * Emits the `mp-spent` replay event with the updated remaining
+ * slots; the caller folds that into the running event list.
+ */
+const applyMpSpend = (
+  parties: Map<PartyId, Party>,
+  partyId: PartyId,
+  casterUnitId: UnitId,
+  abilityId: AbilityId,
+  tier: 1 | 2 | 3,
+  state: GameState,
+  tick: () => number,
+): ReplayEvent | undefined => {
+  const party = parties.get(partyId);
+  if (!party) return undefined;
+  const caster = party.units.find((u) => u.id === casterUnitId);
+  if (!caster) return undefined;
+  if (!caster.mpSlots) return undefined;
+  const updated = spendSlot(caster, tier);
+  if (!updated.mpSlots) return undefined;
+  parties.set(partyId, {
+    ...party,
+    units: party.units.map((u) => (u.id === casterUnitId ? updated : u)),
+  });
+  return {
+    kind: 'mp-spent',
+    turn: state.turn,
+    tick: tick(),
+    partyId,
+    unitId: casterUnitId,
+    abilityId,
+    tier,
+    slotsRemaining: updated.mpSlots,
+  };
+};
 
 const handleJellyApply = (args: HandlerArgs & { jelly: JellyFile }): HandlerResult => {
   const { party, slot, state, parties, webbedTiles, tick, jelly } = args;
@@ -691,6 +774,26 @@ export const resolveAbilityOrders = (
     if (!party) continue;
     const slot = firstAbilityOrder(party.orders);
     if (!slot) continue;
+    // Round 21 — MP-tier gate (mechanics memo §1.1). For abilities
+    // with a non-null `tier`, find a living caster in the party who
+    // both knows the ability AND has a slot at that tier. If no
+    // eligible caster exists, silently consume the order (no events,
+    // no effect) — same back-pressure shape as the legacy `uses: N`
+    // cap. Tier-null abilities (passives, queen-ultimate, plus any
+    // ability the data file omits a tier on) skip the gate entirely.
+    const tier = tierForAbility(abilities, slot.order.abilityId);
+    let casterUnitId: UnitId | undefined;
+    if (tier !== null) {
+      const caster = pickMpCaster(party, slot.order.abilityId, tier, state.unitTemplates);
+      if (!caster) {
+        parties.set(party.id, { ...party, orders: dropOrderAt(party.orders, slot.index) });
+        continue;
+      }
+      // Only track the caster unit when they actually carry an MP
+      // pool — non-casters firing tier-1 abilities (e.g., footman
+      // `brace`) don't consume slots and don't emit `mp-spent`.
+      if (caster.mpSlots) casterUnitId = caster.id;
+    }
     let r: HandlerResult | undefined;
     const baseArgs: HandlerArgs = {
       party,
@@ -728,6 +831,30 @@ export const resolveAbilityOrders = (
         break;
     }
     if (r) events.push(...r.events);
+    // Round 21 — post-handler MP decrement. Emit `mp-spent` only
+    // when the handler actually fired the ability (signaled by an
+    // `ability-used` event in this handler's emitted events). The
+    // dispatch's caster unit selection is preserved across the
+    // handler — the caster stays in the party (or is dead if hypnotize
+    // killed it, in which case `applyMpSpend` finds them and still
+    // decrements; mp-spent on a dead caster is benign for tracking).
+    if (r && casterUnitId !== undefined && tier !== null) {
+      const fired = r.events.some(
+        (e) => e.kind === 'ability-used' && e.abilityId === slot.order.abilityId,
+      );
+      if (fired) {
+        const mpEvent = applyMpSpend(
+          parties,
+          party.id,
+          casterUnitId,
+          slot.order.abilityId,
+          tier,
+          state,
+          tick,
+        );
+        if (mpEvent) events.push(mpEvent);
+      }
+    }
   }
   void firstUnitWithAbility; // export-by-side-effect: keeps helper testable
   return {

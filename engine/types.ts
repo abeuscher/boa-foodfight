@@ -94,6 +94,29 @@ export interface UnitTemplate {
   readonly planeAffinity: PlaneAffinity;
 }
 
+/**
+ * Round 21 — tiered MP pool (mechanics memo §1.1, FF3 magic-tier shape).
+ * Each caster-eligible unit (template intelligence ≥ 5 OR tag `'caster'`)
+ * is initialized at scenario start with `{ tier1: 4, tier2: 2, tier3: 1 }`.
+ * Each ability cast decrements the slot for its declared tier; when the
+ * caster has 0 slots at the ability's tier the cast silently fails (no
+ * event, no effect) — same back-pressure shape as the old `uses: N` cap.
+ *
+ * Higher tiers cannot drain lower tiers (no spillover): a caster sitting
+ * on 0 tier-3 slots cannot fire a tier-3 ability even if tier-1 and
+ * tier-2 are full. The `uses: N` per-ability cap still applies on top
+ * of MP — `spawn-spiderlings` is `uses: 1` AND tier 3, so the caster
+ * fires it once per scenario AND consumes a tier-3 slot.
+ *
+ * Non-caster units don't carry an MpSlots field (undefined). Their
+ * tier-1 abilities (`brace`, etc) fire freely without consuming a pool.
+ */
+export interface MpSlots {
+  readonly tier1: number;
+  readonly tier2: number;
+  readonly tier3: number;
+}
+
 export interface Unit {
   readonly id: UnitId;
   readonly templateId: UnitTemplateId;
@@ -104,6 +127,13 @@ export interface Unit {
    * gate one-shot abilities like `volley` and `mend`. Absent or empty
    * means no abilities have fired yet. */
   readonly usedAbilities?: readonly AbilityId[];
+  /**
+   * Round 21 — per-unit tiered MP pool (mechanics memo §1.1). Set on
+   * caster-eligible units at scenario start (`{4, 2, 1}`); undefined
+   * for non-casters. Decremented per ability cast; the caster cannot
+   * cast an ability whose tier slot is already 0.
+   */
+  readonly mpSlots?: MpSlots;
 }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +631,23 @@ export type ReplayEvent =
       readonly kind: 'ability-used';
       readonly partyId: PartyId;
       readonly abilityId: AbilityId;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 21 — per-cast MP-tier consumption (mechanics memo §1.1).
+       * Emitted on every ability cast that drained a tier slot from a
+       * caster's pool. Captures the firing party + caster unit, the
+       * ability's tier, and the caster's slot totals after the
+       * decrement (so a viewer can render running MP without
+       * re-summing the stream). Non-caster casts (e.g., footman
+       * `brace`) do NOT fire this event — they're outside the pool.
+       */
+      readonly kind: 'mp-spent';
+      readonly partyId: PartyId;
+      readonly unitId: UnitId;
+      readonly abilityId: AbilityId;
+      readonly tier: 1 | 2 | 3;
+      readonly slotsRemaining: MpSlots;
     })
   | (ReplayEventCommon & { readonly kind: 'unit-died'; readonly unitId: UnitId })
   | (ReplayEventCommon & { readonly kind: 'leader-died'; readonly partyId: PartyId })

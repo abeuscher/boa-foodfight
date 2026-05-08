@@ -13,6 +13,7 @@ import { coordKey } from './coord.ts';
 import { assignFormation } from './formation.ts';
 import { spawnItems } from './items.ts';
 import { generateRandomMap } from './map-gen.ts';
+import { INITIAL_MP_SLOTS, isCasterTemplate } from './mp-tiers.ts';
 import { spawnNeutrals } from './neutrals.ts';
 import { PHASE_LENGTH } from './phase.ts';
 import { createRng } from './rng.ts';
@@ -203,6 +204,7 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
 const buildParties = (
   rosters: readonly RosterFile[],
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  abilities: AbilitiesFile,
 ): ReadonlyMap<PartyId, Party> => {
   const parties = new Map<PartyId, Party>();
   let unitCounter = 0;
@@ -218,12 +220,22 @@ const buildParties = (
         }
         for (let i = 0; i < entry.count; i++) {
           unitCounter += 1;
+          // Round 21 — initialize MP pool (mechanics memo §1.1) for
+          // caster-eligible templates: intelligence ≥ 5, the `caster`
+          // tag, or any template that carries a tier-2/3 ability
+          // (e.g., archer's volley, footman's phalanx-charge).
+          // Non-casters get no `mpSlots` field so their tier-1
+          // abilities (e.g., footman `brace`) fire freely.
+          const mpSlotsField = isCasterTemplate(tmpl, abilities)
+            ? { mpSlots: INITIAL_MP_SLOTS }
+            : {};
           units.push({
             id: `u${String(unitCounter).padStart(4, '0')}-${entry.templateId}` as UnitId,
             templateId: tmpl.id,
             currentHp: tmpl.baseStats.hp,
             level: 1,
             xp: 0,
+            ...mpSlotsField,
           });
         }
       }
@@ -290,7 +302,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const randomizedMap = generateRandomMap({ seed, base: data.map });
   const tiles = buildTiles(randomizedMap);
   const posts = buildPosts(randomizedMap);
-  const baseParties = buildParties(data.rosters, unitTemplates);
+  const baseParties = buildParties(data.rosters, unitTemplates, data.abilities);
   const fog = buildInitialFog(tiles);
 
   // Round 8: spawn three neutral parties (one each mice/cockroaches/

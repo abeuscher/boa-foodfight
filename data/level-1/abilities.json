@@ -8,6 +8,7 @@
       "target": "area",
       "uses": 2,
       "cooldown": 0,
+      "tier": 2,
       "params": {
         "radius": 3
       },
@@ -20,6 +21,7 @@
       "target": "self",
       "uses": 1,
       "cooldown": 0,
+      "tier": 3,
       "params": {},
       "description": "An ant-mage hauls the column up onto another plane via short-range pheromone-thread teleport. Once per scenario, consumes the party's order for that turn."
     },
@@ -30,6 +32,7 @@
       "target": "self",
       "uses": null,
       "cooldown": 0,
+      "tier": null,
       "params": {},
       "description": "Spiders are at home crawling around corners. When a spider party's move would land on a plane edge, the engine automatically follows the corner adjacency in the same step. Faction-wide passive; no order required."
     },
@@ -40,6 +43,7 @@
       "target": "party",
       "uses": null,
       "cooldown": 0,
+      "tier": 1,
       "params": {
         "minWorkers": 3
       },
@@ -52,6 +56,7 @@
       "target": "party",
       "uses": 1,
       "cooldown": 2,
+      "tier": 1,
       "params": {
         "doses": 1,
         "attackBonus": 1,
@@ -67,6 +72,7 @@
       "target": "area",
       "uses": 1,
       "cooldown": 0,
+      "tier": null,
       "params": {
         "radius": 5,
         "damage": 50
@@ -80,6 +86,7 @@
       "target": "party",
       "uses": 1,
       "cooldown": 1,
+      "tier": 2,
       "params": {
         "damage": 12,
         "queenBonusDamage": 4
@@ -93,6 +100,7 @@
       "target": "self",
       "uses": null,
       "cooldown": 1,
+      "tier": 1,
       "params": {
         "armorBonus": 3,
         "durationTurns": 1
@@ -106,6 +114,7 @@
       "target": "party",
       "uses": 3,
       "cooldown": 1,
+      "tier": 2,
       "params": {
         "heal": 6
       },
@@ -118,6 +127,7 @@
       "target": "party",
       "uses": null,
       "cooldown": 2,
+      "tier": 1,
       "params": {
         "radius": 1
       },
@@ -131,6 +141,7 @@
       "target": "party",
       "uses": 2,
       "cooldown": 1,
+      "tier": 2,
       "params": {
         "movementPenalty": 2,
         "attackPenalty": 1,
@@ -145,6 +156,7 @@
       "target": "self",
       "uses": null,
       "cooldown": 0,
+      "tier": 2,
       "params": {
         "heal": 1,
         "hpThreshold": 0.5
@@ -158,6 +170,7 @@
       "target": "party",
       "uses": 1,
       "cooldown": 0,
+      "tier": 2,
       "params": {
         "hpThreshold": 0.33,
         "immobilizeCount": 1,
@@ -172,6 +185,7 @@
       "target": "tile",
       "uses": 1,
       "cooldown": 0,
+      "tier": 2,
       "params": {
         "delayTurns": 1
       },
@@ -184,6 +198,7 @@
       "target": "party",
       "uses": null,
       "cooldown": 2,
+      "tier": 2,
       "params": {
         "successRate": 0.25
       },
@@ -196,6 +211,7 @@
       "target": "self",
       "uses": 1,
       "cooldown": 0,
+      "tier": 3,
       "params": {
         "count": 5
       },
@@ -208,6 +224,7 @@
       "target": "party",
       "uses": 1,
       "cooldown": 1,
+      "tier": 3,
       "params": {
         "damage": 22,
         "minMages": 1,
@@ -222,6 +239,7 @@
       "target": "party",
       "uses": null,
       "cooldown": 0,
+      "tier": 3,
       "params": {
         "successRate": 0.8,
         "minControlTurns": 5,
@@ -237,6 +255,7 @@
       "target": "party",
       "uses": 1,
       "cooldown": 1,
+      "tier": 3,
       "params": {
         "damage": 6,
         "aoe": 1,
