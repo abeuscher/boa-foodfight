@@ -102,6 +102,40 @@ const WEB_GUARD: PartyId = 'web-guard' as PartyId;
 const DEEP_RAIDER: PartyId = 'deep-raider' as PartyId;
 
 const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+const WEB_MEND: AbilityId = 'web-mend' as AbilityId;
+
+/**
+ * Round 18 — heal-priority trigger radius. When an ant trail entry
+ * (age ≤ 1) sits within Chebyshev `HEAL_TRIGGER_RADIUS` of the
+ * spider-web on the same plane, OR when an ant is on the floor at the
+ * web's (x, y) column (the wall-crack ladder approach), web-guard
+ * fires `web-mend` instead of sitting idle. This is NOT a recall —
+ * silk-line / deep-raider / advance-scout keep their offensive
+ * orders. Only web-guard's ABILITY use changes; its tile is
+ * unchanged. The reach mirrors the rolled-back round-13 emergency-
+ * defense radius without the stack-on-one-tile recall.
+ */
+const HEAL_TRIGGER_RADIUS = 3;
+
+/**
+ * True iff at least one fresh (age ≤ 1) ant trail entry sits within
+ * `HEAL_TRIGGER_RADIUS` of the spider-web on the same plane, OR sits
+ * on the floor at the web's (x, y) (the wall-crack ladder approach).
+ * Exported for direct unit testing.
+ */
+export const isWebUnderHealThreat = (state: GameState, webLoc: TileCoord): boolean => {
+  const trail = getSpiderVisibleAntTrail(state);
+  for (const entry of trail) {
+    if (entry.ageInTurns > 1) continue;
+    if (entry.plane === webLoc.plane) {
+      const dx = Math.abs(entry.x - webLoc.x);
+      const dy = Math.abs(entry.y - webLoc.y);
+      if (Math.max(dx, dy) <= HEAL_TRIGGER_RADIUS) return true;
+    }
+    if (entry.plane === 'floor' && entry.x === webLoc.x && entry.y === webLoc.y) return true;
+  }
+  return false;
+};
 
 /** Round 15 — HP-fraction threshold for the flee trigger. Mirrors the
  * baseline value so the asymmetry is purely strategic, not numeric. */
@@ -846,7 +880,19 @@ export const spiderL1: AIPolicy = {
       } else if (id === SILK_LINE && state.turn === 2) {
         nextOrders = [{ kind: 'use-ability', abilityId: 'spin-web' as AbilityId }];
       } else if (id === WEB_GUARD) {
-        nextOrders = [];
+        // Round 18 — heal-priority. When ants threaten the spider-web
+        // (within Chebyshev HEAL_TRIGGER_RADIUS on the ceiling, or on
+        // the floor at the web's (x, y) column) AND web-guard isn't
+        // at full HP, fire `web-mend`. Otherwise hold position. This
+        // intentionally does NOT change web-guard's tile — the queen
+        // bearer stays on the web; only her ability use changes.
+        const healThreat = isWebUnderHealThreat(state, webLoc);
+        const hpFrac = livingHpFraction(party, state.unitTemplates);
+        if (healThreat && hpFrac > 0 && hpFrac < 1.0) {
+          nextOrders = [{ kind: 'use-ability', abilityId: WEB_MEND }];
+        } else {
+          nextOrders = [];
+        }
       } else if (pusher !== null && id === pusher.id) {
         const stepped = stepToward(party.location, counterPushTargetLoc);
         nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];

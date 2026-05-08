@@ -20,7 +20,7 @@ import type {
 } from '../engine/types.ts';
 
 import { postsOfType, SOAP_DISH_TYPE, TOWEL_RACK_TYPE } from './policy-helpers.ts';
-import { spiderL1 } from './spider-l1.ts';
+import { isWebUnderHealThreat, spiderL1 } from './spider-l1.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -275,6 +275,96 @@ describe('spiderL1', () => {
         (o) => o.kind === 'use-ability' && o.abilityId === HYPNOTIZE,
       );
       expect(hypnoOrder).toBeUndefined();
+    });
+  });
+
+  describe('round 18 — heal-priority web-guard', () => {
+    const WEB_MEND: AbilityId = 'web-mend' as AbilityId;
+    const SPIDER_WEB_ID = 'spider-web' as PostId;
+
+    /** Reset the web-guard's HP to a fraction of the queen's max HP so
+     * the heal trigger has slack to fire. The queen template carries
+     * web-mend; we knock her HP down by 5 so heal can land. */
+    const woundWebGuard = (state: GameState): GameState => {
+      const guard = state.parties.get('web-guard' as PartyId);
+      if (!guard) throw new Error('web-guard missing');
+      const newUnits = guard.units.map((u) => ({ ...u, currentHp: Math.max(1, u.currentHp - 5) }));
+      return replaceParty(state, { ...guard, units: newUnits });
+    };
+
+    it('isWebUnderHealThreat returns true for an ant on the ceiling near the web', () => {
+      const { state: initial } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const web = requirePost(isolated, SPIDER_WEB_ID);
+      // Place pathfinders within radius 3 of the web on the ceiling.
+      const close: TileCoord = {
+        plane: web.location.plane,
+        x: web.location.x - 3,
+        y: web.location.y,
+      };
+      const moved = moveAntPartyTo(isolated, 'pathfinders' as PartyId, close);
+      expect(isWebUnderHealThreat(moved, web.location)).toBe(true);
+    });
+
+    it('isWebUnderHealThreat returns false when no ants are near the web', () => {
+      const { state: initial } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const web = requirePost(isolated, SPIDER_WEB_ID);
+      // After isolateAnts every ant party is at floor (0, 0); web is on
+      // ceiling (9, 9). The floor-column escape clause checks (web.x,
+      // web.y) on the floor (= floor (9, 9)), not (0, 0), so this is
+      // out of range on every dimension.
+      expect(isWebUnderHealThreat(isolated, web.location)).toBe(false);
+    });
+
+    it('web-guard fires web-mend when the heal threat is active and the queen is wounded', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const wounded = woundWebGuard(isolated);
+      const web = requirePost(wounded, SPIDER_WEB_ID);
+      // Place pathfinders 2 tiles away from the web on the ceiling.
+      const close: TileCoord = {
+        plane: web.location.plane,
+        x: web.location.x - 2,
+        y: web.location.y,
+      };
+      const threatened = moveAntPartyTo(wounded, 'pathfinders' as PartyId, close);
+      const next = spiderL1.decide(threatened, data, createRng(1));
+      const guard = next.parties.get('web-guard' as PartyId);
+      const mendOrder = guard?.orders.find(
+        (o) => o.kind === 'use-ability' && o.abilityId === WEB_MEND,
+      );
+      expect(mendOrder).toBeDefined();
+    });
+
+    it('web-guard does NOT fire web-mend when the queen is at full HP', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Threat is active, but no wounding — the queen is at 100% HP.
+      const web = requirePost(isolated, SPIDER_WEB_ID);
+      const close: TileCoord = {
+        plane: web.location.plane,
+        x: web.location.x - 1,
+        y: web.location.y,
+      };
+      const threatened = moveAntPartyTo(isolated, 'pathfinders' as PartyId, close);
+      // Use turn 1 so the round-3 spawn-spiderlings branch can't fire.
+      const next = spiderL1.decide({ ...threatened, turn: 1 }, data, createRng(1));
+      const guard = next.parties.get('web-guard' as PartyId);
+      const mendOrder = guard?.orders.find(
+        (o) => o.kind === 'use-ability' && o.abilityId === WEB_MEND,
+      );
+      expect(mendOrder).toBeUndefined();
+    });
+
+    it('web-guard does NOT fire web-mend with no threat (idle baseline preserved)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      const wounded = woundWebGuard(isolated);
+      // Use turn 1 to skip the round-3 spawn-spiderlings branch.
+      const next = spiderL1.decide({ ...wounded, turn: 1 }, data, createRng(1));
+      const guard = next.parties.get('web-guard' as PartyId);
+      expect(guard?.orders).toEqual([]);
     });
   });
 
