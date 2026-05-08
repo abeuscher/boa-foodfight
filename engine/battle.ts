@@ -739,9 +739,12 @@ export const resolveBattle = (
   rng: Rng,
   tick: () => number,
 ): BattleOutcome => {
-  // Pre-battle: fire opening abilities (volley, mend) on both sides. The
-  // returned parties carry usedAbilities flags and any HP changes from
-  // volley damage / mend healing; combat then runs against those parties.
+  // Pre-battle: fire opening abilities (volley, mend, round-24 combos)
+  // on both sides. The returned parties carry usedAbilities flags and
+  // any HP changes from volley damage / mend healing; combat then
+  // runs against those parties. Round 24 — pass the full parties map
+  // so combo resolvers can locate adjacent same-faction partners and
+  // emit `partnerUpdates` for the harness to fold back into state.
   const opening = applyOpeningAbilities(
     input.attacker,
     input.defender,
@@ -749,6 +752,7 @@ export const resolveBattle = (
     input.abilities,
     state.turn,
     tick,
+    { allParties: state.parties },
   );
   const attacker = opening.attacker;
   const defender = opening.defender;
@@ -1164,6 +1168,17 @@ export const resolveBattle = (
   };
 
   const newParties = new Map(state.parties);
+  // Round 24 — apply partner-party updates from combo abilities (mp
+  // decrements + usedAbilities flags) BEFORE writing the two combatants,
+  // so a partner that's also the attacker / defender (rare — the partner
+  // is by spec a third party, but defensively allow overlap) is
+  // overwritten by the combatant's post-battle state. Combos are
+  // pre-battle so the partner's units are unchanged from this battle's
+  // POV beyond the MP / used-abilities bump.
+  for (const upd of opening.partnerUpdates) {
+    if (upd.partyId === attacker.id || upd.partyId === defender.id) continue;
+    newParties.set(upd.partyId, upd.party);
+  }
   newParties.set(attacker.id, newAttacker);
   newParties.set(defender.id, newDefender);
 

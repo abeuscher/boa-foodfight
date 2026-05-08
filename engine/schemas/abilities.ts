@@ -8,10 +8,25 @@ export const abilityCategorySchema = z.enum([
   'buff',
   'debuff',
   'special-attack',
+  'special-attack-combo',
   'passive',
 ]);
 
 export const abilityTargetSchema = z.enum(['self', 'tile', 'party', 'post', 'area', 'global']);
+
+/**
+ * Free-form per-ability parameter values. Most abilities are flat numeric
+ * (`damage: 12`, `radius: 3`); round-24 combo abilities (mechanics memo
+ * §1.2) extend this with a `componentAbilities: string[]` list and a
+ * `mpCostBySource: Record<string, number>` table keyed by component
+ * ability id. A `z.union` here keeps the legacy numeric reads (`?? 0`)
+ * working unchanged on the existing ability set.
+ */
+const abilityParamValueSchema = z.union([
+  z.number(),
+  z.array(z.string()),
+  z.record(z.string(), z.number()),
+]);
 
 export const abilityDefinitionSchema = z.object({
   id: idSchema,
@@ -22,8 +37,8 @@ export const abilityDefinitionSchema = z.object({
   uses: z.number().int().positive().nullable(),
   /** Turns of cooldown between uses; 0 = none. */
   cooldown: z.number().int().nonnegative(),
-  /** Free-form numeric parameters keyed by name; the engine reads what each ability needs. */
-  params: z.record(z.string(), z.number()).default({}),
+  /** Free-form parameters keyed by name; the engine reads what each ability needs. */
+  params: z.record(z.string(), abilityParamValueSchema).default({}),
   /** Day/night gating (rec 1.2). `'day'` means usable only by day,
    * `'night'` only by night, omitted/`null` means usable in either
    * phase. The engine emits `ability-blocked-by-phase` (no-op + drop

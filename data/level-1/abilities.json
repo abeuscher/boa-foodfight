@@ -276,6 +276,39 @@
         "minSpinnersOrQueen": 1
       },
       "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for heavy damage. Reserved for combos in later turns."
+    },
+    {
+      "id": "royal-onslaught",
+      "name": "Royal Onslaught",
+      "category": "special-attack-combo",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "damage": 18,
+        "componentAbilities": ["magic-arrow", "jelly-apply"],
+        "mpCostBySource": { "magic-arrow": 3, "jelly-apply": 1 }
+      },
+      "description": "Mage and worker channel the Queen's blessing into a single thunderous strike. All enemy units in the target party take heavy damage."
+    },
+    {
+      "id": "venom-storm",
+      "name": "Venom Storm",
+      "category": "special-attack-combo",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "damage": 3,
+        "movementPenalty": 2,
+        "attackPenalty": 1,
+        "durationTurns": 2,
+        "componentAbilities": ["venom-blast", "web-tangle"],
+        "mpCostBySource": { "venom-blast": 2, "web-tangle": 2 }
+      },
+      "description": "Spinner and queen weave venom and silk into a saturating cloud — every unit in the target party is poisoned and bound at once."
     }
   ]
 }

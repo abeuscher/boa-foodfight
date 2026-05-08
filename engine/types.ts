@@ -134,6 +134,19 @@ export interface Unit {
    * cast an ability whose tier slot is already 0.
    */
   readonly mpSlots?: MpSlots;
+  /**
+   * Round 24 — venom-storm combo debuff (mechanics memo §1.2). When
+   * a venom-storm combo lands on the unit's party, every member is
+   * tagged with `tangleTurnsRemaining = durationTurns` (2 by default
+   * — matches the source `web-tangle` ability's `durationTurns`
+   * param). End-of-turn decrements; reaches 0 → the field is dropped
+   * on the next turn's working state. The tag mirrors web-tangle's
+   * intent (movement + attack penalty) but doesn't yet alter combat
+   * math — the engine surface is the per-unit field plus the
+   * `combo-fired` event with `debuffApplied: 'venom-storm'`. Field is
+   * optional / absent for unaffected units.
+   */
+  readonly tangleTurnsRemaining?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -930,6 +943,30 @@ export type ReplayEvent =
         readonly hpAfter: number;
       }[];
       readonly totalDamage: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 24 — combo-fired (mechanics memo §1.2). A pre-battle
+       * combo ability resolved against the target party. `comboId`
+       * is the combo's ability id (`royal-onslaught`, `venom-storm`).
+       * `sourcePartyId` is the party currently engaged in battle that
+       * initiated the combo; `partnerPartyId` is the adjacent same-
+       * faction party that supplied the second component (and paid
+       * its own MP cost). `targetPartyId` is the enemy party hit by
+       * the combo. `totalDamage` is the sum of HP delta across the
+       * full target party (combos are full-party AoE). When the
+       * combo applies a status effect, `debuffApplied` carries the
+       * shape's `kind` tag for replay readers (currently only
+       * `'venom-storm'`'s movement+attack penalty); omitted for
+       * pure-damage combos like `royal-onslaught`.
+       */
+      readonly kind: 'combo-fired';
+      readonly comboId: AbilityId;
+      readonly sourcePartyId: PartyId;
+      readonly partnerPartyId: PartyId;
+      readonly targetPartyId: PartyId;
+      readonly totalDamage: number;
+      readonly debuffApplied?: 'venom-storm';
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

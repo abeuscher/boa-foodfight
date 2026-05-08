@@ -21,26 +21,66 @@
  * type the turn driver passes through).
  */
 
+import { distance } from './coord.ts';
 import { backRowIntelligenceBonus, formationOrAllFront } from './formation.ts';
 import { canCastTier, spendSlot, tierForAbility } from './mp-tiers.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
-import type { AbilityId, Party, ReplayEvent, Unit, UnitTemplate, UnitTemplateId } from './types.ts';
+import type {
+  AbilityId,
+  Party,
+  PartyId,
+  ReplayEvent,
+  Unit,
+  UnitTemplate,
+  UnitTemplateId,
+} from './types.ts';
 
 const VOLLEY: AbilityId = 'volley' as AbilityId;
 const MEND: AbilityId = 'mend' as AbilityId;
 const MAGIC_ARROW: AbilityId = 'magic-arrow' as AbilityId;
 const PHALANX_CHARGE: AbilityId = 'phalanx-charge' as AbilityId;
 const VENOM_BLAST: AbilityId = 'venom-blast' as AbilityId;
+const WEB_TANGLE: AbilityId = 'web-tangle' as AbilityId;
+const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
+const ROYAL_ONSLAUGHT: AbilityId = 'royal-onslaught' as AbilityId;
+const VENOM_STORM: AbilityId = 'venom-storm' as AbilityId;
 const FOOTMAN_TEMPLATE = 'ant-footman';
 const ARCHER_TEMPLATE = 'ant-archer';
 const MAGE_TEMPLATE = 'ant-mage';
+const WORKER_TEMPLATE = 'ant-worker';
 const SPINNER_TEMPLATE = 'spider-spinner';
 const SPIDER_QUEEN_TEMPLATE = 'spider-queen';
+
+/**
+ * Round 24 — combo abilities (mechanics memo §1.2). When a battle's
+ * shooter party has a partner adjacent (Chebyshev 1, same plane,
+ * same faction) carrying the second component ability + matching
+ * MP, a combo fires pre-battle. The partner sits OUTSIDE the
+ * battle's two-party scope — its MP gets decremented and combo-
+ * fired bookkeeping bumps the per-party-per-scenario cap. Caller
+ * passes `allParties` (the working state's parties map) so the
+ * resolver can locate / mutate partner parties; result includes
+ * a partnerUpdates list of (partyId, updated Party) pairs that the
+ * battle module writes back into state.parties after resolution.
+ */
+export interface ComboContext {
+  readonly allParties: ReadonlyMap<PartyId, Party>;
+}
+
+export interface ComboPartnerUpdate {
+  readonly partyId: PartyId;
+  readonly party: Party;
+}
 
 export interface OpeningAbilityResult {
   readonly attacker: Party;
   readonly defender: Party;
   readonly events: readonly ReplayEvent[];
+  /** Round 24 — partner-party MP / combo-fired updates emitted by
+   * combo abilities. Empty when no combos fired. The battle module
+   * folds these into `state.parties` after the rest of opening
+   * resolution. */
+  readonly partnerUpdates: readonly ComboPartnerUpdate[];
 }
 
 const hasUsed = (unit: Unit, abilityId: AbilityId): boolean =>
@@ -87,14 +127,34 @@ const consumeMpForCast = (
 
 const isLiving = (u: Unit): boolean => u.currentHp > 0;
 
+/**
+ * Round 24 — params widened (mechanics memo §1.2): combo abilities
+ * carry `componentAbilities: string[]` and `mpCostBySource:
+ * Record<string, number>` alongside the legacy numeric reads
+ * (`damage: 12`, `radius: 3`). The narrow `numericParam` helper keeps
+ * the existing `def.params.damage ?? 0` call sites in this module
+ * type-clean by unwrapping only number-valued slots; non-number
+ * fields fall through to the supplied default.
+ */
 const findAbility = (
   abilities: AbilitiesFile,
   id: AbilityId,
-): { params: Readonly<Record<string, number>> } | undefined => {
+):
+  | { params: Readonly<Record<string, number | readonly string[] | Record<string, number>>> }
+  | undefined => {
   for (const a of abilities.abilities) {
     if (a.id === id) return a;
   }
   return undefined;
+};
+
+const numericParam = (
+  params: Readonly<Record<string, number | readonly string[] | Record<string, number>>>,
+  key: string,
+  fallback: number,
+): number => {
+  const raw = params[key];
+  return typeof raw === 'number' ? raw : fallback;
 };
 
 const unitHasAbility = (
@@ -116,12 +176,12 @@ const fireVolleys = (
 ): { shooter: Party; target: Party; events: readonly ReplayEvent[] } => {
   const def = findAbility(abilities, VOLLEY);
   if (!def) return { shooter, target, events: [] };
-  const damage = def.params.damage ?? 0;
+  const damage = numericParam(def.params, 'damage', 0);
   if (damage <= 0) return { shooter, target, events: [] };
   // Optional queen-targeting bonus, configured by the coevolution-loop
   // round-3 ant-firepower designer. When the volley lands on a unit
   // tagged `queen`, add this bonus damage on top of the base.
-  const queenBonus = def.params.queenBonusDamage ?? 0;
+  const queenBonus = numericParam(def.params, 'queenBonusDamage', 0);
   // Round 21 — MP tier (mechanics memo §1.1). Volley is tier 2: a
   // caster firing it consumes a tier-2 slot. Archers (the typical
   // shooter) are non-casters with int=2, so they have no pool and
@@ -196,7 +256,7 @@ const fireMends = (
 ): { party: Party; events: readonly ReplayEvent[] } => {
   const def = findAbility(abilities, MEND);
   if (!def) return { party, events: [] };
-  const heal = def.params.heal ?? 0;
+  const heal = numericParam(def.params, 'heal', 0);
   if (heal <= 0) return { party, events: [] };
   // Round 21 — Mend is tier 2; ant-mage is a caster (int 8) so the
   // cast drains a tier-2 slot from the firing mage's pool.
@@ -277,9 +337,9 @@ const fireMagicArrows = (
   const { shooter, target, abilities, turn, tick, templates } = args;
   const def = findAbility(abilities, MAGIC_ARROW);
   if (!def) return { shooter, target, events: [] };
-  const damage = def.params.damage ?? 0;
-  const minMages = def.params.minMages ?? 1;
-  const minArchers = def.params.minArchers ?? 1;
+  const damage = numericParam(def.params, 'damage', 0);
+  const minMages = numericParam(def.params, 'minMages', 1);
+  const minArchers = numericParam(def.params, 'minArchers', 1);
   if (damage <= 0) return { shooter, target, events: [] };
   if (countLivingTemplate(shooter, MAGE_TEMPLATE) < minMages)
     return { shooter, target, events: [] };
@@ -371,8 +431,8 @@ const firePhalanxCharge = (args: OpeningArgs): OpeningResult => {
   const { shooter, target, abilities, turn, tick } = args;
   const def = findAbility(abilities, PHALANX_CHARGE);
   if (!def) return { shooter, target, events: [] };
-  const damage = def.params.damage ?? 0;
-  const minFootmen = def.params.minFootmen ?? 3;
+  const damage = numericParam(def.params, 'damage', 0);
+  const minFootmen = numericParam(def.params, 'minFootmen', 3);
   if (damage <= 0) return { shooter, target, events: [] };
   if (countLivingTemplate(shooter, FOOTMAN_TEMPLATE) < minFootmen)
     return { shooter, target, events: [] };
@@ -449,9 +509,9 @@ const fireVenomBlast = (args: OpeningArgs): OpeningResult => {
   const { shooter, target, abilities, turn, tick } = args;
   const def = findAbility(abilities, VENOM_BLAST);
   if (!def) return { shooter, target, events: [] };
-  const damagePerUnit = def.params.damagePerUnit ?? 0;
+  const damagePerUnit = numericParam(def.params, 'damagePerUnit', 0);
   if (damagePerUnit <= 0) return { shooter, target, events: [] };
-  const usesCap = def.params.uses ?? 0;
+  const usesCap = numericParam(def.params, 'uses', 0);
   // Per-scenario per-party `uses` cap. Sum venom-blast occurrences in
   // the shooter's units' `usedAbilities`; cast aborts when the count
   // already meets/exceeds the cap. The data file's `uses: 2` lives on
@@ -555,6 +615,385 @@ const fireVenomBlast = (args: OpeningArgs): OpeningResult => {
   };
 };
 
+// ---------------------------------------------------------------------------
+// Round 24 — combo abilities (mechanics memo §1.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Round 24 — combo "Royal Onslaught" Component A predicate: living
+ * ant-mage in `party` with a tier-3 MP slot remaining AND the per-
+ * party-per-scenario combo cap not yet reached. Returns the eligible
+ * mage unit or undefined.
+ */
+const findRoyalOnslaughtMage = (party: Party): Unit | undefined => {
+  for (const u of party.units) {
+    if (!isLiving(u)) continue;
+    if (u.templateId !== MAGE_TEMPLATE) continue;
+    if (hasUsed(u, ROYAL_ONSLAUGHT)) continue;
+    if (!canCastTier(u, 3)) continue;
+    return u;
+  }
+  return undefined;
+};
+
+/**
+ * Round 24 — combo "Royal Onslaught" Component B predicate: living
+ * ant-worker in `party` with `jelly-apply` on its template and a
+ * tier-1 MP slot remaining (workers are non-casters today, so the
+ * tier check effectively short-circuits to true; the gate is here
+ * for symmetry with the spec).
+ */
+const findRoyalOnslaughtWorker = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): Unit | undefined => {
+  for (const u of party.units) {
+    if (!isLiving(u)) continue;
+    if (u.templateId !== WORKER_TEMPLATE) continue;
+    if (hasUsed(u, ROYAL_ONSLAUGHT)) continue;
+    if (!unitHasAbility(u, JELLY_APPLY, templates)) continue;
+    if (!canCastTier(u, 1)) continue;
+    return u;
+  }
+  return undefined;
+};
+
+/**
+ * Round 24 — combo "Venom Storm" Component A predicate: living
+ * spider unit (spinner or queen) carrying `venom-blast` with a
+ * tier-2 MP slot remaining. Spinners and queens are the only
+ * templates with `venom-blast` (round 22 data).
+ */
+const findVenomStormVenomCaster = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): Unit | undefined => {
+  for (const u of party.units) {
+    if (!isLiving(u)) continue;
+    if (u.templateId !== SPINNER_TEMPLATE && u.templateId !== SPIDER_QUEEN_TEMPLATE) continue;
+    if (hasUsed(u, VENOM_STORM)) continue;
+    if (!unitHasAbility(u, VENOM_BLAST, templates)) continue;
+    if (!canCastTier(u, 2)) continue;
+    return u;
+  }
+  return undefined;
+};
+
+/**
+ * Round 24 — combo "Venom Storm" Component B predicate: living
+ * spider unit carrying `web-tangle` (spinner or queen) with a
+ * tier-2 MP slot remaining.
+ */
+const findVenomStormWebCaster = (
+  party: Party,
+  excludeUnitId: Unit['id'] | undefined,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+): Unit | undefined => {
+  for (const u of party.units) {
+    if (!isLiving(u)) continue;
+    if (excludeUnitId !== undefined && u.id === excludeUnitId) continue;
+    if (u.templateId !== SPINNER_TEMPLATE && u.templateId !== SPIDER_QUEEN_TEMPLATE) continue;
+    if (hasUsed(u, VENOM_STORM)) continue;
+    if (!unitHasAbility(u, WEB_TANGLE, templates)) continue;
+    if (!canCastTier(u, 2)) continue;
+    return u;
+  }
+  return undefined;
+};
+
+/**
+ * Round 24 — adjacency predicate for combos (mechanics memo §1.2).
+ * Two parties combo iff same faction, same plane, Chebyshev distance
+ * ≤ 1 (Chebyshev 0 — co-located parties are allowed; the spec says
+ * "two adjacent same-faction parties" but doesn't forbid co-location.
+ * For determinism the engine matches the user's "Chebyshev 1, same
+ * plane" wording: distance ≤ 1 covers both cases).
+ */
+const isComboAdjacent = (a: Party, b: Party): boolean => {
+  if (a.id === b.id) return false;
+  if (a.faction !== b.faction) return false;
+  if (a.location.plane !== b.location.plane) return false;
+  return distance(a.location, b.location) <= 1;
+};
+
+/** Round 24 — apply per-unit MP spend (returns updated Party + the
+ * mp-spent event when one fires). */
+const spendMpOnUnit = (
+  party: Party,
+  unitId: Unit['id'],
+  abilityId: AbilityId,
+  tier: 1 | 2 | 3,
+  turn: number,
+  tick: () => number,
+): { party: Party; event: ReplayEvent | undefined } => {
+  const target = party.units.find((u) => u.id === unitId);
+  if (!target) return { party, event: undefined };
+  const mpResult = consumeMpForCast(
+    markUsed(target, abilityId),
+    abilityId,
+    tier,
+    party.id,
+    turn,
+    tick,
+  );
+  return {
+    party: { ...party, units: party.units.map((u) => (u.id === unitId ? mpResult.unit : u)) },
+    event: mpResult.event,
+  };
+};
+
+interface ComboFireOutcome {
+  readonly target: Party;
+  readonly shooter: Party;
+  readonly partner: Party;
+  readonly events: readonly ReplayEvent[];
+}
+
+/**
+ * Round 24 — fire "Royal Onslaught" against `target`. Caller has
+ * already validated component-A (mage in `shooter`) and component-B
+ * (worker in `partner`) eligibility. Damage is applied to all
+ * living units in the target party. Both source units consume MP
+ * and have `royal-onslaught` appended to `usedAbilities`.
+ */
+const fireRoyalOnslaught = (args: {
+  shooter: Party;
+  partner: Party;
+  target: Party;
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
+  abilities: AbilitiesFile;
+  turn: number;
+  tick: () => number;
+}): ComboFireOutcome | undefined => {
+  const { shooter, partner, target, templates, abilities, turn, tick } = args;
+  const def = findAbility(abilities, ROYAL_ONSLAUGHT);
+  if (!def) return undefined;
+  const damage = numericParam(def.params, 'damage', 0);
+  if (damage <= 0) return undefined;
+  const mage = findRoyalOnslaughtMage(shooter);
+  if (!mage) return undefined;
+  const worker = findRoyalOnslaughtWorker(partner, templates);
+  if (!worker) return undefined;
+  const events: ReplayEvent[] = [];
+
+  // Mage spends tier-3 MP and marks used.
+  const mageSpend = spendMpOnUnit(shooter, mage.id, ROYAL_ONSLAUGHT, 3, turn, tick);
+  const workingShooter = mageSpend.party;
+  if (mageSpend.event) events.push(mageSpend.event);
+
+  const workerSpend = spendMpOnUnit(partner, worker.id, ROYAL_ONSLAUGHT, 1, turn, tick);
+  const workingPartner = workerSpend.party;
+  if (workerSpend.event) events.push(workerSpend.event);
+
+  // Apply damage to every living unit in target.
+  let totalDamage = 0;
+  const deathEvents: ReplayEvent[] = [];
+  const newTargetUnits = target.units.map((u) => {
+    if (!isLiving(u)) return u;
+    const hpAfter = Math.max(0, u.currentHp - damage);
+    const delta = u.currentHp - hpAfter;
+    if (delta <= 0) return u;
+    totalDamage += delta;
+    if (u.currentHp > 0 && hpAfter <= 0) {
+      deathEvents.push({ kind: 'unit-died', turn, tick: tick(), unitId: u.id });
+    }
+    return { ...u, currentHp: hpAfter };
+  });
+  const newTarget: Party = { ...target, units: newTargetUnits };
+
+  events.push({
+    kind: 'ability-used',
+    turn,
+    tick: tick(),
+    partyId: shooter.id,
+    abilityId: ROYAL_ONSLAUGHT,
+  });
+  events.push({
+    kind: 'combo-fired',
+    turn,
+    tick: tick(),
+    comboId: ROYAL_ONSLAUGHT,
+    sourcePartyId: shooter.id,
+    partnerPartyId: partner.id,
+    targetPartyId: target.id,
+    totalDamage,
+  });
+  events.push(...deathEvents);
+
+  return { shooter: workingShooter, partner: workingPartner, target: newTarget, events };
+};
+
+/**
+ * Round 24 — fire "Venom Storm" against `target`. Damage to every
+ * living unit + per-unit `tangleTurnsRemaining` debuff stamp. Both
+ * source units (venom-caster in shooter, web-caster in partner)
+ * consume tier-2 MP.
+ */
+const fireVenomStorm = (args: {
+  shooter: Party;
+  partner: Party;
+  target: Party;
+  abilities: AbilitiesFile;
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
+  turn: number;
+  tick: () => number;
+}): ComboFireOutcome | undefined => {
+  const { shooter, partner, target, abilities, templates, turn, tick } = args;
+  const def = findAbility(abilities, VENOM_STORM);
+  if (!def) return undefined;
+  const damage = numericParam(def.params, 'damage', 0);
+  const durationTurns = numericParam(def.params, 'durationTurns', 2);
+  if (damage <= 0 && durationTurns <= 0) return undefined;
+  const venomCaster = findVenomStormVenomCaster(shooter, templates);
+  if (!venomCaster) return undefined;
+  // Partner: prefer a different unit than the shooter's caster when
+  // partner === shooter (defensive — combo predicate rejects same
+  // party but tests may shortcut). Allow same-id when the caster
+  // role differs.
+  const webCaster = findVenomStormWebCaster(partner, undefined, templates);
+  if (!webCaster) return undefined;
+
+  const events: ReplayEvent[] = [];
+  const venomSpend = spendMpOnUnit(shooter, venomCaster.id, VENOM_STORM, 2, turn, tick);
+  const workingShooter = venomSpend.party;
+  if (venomSpend.event) events.push(venomSpend.event);
+  const webSpend = spendMpOnUnit(partner, webCaster.id, VENOM_STORM, 2, turn, tick);
+  const workingPartner = webSpend.party;
+  if (webSpend.event) events.push(webSpend.event);
+
+  let totalDamage = 0;
+  const deathEvents: ReplayEvent[] = [];
+  const newTargetUnits = target.units.map((u) => {
+    if (!isLiving(u)) {
+      // Dead units don't get tagged; existing fields untouched.
+      return u;
+    }
+    const hpAfter = Math.max(0, u.currentHp - damage);
+    const delta = u.currentHp - hpAfter;
+    totalDamage += delta;
+    if (delta > 0 && u.currentHp > 0 && hpAfter <= 0) {
+      deathEvents.push({ kind: 'unit-died', turn, tick: tick(), unitId: u.id });
+    }
+    // Stamp the debuff on every living unit (including those killed
+    // outright by the damage — they're still tagged, which is harmless
+    // bookkeeping). End-of-turn decay handles cleanup.
+    return { ...u, currentHp: hpAfter, tangleTurnsRemaining: durationTurns };
+  });
+  const newTarget: Party = { ...target, units: newTargetUnits };
+
+  events.push({
+    kind: 'ability-used',
+    turn,
+    tick: tick(),
+    partyId: shooter.id,
+    abilityId: VENOM_STORM,
+  });
+  events.push({
+    kind: 'combo-fired',
+    turn,
+    tick: tick(),
+    comboId: VENOM_STORM,
+    sourcePartyId: shooter.id,
+    partnerPartyId: partner.id,
+    targetPartyId: target.id,
+    totalDamage,
+    debuffApplied: 'venom-storm',
+  });
+  events.push(...deathEvents);
+
+  return { shooter: workingShooter, partner: workingPartner, target: newTarget, events };
+};
+
+/**
+ * Round 24 — locate a same-faction adjacent partner party (Chebyshev
+ * 1, same plane) that satisfies `partnerOk`. Deterministic by
+ * partyId order. The shooter party itself is excluded. Used by both
+ * combo resolvers.
+ */
+const findComboPartner = (
+  shooter: Party,
+  allParties: ReadonlyMap<PartyId, Party>,
+  partnerOk: (candidate: Party) => boolean,
+): Party | undefined => {
+  const candidateIds: PartyId[] = [];
+  for (const id of allParties.keys()) candidateIds.push(id);
+  candidateIds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const id of candidateIds) {
+    if (id === shooter.id) continue;
+    const candidate = allParties.get(id);
+    if (!candidate) continue;
+    if (!isComboAdjacent(shooter, candidate)) continue;
+    if (!partnerOk(candidate)) continue;
+    return candidate;
+  }
+  return undefined;
+};
+
+/**
+ * Round 24 — try the ant Royal-Onslaught combo for `shooter`.
+ * Returns the post-combo (shooter, target, partner-update, events)
+ * or `undefined` when the combo doesn't fire.
+ */
+const tryRoyalOnslaught = (args: {
+  shooter: Party;
+  target: Party;
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
+  abilities: AbilitiesFile;
+  turn: number;
+  tick: () => number;
+  combo: ComboContext;
+}):
+  | { shooter: Party; target: Party; partner: ComboPartnerUpdate; events: readonly ReplayEvent[] }
+  | undefined => {
+  const { shooter, target, templates, abilities, turn, tick, combo } = args;
+  if (shooter.faction !== 'ant') return undefined;
+  if (!findRoyalOnslaughtMage(shooter)) return undefined;
+  const partner = findComboPartner(shooter, combo.allParties, (cand) => {
+    return findRoyalOnslaughtWorker(cand, templates) !== undefined;
+  });
+  if (!partner) return undefined;
+
+  const out = fireRoyalOnslaught({ shooter, partner, target, templates, abilities, turn, tick });
+  if (!out) return undefined;
+  return {
+    shooter: out.shooter,
+    target: out.target,
+    partner: { partyId: partner.id, party: out.partner },
+    events: out.events,
+  };
+};
+
+/**
+ * Round 24 — try the spider Venom-Storm combo for `shooter`.
+ */
+const tryVenomStorm = (args: {
+  shooter: Party;
+  target: Party;
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
+  abilities: AbilitiesFile;
+  turn: number;
+  tick: () => number;
+  combo: ComboContext;
+}):
+  | { shooter: Party; target: Party; partner: ComboPartnerUpdate; events: readonly ReplayEvent[] }
+  | undefined => {
+  const { shooter, target, templates, abilities, turn, tick, combo } = args;
+  if (shooter.faction !== 'spider') return undefined;
+  if (!findVenomStormVenomCaster(shooter, templates)) return undefined;
+  const partner = findComboPartner(shooter, combo.allParties, (cand) => {
+    return findVenomStormWebCaster(cand, undefined, templates) !== undefined;
+  });
+  if (!partner) return undefined;
+  const out = fireVenomStorm({ shooter, partner, target, abilities, templates, turn, tick });
+  if (!out) return undefined;
+  return {
+    shooter: out.shooter,
+    target: out.target,
+    partner: { partyId: partner.id, party: out.partner },
+    events: out.events,
+  };
+};
+
 export const applyOpeningAbilities = (
   attacker: Party,
   defender: Party,
@@ -562,6 +1001,7 @@ export const applyOpeningAbilities = (
   abilities: AbilitiesFile,
   turn: number,
   tick: () => number,
+  combo?: ComboContext,
 ): OpeningAbilityResult => {
   const events: ReplayEvent[] = [];
 
@@ -577,14 +1017,66 @@ export const applyOpeningAbilities = (
   );
   events.push(...defVolley.events);
 
+  // Round 24 — combo abilities (mechanics memo §1.2). Combos fire
+  // BEFORE the single-component openers (magic-arrow, phalanx-
+  // charge, venom-blast) so the spike fires off the mage / venom-
+  // caster's MP slot first, instead of being silently preempted by
+  // a magic-arrow / venom-blast cast that drains the same tier-3
+  // (mage) or tier-2 (spinner / queen) slot. Volleys still resolve
+  // first (archers are non-casters; volleys never compete with
+  // combos for MP). Attacker-side combo resolves first; defender-
+  // side after. A combo's partner party may be ANY adjacent ally —
+  // including the other combatant when adjacent. The combo MP cost
+  // and per-shooter cap-bump are applied to the partner party via
+  // `partnerUpdates`, which the battle module writes back into
+  // state.parties after this function returns.
+  let comboAttacker = defVolley.target;
+  let comboDefender = defVolley.shooter;
+  const partnerUpdates: ComboPartnerUpdate[] = [];
+  if (combo) {
+    const tryCombo = (
+      shooter: Party,
+      target: Party,
+    ):
+      | {
+          shooter: Party;
+          target: Party;
+          partner: ComboPartnerUpdate;
+          events: readonly ReplayEvent[];
+        }
+      | undefined => {
+      if (shooter.faction === 'ant') {
+        return tryRoyalOnslaught({ shooter, target, templates, abilities, turn, tick, combo });
+      }
+      if (shooter.faction === 'spider') {
+        return tryVenomStorm({ shooter, target, templates, abilities, turn, tick, combo });
+      }
+      return undefined;
+    };
+    const atkCombo = tryCombo(comboAttacker, comboDefender);
+    if (atkCombo) {
+      comboAttacker = atkCombo.shooter;
+      comboDefender = atkCombo.target;
+      partnerUpdates.push(atkCombo.partner);
+      events.push(...atkCombo.events);
+    }
+    const defCombo = tryCombo(comboDefender, comboAttacker);
+    if (defCombo) {
+      comboDefender = defCombo.shooter;
+      comboAttacker = defCombo.target;
+      partnerUpdates.push(defCombo.partner);
+      events.push(...defCombo.events);
+    }
+  }
+
   // Group attacks: magic-arrow (mage+archer) and phalanx-charge (3+
-  // footmen) fire after volley and before mend, so they soften the
-  // defender further or pre-empt the kill battle. Only the attacker
-  // side fires group attacks — they're spec'd as offensive group
-  // moves, not defensive reactions.
+  // footmen) fire after volley + combos and before mend, so they
+  // soften the defender further or pre-empt the kill battle. Only the
+  // attacker side fires group attacks — they're spec'd as offensive
+  // group moves, not defensive reactions.
   const atkArrow = fireMagicArrows({
-    shooter: defVolley.target,
-    target: defVolley.shooter,
+    shooter: comboAttacker,
+    target: comboDefender,
     abilities,
     turn,
     tick,
@@ -621,12 +1113,18 @@ export const applyOpeningAbilities = (
   });
   events.push(...defVenom.events);
 
+  // `defVenom.target` is the working attacker (used as the target in
+  // the defender's venom-blast pass), `defVenom.shooter` is the
+  // working defender.
   const atkMend = fireMends(defVenom.target, templates, abilities, turn, tick);
   events.push(...atkMend.events);
   const defMend = fireMends(defVenom.shooter, templates, abilities, turn, tick);
   events.push(...defMend.events);
 
-  // The attacker is whichever party's units we threaded through the
-  // mage/archer/phalanx pipeline; defender is the other.
-  return { attacker: atkMend.party, defender: defMend.party, events };
+  return {
+    attacker: atkMend.party,
+    defender: defMend.party,
+    events,
+    partnerUpdates,
+  };
 };

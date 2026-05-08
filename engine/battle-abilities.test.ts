@@ -57,7 +57,8 @@ describe('applyOpeningAbilities — volley', () => {
       makeTickClock(),
     );
 
-    const damage = data.abilities.abilities.find((a) => a.id === 'volley')?.params.damage ?? 0;
+    const volleyDamageRaw = data.abilities.abilities.find((a) => a.id === 'volley')?.params.damage;
+    const damage = typeof volleyDamageRaw === 'number' ? volleyDamageRaw : 0;
     const newScout = out.defender.units.find((u) => u.id === scout.id);
     const newSoldier = out.defender.units.find((u) => u.id === soldier.id);
     expect(newScout?.currentHp).toBe(Math.max(0, 10 - damage));
@@ -140,7 +141,8 @@ describe('applyOpeningAbilities — mend', () => {
     const atk = mkParty('atk', [mage, wounded, fullHealth], 'ant');
     const def = mkParty('def', [mkUnit('spider-soldier', 'd-1', 12)], 'spider');
 
-    const heal = data.abilities.abilities.find((a) => a.id === 'mend')?.params.heal ?? 0;
+    const mendHealRaw = data.abilities.abilities.find((a) => a.id === 'mend')?.params.heal;
+    const heal = typeof mendHealRaw === 'number' ? mendHealRaw : 0;
     const out = applyOpeningAbilities(
       atk,
       def,
