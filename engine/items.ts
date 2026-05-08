@@ -159,7 +159,10 @@ export const itemTemplateById = (
 /**
  * Per-roll discovery probability for an undiscovered item within
  * Chebyshev 1 (same plane) of an eligible party at end-of-turn. Spec
- * locks this at 25%.
+ * locks the adjacency rate at 25%; a party standing ON the item tile
+ * (Chebyshev 0) auto-discovers (100%, see `discoverItems`). The
+ * round-28 bump rewards exploration: walking over an item now finds
+ * it deterministically rather than rolling at 1-in-4.
  */
 export const ITEM_DISCOVERY_CHANCE = 0.25;
 
@@ -201,6 +204,14 @@ const isDiscoveryEligible = (
 
 const isAdjacent = (a: TileCoord, b: TileCoord): boolean =>
   a.plane === b.plane && distance(a, b) <= 1;
+
+/**
+ * True iff the party stands ON the spawn's tile (Chebyshev 0). Round
+ * 28 — on-tile pickups bypass the discovery roll and resolve at
+ * 100%; only Chebyshev 1 still rolls at `ITEM_DISCOVERY_CHANCE`.
+ */
+const isOnTile = (a: TileCoord, b: TileCoord): boolean =>
+  a.plane === b.plane && distance(a, b) === 0;
 
 interface ConsumableEffectInput {
   readonly party: Party;
@@ -321,8 +332,15 @@ export const discoverItems = (
       const spawn = spawns[i];
       if (!spawn || spawn.discovered) continue;
       if (!isAdjacent(workingParty.location, spawn.location)) continue;
-      // 25% roll, deterministic via the seeded RNG.
-      if (rng.next() >= ITEM_DISCOVERY_CHANCE) continue;
+      // Round 28 — on-tile (Chebyshev 0) auto-discovers (100%, no
+      // RNG draw); adjacency (Chebyshev 1) still rolls 25% via the
+      // seeded RNG. Skipping the RNG draw on auto-discovery is
+      // intentional and preserves determinism: the on-tile branch
+      // is unconditional, so the consumption is deterministic
+      // either way.
+      if (!isOnTile(workingParty.location, spawn.location)) {
+        if (rng.next() >= ITEM_DISCOVERY_CHANCE) continue;
+      }
 
       const tmpl = itemTemplateById(input.itemsFile, spawn.itemId);
       if (!tmpl) continue;

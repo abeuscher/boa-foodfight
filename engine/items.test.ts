@@ -92,13 +92,14 @@ describe('engine/items spawn', () => {
 });
 
 describe('engine/items discovery', () => {
-  it('discovery roll fires at 25% — same RNG seed picks up the same items', () => {
+  it('discovery roll fires at 25% for Chebyshev-1 adjacency — same RNG seed picks up the same items', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
-    // Plant one knowable spawn adjacent to a chosen ant party so the
-    // 25% roll has a clear deterministic outcome under a known seed.
+    // Plant one knowable spawn at Chebyshev distance 1 (the round-28
+    // bump made Cheb 0 auto-discover at 100%, so the 25% rate now
+    // requires diagonal/orthogonal adjacency rather than on-tile).
     const partyId = findAntFieldPartyId(state);
     const partyLoc = state.parties.get(partyId)!.location;
-    const adjLoc: TileCoord = { plane: partyLoc.plane, x: partyLoc.x, y: partyLoc.y };
+    const adjLoc: TileCoord = { plane: partyLoc.plane, x: partyLoc.x + 1, y: partyLoc.y };
     const spawn: ItemSpawn = {
       itemId: 'leather-pad' as ItemId,
       location: adjLoc,
@@ -126,6 +127,86 @@ describe('engine/items discovery', () => {
     const a1 = endOfTurn(seeded, eotInput(data), makeTickClock(), createRng(7));
     const a2 = endOfTurn(seeded, eotInput(data), makeTickClock(), createRng(7));
     expect(JSON.stringify(a1.events)).toBe(JSON.stringify(a2.events));
+  });
+
+  it('round 28 — party on the item tile auto-discovers (100%, no RNG)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const partyId = findAntFieldPartyId(state);
+    // Move the chosen party to a remote tile that isn't within Cheb 1
+    // of any other eligible party (avoids other ants stealing the
+    // item on a 25% adjacency roll). Then plant the item at that
+    // remote tile and verify the on-tile party always gets it.
+    const remote: TileCoord = { plane: 'floor', x: 0, y: 9 };
+    const moved = updateParty(state, partyId, { location: remote });
+    const spawn: ItemSpawn = {
+      itemId: 'leather-pad' as ItemId,
+      location: remote,
+      buried: false,
+      discovered: false,
+    };
+    const seeded = placeItemAt(clearItems(moved), spawn);
+    // Sample 50 seeds; every single one should yield a discovery
+    // event for the on-tile party (no rng draw is consumed for the
+    // auto-discovery, so the outcome is deterministic regardless of
+    // seed).
+    for (let seed = 1; seed <= 50; seed++) {
+      const out = endOfTurn(seeded, eotInput(data), makeTickClock(), createRng(seed));
+      const discovered = out.events.find(
+        (e) => e.kind === 'item-discovered' && e.partyId === partyId,
+      );
+      expect(discovered).toBeDefined();
+    }
+  });
+
+  it('round 28 — multiple parties on same item tile: lowest-id party wins (deterministic)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const partyId = findAntFieldPartyId(state);
+    // Pick a second eligible ant party. Co-locate both on a remote
+    // tile so no third party rolls Cheb-1 discovery and steals the
+    // event before either of these two on-tile candidates is
+    // processed.
+    let otherId: PartyId | null = null;
+    for (const [id, p] of state.parties) {
+      if (id === partyId) continue;
+      if (p.faction !== 'ant') continue;
+      if (p.leaderless) continue;
+      const isQueenParty = p.units.some((u) => {
+        const tmpl = state.unitTemplates.get(u.templateId);
+        return tmpl?.tags.includes('queen');
+      });
+      if (isQueenParty) continue;
+      otherId = id;
+      break;
+    }
+    if (otherId === null) {
+      // No second eligible party in this scenario seed — skip the
+      // determinism check (the auto-discovery path is already
+      // exercised by the single-party test above).
+      return;
+    }
+    const remote: TileCoord = { plane: 'floor', x: 0, y: 9 };
+    let co = updateParty(state, partyId, { location: remote });
+    co = updateParty(co, otherId, { location: remote });
+    const spawn: ItemSpawn = {
+      itemId: 'leather-pad' as ItemId,
+      location: remote,
+      buried: false,
+      discovered: false,
+    };
+    const seeded = placeItemAt(clearItems(co), spawn);
+    const out = endOfTurn(seeded, eotInput(data), makeTickClock(), createRng(42));
+    // Discovery is processed in alphabetical PartyId order — whichever
+    // id sorts first claims the item. The other party walks away
+    // empty-handed but no spurious events fire.
+    const winnerId = String(partyId) < String(otherId) ? partyId : otherId;
+    const loserId = winnerId === partyId ? otherId : partyId;
+    const events = out.events.filter(
+      (e) => e.kind === 'item-discovered' || e.kind === 'item-consumed',
+    );
+    const winnerHit = events.some((e) => 'partyId' in e && e.partyId === winnerId);
+    const loserHit = events.some((e) => 'partyId' in e && e.partyId === loserId);
+    expect(winnerHit).toBe(true);
+    expect(loserHit).toBe(false);
   });
 
   it('mead heals every living unit to full HP on pickup, consumes the slot', () => {
