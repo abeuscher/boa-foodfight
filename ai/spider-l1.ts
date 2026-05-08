@@ -118,6 +118,18 @@ const WEB_MEND: AbilityId = 'web-mend' as AbilityId;
 const HEAL_TRIGGER_RADIUS = 3;
 
 /**
+ * Round 23 — web-mend HP-fraction gate. The queen carries the
+ * spider-side venom-blast (r22; tier-2 pre-battle damage parity) AND
+ * web-mend (r18; tier-2 active heal). Both abilities draw from the
+ * queen's 2-tier-2-slot MP pool. A web-mend fired at 99% HP burns a
+ * slot that could have powered a venom-blast in the next battle, so we
+ * hold the heal until the queen is meaningfully wounded — < 80% of her
+ * effective HP. Below that threshold the heal pays for itself; above
+ * it the venom-blast is more valuable.
+ */
+const WEB_MEND_HP_THRESHOLD = 0.8;
+
+/**
  * True iff at least one fresh (age ≤ 1) ant trail entry sits within
  * `HEAL_TRIGGER_RADIUS` of the spider-web on the same plane, OR sits
  * on the floor at the web's (x, y) (the wall-crack ladder approach).
@@ -669,20 +681,21 @@ const casterHealthyEnough = (party: Party): boolean => {
 };
 
 /**
- * Round-9 placement (spider side). With 5 spider parties the engine
+ * Round-23 placement (spider side). With 5 spider parties the engine
  * cap is ⌊5/2⌋ = 2 movable. We commit:
- *   - deep-raider at floor (7, 3): pulled BACK from the round-7/8
- *     forward (8, 5) tile. The aggressive (8, 5) placement crushed
- *     ant rush/jelly-rush/dive variants (1-4% win rate, 99% timeouts)
- *     by sitting directly on their (4-5, 4-5) approach lane. (7, 3)
- *     keeps the raider on the spider half of the floor (above and
- *     to the right of the centerline) and still inside the storm-
- *     drain column — but well out of the (4-5, 4-5) ant breakout
- *     zone, restoring variant viability without surrendering the
- *     mid-board pressure entirely. The raider's `decideRaiderTarget`
- *     logic still drives it forward toward live ant trails after
- *     turn 1, so the descent toward the storm-drain column is only
- *     deferred by ~1-2 turns, not abandoned.
+ *   - deep-raider at floor (8, 3): pulled BACK from round-9's (7, 3).
+ *     Round 22's diversity gate showed rush at 39% and flank at 40%
+ *     (both at/below the 40% diversity floor). Rush travels through
+ *     floor (3, 3) → (5, 0); flank uses the ceiling (5, 5) and (9, 5)
+ *     waypoints. The raider at (7, 3) sat one tile diagonally off
+ *     rush's vanguard-bravo (3, 3) staging path and could intercept
+ *     within 2 turns. Stepping it east one column to (8, 3) keeps it
+ *     on the spider half of the floor and still in the storm-drain
+ *     column for `decideRaiderTarget`'s forward-pressure path, while
+ *     putting one extra tile of buffer between the raider and rush's
+ *     (3-5, 0-3) breakout zone. Net effect: rush/flank get back a
+ *     hair of breathing room on turns 1-2, restoring the diversity
+ *     floor without abandoning mid-board pressure.
  *   - silk-line at ceiling (7, 7): unchanged from round 7. Forward
  *     of (9, 8) toward the storm-drain column on the ceiling —
  *     silk-line's per-turn logic already pushes toward storm-drain
@@ -692,7 +705,7 @@ const casterHealthyEnough = (party: Party): boolean => {
  */
 const spiderL1Placement = (state: GameState): GameState =>
   spiderPlacement(state, {
-    'deep-raider': { plane: 'floor', x: 7, y: 3 },
+    'deep-raider': { plane: 'floor', x: 8, y: 3 },
     'silk-line': { plane: 'ceiling', x: 7, y: 7 },
   });
 
@@ -741,7 +754,18 @@ export const spiderL1: AIPolicy = {
     // spider AI's "is this party hurt?" signal is preserved by spec
     // (rec 1.5 only constrains *position* visibility, not full state).
     let pursueTarget: { antPartyId: PartyId; loc: TileCoord } | null = null;
-    if (state.turn >= 4 && antControlledPostCount(state) >= 2) {
+    // Round 23 — looser pursuit gate. The cumulative drift through r22
+    // had baseline at 67% — over the 65% band. Spider damage parity is
+    // venom-blast (r22, pre-battle, 4 dmg/unit/rank), but it only fires
+    // when a battle actually happens. To raise venom-blast fire rate
+    // without buffing any unit stats, we widen the pursuit window: the
+    // pursuit gate now fires from turn 3 onward (was turn 4) with the
+    // first ant POST flip (was 2 POSTs), and the wounded-ant fraction
+    // threshold rises to < 0.65 (was < 0.5). The result: more ant
+    // parties qualify as pursuit targets earlier, so a non-scout spider
+    // spends fewer turns idle and more turns engaging — and every
+    // engagement is a venom-blast firing opportunity.
+    if (state.turn >= 3 && antControlledPostCount(state) >= 1) {
       const trail = getSpiderVisibleAntTrail(state);
       const freshestByParty = new Map<PartyId, SpiderVisibleTrailEntry>();
       for (const entry of trail) {
@@ -760,7 +784,7 @@ export const spiderL1: AIPolicy = {
         }, 0);
         if (maxHp <= 0) continue;
         const frac = livingHp / maxHp;
-        if (frac >= 0.5) continue;
+        if (frac >= 0.65) continue;
         const fresh = freshestByParty.get(party.id);
         if (!fresh) continue; // No trail yet (turn 0); skip pursuit.
         const trailLoc: TileCoord = { plane: fresh.plane, x: fresh.x, y: fresh.y };
@@ -882,13 +906,23 @@ export const spiderL1: AIPolicy = {
       } else if (id === WEB_GUARD) {
         // Round 18 — heal-priority. When ants threaten the spider-web
         // (within Chebyshev HEAL_TRIGGER_RADIUS on the ceiling, or on
-        // the floor at the web's (x, y) column) AND web-guard isn't
-        // at full HP, fire `web-mend`. Otherwise hold position. This
-        // intentionally does NOT change web-guard's tile — the queen
-        // bearer stays on the web; only her ability use changes.
+        // the floor at the web's (x, y) column) AND web-guard is
+        // meaningfully wounded, fire `web-mend`. Otherwise hold
+        // position. This intentionally does NOT change web-guard's
+        // tile — the queen bearer stays on the web; only her ability
+        // use changes.
+        //
+        // Round 23 — tightened HP-fraction gate from < 1.0 to <
+        // WEB_MEND_HP_THRESHOLD (0.8). Web-mend is a tier-2 cast on
+        // the queen, and venom-blast is also tier-2. The queen carries
+        // 2 tier-2 slots per scenario, so every web-mend at 99% HP
+        // burns one slot that could have gone to a venom-blast (4
+        // dmg/unit/rank pre-battle). Holding the heal until the queen
+        // is at < 80% effective HP preserves the second tier-2 slot
+        // for the next battle's venom-blast firing.
         const healThreat = isWebUnderHealThreat(state, webLoc);
         const hpFrac = livingHpFraction(party, state.unitTemplates);
-        if (healThreat && hpFrac > 0 && hpFrac < 1.0) {
+        if (healThreat && hpFrac > 0 && hpFrac < WEB_MEND_HP_THRESHOLD) {
           nextOrders = [{ kind: 'use-ability', abilityId: WEB_MEND }];
         } else {
           nextOrders = [];
