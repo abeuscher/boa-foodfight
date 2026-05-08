@@ -98,7 +98,13 @@ interface AbilitiesFile {
     target: string;
     uses: number | null;
     cooldown: number;
-    params: Record<string, number>;
+    /** Round 24 — combo abilities (mechanics memo §1.2) widened the
+     * params shape from `Record<string, number>` to also accept
+     * `string[]` (componentAbilities) and `Record<string, number>`
+     * (mpCostBySource). The local type mirrors the engine schema so a
+     * coevo `add-ability` / `replace-ability` proposal carrying combo
+     * params round-trips through the harness without lossy clones. */
+    params: Record<string, number | string[] | Record<string, number>>;
     description: string;
   }[];
 }

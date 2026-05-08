@@ -131,6 +131,40 @@ const healParty = (
   return { ...party, units: healed };
 };
 
+/**
+ * Round 24 — venom-storm tangle decay (mechanics memo §1.2). Walk
+ * every unit in every party; if `tangleTurnsRemaining` is set,
+ * decrement by 1 and drop the field when it hits 0. Returns a new
+ * state only when at least one unit's field changed (avoids
+ * pointless re-allocation on the common no-debuff turn).
+ */
+const applyTangleDecay = (state: GameState): GameState => {
+  let changedAny = false;
+  const next = new Map<PartyId, Party>();
+  for (const [id, party] of state.parties) {
+    let partyChanged = false;
+    const newUnits = party.units.map((u) => {
+      if (u.tangleTurnsRemaining === undefined || u.tangleTurnsRemaining <= 0) return u;
+      partyChanged = true;
+      const remaining = u.tangleTurnsRemaining - 1;
+      if (remaining <= 0) {
+        // Drop the field by spreading without it.
+        const { tangleTurnsRemaining: _drop, ...rest } = u;
+        void _drop;
+        return rest;
+      }
+      return { ...u, tangleTurnsRemaining: remaining };
+    });
+    if (partyChanged) {
+      changedAny = true;
+      next.set(id, { ...party, units: newUnits });
+    } else {
+      next.set(id, party);
+    }
+  }
+  return changedAny ? { ...state, parties: next } : state;
+};
+
 const applyHealing = (state: GameState): GameState => {
   const next = new Map<PartyId, Party>();
   for (const [id, party] of state.parties) {
@@ -477,6 +511,13 @@ export const endOfTurn = (
 
   // 1. Healing.
   let working = applyHealing(state);
+
+  // 1b. Round 24 — venom-storm tangle decay (mechanics memo §1.2).
+  //     Per-unit `tangleTurnsRemaining` decrements by 1 each end-of-
+  //     turn; reaches 0 → field is dropped on the next tick. Pure
+  //     bookkeeping; no event emitted (the combo-fired event already
+  //     captured the application).
+  working = applyTangleDecay(working);
 
   // 2. Queen ultimate charge. Only emit if the value actually changed —
   //    once the cap is hit, repeated charge=cap events are pure noise.
