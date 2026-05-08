@@ -196,9 +196,55 @@ function reduceWithInitial(events, targetTick) {
         if (pu) pu.location = e.to;
         break;
       }
-      case 'post-captured':
-        posts.set(e.postId, { owner: e.newOwner });
+      case 'post-captured': {
+        // Round 17 — flipping ownership clears any in-progress
+        // capture (the prior `post-capture-progressed` chain is now
+        // over). Preserve any existing `owner` map shape.
+        const live = posts.get(e.postId) ?? {};
+        posts.set(e.postId, {
+          ...live,
+          owner: e.newOwner,
+          capturingFaction: null,
+          captureTurnsRemaining: null,
+        });
         break;
+      }
+      case 'post-capture-started': {
+        // Round 17 — a fresh hold begins. Owner stays unchanged
+        // (visible flip happens later via `post-captured`); we
+        // record the capturer so the renderer can pulse a border
+        // in their faction color.
+        const live = posts.get(e.postId) ?? { owner: e.fromOwner };
+        posts.set(e.postId, {
+          ...live,
+          capturingFaction: e.capturingFaction,
+          captureTurnsRemaining: 2,
+        });
+        break;
+      }
+      case 'post-capture-progressed': {
+        // Round 17 — decremented this turn.
+        const live = posts.get(e.postId) ?? {};
+        posts.set(e.postId, {
+          ...live,
+          capturingFaction: e.capturingFaction,
+          captureTurnsRemaining: e.turnsRemaining,
+        });
+        break;
+      }
+      case 'post-capture-aborted': {
+        // Round 17 — capture failed. Per spec, the engine resets
+        // the POST to neutral when the holder leaves mid-capture
+        // (drops any prior ownership). The viewer mirrors that.
+        const live = posts.get(e.postId) ?? {};
+        posts.set(e.postId, {
+          ...live,
+          owner: 'neutral',
+          capturingFaction: null,
+          captureTurnsRemaining: null,
+        });
+        break;
+      }
       case 'queen-ultimate-charged':
         queenCharge = e.charge;
         break;
@@ -587,10 +633,21 @@ function drawPosts(ctx, plane, postsState, initialPosts, area) {
     if (def.plane !== plane) continue;
     const live = postsState.get(def.id);
     const owner = live?.owner ?? def.owner;
+    const capturingFaction = live?.capturingFaction ?? null;
     const cx = ox + def.x * cellSize + cellSize / 2;
     const cy = oy + def.y * cellSize + cellSize / 2;
     ctx.fillStyle = FACTION_COLOR[owner] ?? '#888';
     ctx.fillRect(cx - half, cy - half, badge, badge);
+    // Round 17 — capture-in-progress: render a thicker outline in the
+    // CAPTURING faction's color (NOT the current owner's). Lets the
+    // viewer call out POSTs that are mid-flip from a glance. The
+    // post-captured event will retire this state when ownership
+    // actually changes.
+    if (capturingFaction !== null && capturingFaction !== owner) {
+      ctx.strokeStyle = FACTION_COLOR[capturingFaction] ?? '#fff';
+      ctx.lineWidth = Math.max(2.5, Math.floor(cellSize * 0.12));
+      ctx.strokeRect(cx - half - 1, cy - half - 1, badge + 2, badge + 2);
+    }
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(cx - half, cy - half, badge, badge);
@@ -791,12 +848,23 @@ function renderPostsPanel(state) {
     const live = state.posts.get(def.id);
     const owner = live?.owner ?? def.owner;
     const bonus = postDefensiveBonus(def.id);
+    // Round 17 — append a "capture: <faction> in N turns" status when
+    // a hold is in progress. Visible alongside the owner badge so the
+    // reader can see who currently holds the POST AND who's
+    // contesting it.
+    const capturingFaction = live?.capturingFaction ?? null;
+    const turnsRemaining = live?.captureTurnsRemaining ?? null;
+    const captureHtml =
+      capturingFaction !== null && turnsRemaining !== null
+        ? `<span class="post-capture ${capturingFaction}">cap:${capturingFaction} in ${String(turnsRemaining)}</span>`
+        : '';
     return (
       `<div class="post-row">` +
       `<span class="post-id">${escapeHtml(def.id)}</span>` +
       `<span class="post-loc">${escapeHtml(def.plane)} (${String(def.x)},${String(def.y)})</span>` +
       `<span class="post-bonus">+${String(bonus)}</span>` +
       `<span class="post-owner ${owner}">${owner}</span>` +
+      captureHtml +
       `</div>`
     );
   });
@@ -1334,6 +1402,12 @@ function describeEvent(e) {
       return `${e.result.attackerPartyId} vs ${e.result.defenderPartyId} → ${e.result.winner}`;
     case 'post-captured':
       return `${e.postId} → ${e.newOwner}`;
+    case 'post-capture-started':
+      return `${e.postId} capture started by ${e.capturingFaction} (was ${e.fromOwner})`;
+    case 'post-capture-progressed':
+      return `${e.postId} ${e.capturingFaction} hold: ${String(e.turnsRemaining)} left`;
+    case 'post-capture-aborted':
+      return `${e.postId} capture aborted (was ${e.previousOwner} → neutral)`;
     case 'leader-died':
       return e.partyId;
     case 'unit-died':

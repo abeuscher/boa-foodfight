@@ -178,6 +178,19 @@ canvas {
 .post-row .post-owner.neutral {
   color: #888;
 }
+/* Round 17 — POST hold mechanic. Shown only while a capture is in
+ * progress; the renderer drops the field once `post-captured` (or
+ * `post-capture-aborted`) fires. */
+.post-row .post-capture {
+  font-style: italic;
+  margin-left: 4px;
+}
+.post-row .post-capture.ant {
+  color: #e85d4a;
+}
+.post-row .post-capture.spider {
+  color: #c026d3;
+}
 #parties-panel {
   background: #2a2a2a;
   border-radius: 4px;
