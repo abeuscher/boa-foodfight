@@ -121,6 +121,12 @@ const buildNeutralParty = (
   const partyId = partyIdForKind(kind);
   const leaderId = units[0]?.id;
   if (!leaderId) throw new Error(`neutrals: kind '${kind}' has zero units`);
+  // Round 20 — neutrals get a deterministic formation. Mice (large
+  // mercs) front; cockroaches (small swarm) front; stinkbugs (small
+  // damage-zone) front. None have caster / ranged / support tags.
+  const front = units.slice(0, 3).map((u) => u.id);
+  const back = units.slice(3, 5).map((u) => u.id);
+  const reserve = units.slice(5).map((u) => u.id);
   return {
     id: partyId,
     faction: 'neutral',
@@ -132,6 +138,7 @@ const buildNeutralParty = (
     strategyModifiers: [],
     jellyDoses: 0,
     leaderless: false,
+    formation: { front, back, reserve },
   };
 };
 

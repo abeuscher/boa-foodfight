@@ -21,6 +21,7 @@
  * type the turn driver passes through).
  */
 
+import { backRowIntelligenceBonus, formationOrAllFront } from './formation.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type { AbilityId, Party, ReplayEvent, Unit, UnitTemplate, UnitTemplateId } from './types.ts';
 
@@ -204,9 +205,16 @@ interface OpeningResult {
  * shot at a high-HP enemy. Once per scenario per archer-and-mage
  * pair (we just consume one of each via usedAbilities). Requires
  * `minMages` mages and `minArchers` archers in the shooter party.
+ *
+ * Round 20 — back-row casters (mechanics memo §1.5) add +1 effective
+ * intelligence to ability damage. The charging mage applies the
+ * bump; if the mage chosen is back-row (or back-row-by-intelligence)
+ * the arrow lands one extra damage.
  */
-const fireMagicArrows = (args: OpeningArgs): OpeningResult => {
-  const { shooter, target, abilities, turn, tick } = args;
+const fireMagicArrows = (
+  args: OpeningArgs & { templates: ReadonlyMap<UnitTemplateId, UnitTemplate> },
+): OpeningResult => {
+  const { shooter, target, abilities, turn, tick, templates } = args;
   const def = findAbility(abilities, MAGIC_ARROW);
   if (!def) return { shooter, target, events: [] };
   const damage = def.params.damage ?? 0;
@@ -229,10 +237,12 @@ const fireMagicArrows = (args: OpeningArgs): OpeningResult => {
   // per-unit uses elsewhere yet, so this is the budget.)
   let consumedMage = false;
   let consumedArcher = false;
+  let mageUnitId: Unit['id'] | null = null;
   const newShooterUnits = shooter.units.map((u) => {
     if (!isLiving(u)) return u;
     if (!consumedMage && u.templateId === MAGE_TEMPLATE && !hasUsed(u, MAGIC_ARROW)) {
       consumedMage = true;
+      mageUnitId = u.id;
       return markUsed(u, MAGIC_ARROW);
     }
     if (!consumedArcher && u.templateId === ARCHER_TEMPLATE && !hasUsed(u, MAGIC_ARROW)) {
@@ -242,9 +252,20 @@ const fireMagicArrows = (args: OpeningArgs): OpeningResult => {
     return u;
   });
   if (!consumedMage || !consumedArcher) return { shooter, target, events: [] };
+  // Round 20 — back-row caster bonus (+1 intelligence → +1 damage)
+  // when the firing mage is in the back row.
+  let intBonus = 0;
+  if (mageUnitId !== null) {
+    const mageTmpl = templates.get(MAGE_TEMPLATE as UnitTemplateId);
+    if (mageTmpl) {
+      const formation = formationOrAllFront(shooter);
+      intBonus = backRowIntelligenceBonus(formation, mageUnitId, mageTmpl);
+    }
+  }
+  const totalDamage = damage + intBonus;
   // Apply damage.
   const newTargetUnits = target.units.map((u) =>
-    u.id === highest.id ? { ...u, currentHp: Math.max(0, u.currentHp - damage) } : u,
+    u.id === highest.id ? { ...u, currentHp: Math.max(0, u.currentHp - totalDamage) } : u,
   );
   const events: ReplayEvent[] = [
     {
@@ -255,7 +276,7 @@ const fireMagicArrows = (args: OpeningArgs): OpeningResult => {
       abilityId: MAGIC_ARROW,
     },
   ];
-  if (highest.currentHp > 0 && highest.currentHp - damage <= 0) {
+  if (highest.currentHp > 0 && highest.currentHp - totalDamage <= 0) {
     events.push({ kind: 'unit-died', turn, tick: tick(), unitId: highest.id });
   }
   return {
@@ -348,6 +369,7 @@ export const applyOpeningAbilities = (
     abilities,
     turn,
     tick,
+    templates,
   });
   events.push(...atkArrow.events);
   const atkPhalanx = firePhalanxCharge({
