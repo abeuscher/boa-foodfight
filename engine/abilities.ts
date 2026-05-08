@@ -18,7 +18,7 @@
  */
 
 import { coordKey } from './coord.ts';
-import type { JellyFile } from './schemas/index.ts';
+import type { AbilitiesFile, JellyFile } from './schemas/index.ts';
 import type {
   AbilityId,
   AbilityOrder,
@@ -44,6 +44,15 @@ const RECRUIT: AbilityId = 'recruit' as AbilityId;
 const SPAWN_SPIDERLINGS: AbilityId = 'spawn-spiderlings' as AbilityId;
 const SCOUT_PING: AbilityId = 'scout-ping' as AbilityId;
 const HYPNOTIZE: AbilityId = 'hypnotize' as AbilityId;
+const WEB_MEND: AbilityId = 'web-mend' as AbilityId;
+/**
+ * Round 18 — fallback heal-per-unit when the abilities data file does
+ * not surface a usable `params.heal`. The web-mend passive in
+ * `engine/battle.ts` is `heal: 1`, but spec'd active healing wants ~3
+ * HP/turn so the web-guard can sustain itself between turns. We use
+ * `params.heal` as a hint and layer on a constant active-cast bonus.
+ */
+const WEB_MEND_ACTIVE_HEAL = 3;
 
 /** Round 8 hypnotize tuning. Locked by spec. */
 const HYPNOTIZE_SUCCESS_RATE = 0.8;
@@ -580,15 +589,82 @@ const handleSpawnSpiderlings = (args: HandlerArgs): HandlerResult => {
 };
 
 /**
+ * Round 18 — `web-mend` use-ability. Heals every living unit in the
+ * caster's party by `WEB_MEND_ACTIVE_HEAL` HP, capped at the unit
+ * template's `baseStats.hp`. The caster must have `web-mend` in its
+ * abilities (currently only `spider-queen`). Costs nothing; uses are
+ * uncapped (`uses: null` in the data file).
+ *
+ * The existing battle-internal `web-mend` passive in `engine/battle.ts`
+ * is intentionally untouched — that fires DURING battle rounds (the
+ * 0.5-fraction self-mend), this fires BETWEEN turns when the AI
+ * issues a use-ability order in response to ant proximity. They're
+ * complementary: the passive bleeds the heal during a long fight, the
+ * active recovers between fights.
+ */
+const handleWebMend = (
+  args: HandlerArgs & { abilities: AbilitiesFile | undefined },
+): HandlerResult => {
+  const { party, slot, state, parties, webbedTiles, tick, abilities } = args;
+  const events: ReplayEvent[] = [];
+  if (!partyHasAbility(party, WEB_MEND, state.unitTemplates)) {
+    consumeOrder(party, slot, parties);
+    return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+  }
+  // Heal-per-unit: prefer the active-cast constant. The data file's
+  // `params.heal` is the passive trickle (1 HP), which is too small
+  // for the strategic heal-priority response — so we layer on the
+  // active-cast value. The `abilities` arg is reserved for future
+  // tuning if a designer wants to surface a separate active-heal key.
+  void abilities;
+  const heal = WEB_MEND_ACTIVE_HEAL;
+  const perUnit: { unitId: UnitId; hpBefore: number; hpAfter: number }[] = [];
+  let totalHealed = 0;
+  const newUnits = party.units.map((u) => {
+    if (u.currentHp <= 0) return u;
+    const tmpl = state.unitTemplates.get(u.templateId);
+    if (!tmpl) return u;
+    const cap = tmpl.baseStats.hp;
+    if (u.currentHp >= cap) return u;
+    const after = Math.min(cap, u.currentHp + heal);
+    const delta = after - u.currentHp;
+    if (delta <= 0) return u;
+    perUnit.push({ unitId: u.id, hpBefore: u.currentHp, hpAfter: after });
+    totalHealed += delta;
+    return { ...u, currentHp: after };
+  });
+  parties.set(party.id, {
+    ...party,
+    units: newUnits,
+    orders: dropOrderAt(party.orders, slot.index),
+  });
+  events.push(abilityUsedEvent(state, party.id, WEB_MEND, tick));
+  events.push({
+    kind: 'web-mended',
+    turn: state.turn,
+    tick: tick(),
+    partyId: party.id,
+    hpHealed: totalHealed,
+    perUnit,
+  });
+  return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
+};
+
+/**
  * Walk every party's order queue once. For the first `use-ability`
  * order that resolves to a known ability, apply it and pop the order.
  * Returns the new state plus emitted events.
+ *
+ * `abilities` is optional for back-compat with tests that don't load
+ * the full scenario; handlers that need it (currently web-mend) gate
+ * on its presence and parameter shape.
  */
 export const resolveAbilityOrders = (
   state: GameState,
   jelly: JellyFile,
   rng: Rng,
   tick: () => number,
+  abilities?: AbilitiesFile,
 ): AbilityResolution => {
   const events: ReplayEvent[] = [];
   const parties = new Map<PartyId, Party>(state.parties);
@@ -636,6 +712,9 @@ export const resolveAbilityOrders = (
         break;
       case HYPNOTIZE:
         r = handleHypnotize({ ...baseArgs, rng });
+        break;
+      case WEB_MEND:
+        r = handleWebMend({ ...baseArgs, abilities });
         break;
       default:
         break;
