@@ -395,6 +395,25 @@ export const runScenario = (
       buried: ev.buried,
     });
   }
+  // Round 20 — emit `formation-assigned` for every party so viewers /
+  // critics can attribute combat behavior to the row layout. Sorted
+  // by partyId for deterministic output, same convention as the
+  // `partyPositions` snapshot above.
+  for (const id of [...working.parties.keys()].sort()) {
+    const party = working.parties.get(id);
+    if (!party) continue;
+    const formation = party.formation;
+    if (!formation) continue;
+    events.push({
+      kind: 'formation-assigned',
+      turn: 0,
+      tick: tick(),
+      partyId: id,
+      front: formation.front,
+      back: formation.back,
+      reserve: formation.reserve,
+    });
+  }
   events.push({ kind: 'turn-start', turn: 1, tick: tick() });
 
   let turnsPlayed = 0;

@@ -200,6 +200,29 @@ export interface NeutralDecision {
   readonly turnsRemaining: number;
 }
 
+/**
+ * Round 20 — formation slot for a unit inside its party (mechanics
+ * memo §1.5). Front row attacks first and absorbs damage first; back
+ * row trails. Reserve units are off the active fighting layout — they
+ * deal no damage and take no damage until promoted into front/back via
+ * a casualty.
+ */
+export type FormationSlot = 'front' | 'back' | 'reserve';
+
+/**
+ * Round 20 — per-party formation: ordered unit-id lists for the three
+ * slots. `front` capped at 3, `back` capped at 2; anything else is
+ * `reserve`. Auto-assigned at scenario start by template tags + size
+ * (see `engine/formation.ts`); promotion mid-battle moves a reserve
+ * id into the row that just lost a unit, lowest unit-id first for
+ * determinism.
+ */
+export interface Formation {
+  readonly front: readonly UnitId[];
+  readonly back: readonly UnitId[];
+  readonly reserve: readonly UnitId[];
+}
+
 export interface Party {
   readonly id: PartyId;
   readonly faction: Faction;
@@ -220,6 +243,11 @@ export interface Party {
    * Optional for backwards compatibility: a missing field is equivalent
    * to `null` (no equipped item). */
   readonly item?: ItemId | null;
+  /** Round 20 — front/back/reserve slot layout (mechanics memo §1.5).
+   * Optional for backwards compatibility: a missing field is treated
+   * as "all units front" by combat resolution (legacy row-blind
+   * behavior), so older replays / hand-built test parties still work. */
+  readonly formation?: Formation;
 }
 
 // ---------------------------------------------------------------------------
@@ -804,6 +832,35 @@ export type ReplayEvent =
       readonly reason: 'low-hp' | 'threat-prediction';
       readonly enemyPartyId?: PartyId;
       readonly lossProbability?: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 20 — per-party formation announcement (mechanics memo
+       * §1.5). Emitted at scenario-start for every party once
+       * formations are assigned by `assignFormation` from template
+       * tags + size. `front` ≤ 3, `back` ≤ 2; everything overflowing
+       * those caps lands in `reserve` and is excluded from battle
+       * until promotion. Older replays without this event default
+       * the viewer / consumers to "all units front" (legacy row-
+       * blind behavior).
+       */
+      readonly kind: 'formation-assigned';
+      readonly partyId: PartyId;
+      readonly front: readonly UnitId[];
+      readonly back: readonly UnitId[];
+      readonly reserve: readonly UnitId[];
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 20 — reserve unit promoted into front or back when the
+       * corresponding row lost a unit during a battle. Promotion is
+       * deterministic: lowest unit id from `reserve` first. Fires at
+       * most once per casualty per battle round.
+       */
+      readonly kind: 'formation-promoted';
+      readonly partyId: PartyId;
+      readonly slot: 'front' | 'back';
+      readonly unitId: UnitId;
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

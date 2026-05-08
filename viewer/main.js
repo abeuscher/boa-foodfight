@@ -368,6 +368,38 @@ function reduceWithInitial(events, targetTick) {
         // render it for capture-path wins.
         if (e.scoreBreakdown) scoreBreakdown = e.scoreBreakdown;
         break;
+      case 'formation-assigned': {
+        // Round 20 — capture the per-party row layout (mechanics
+        // memo §1.5). Surfaced in the parties JSON panel; older
+        // replays without this event leave `pu.formation` undefined
+        // and the panel renders no formation field (treated as
+        // "all front" by the engine).
+        const pu = partyUnits.get(e.partyId);
+        if (pu) {
+          pu.formation = {
+            front: [...e.front],
+            back: [...e.back],
+            reserve: [...e.reserve],
+          };
+        }
+        break;
+      }
+      case 'formation-promoted': {
+        // Round 20 — reserve unit promoted into front/back during a
+        // battle. Move the unit id from `reserve` to the named slot
+        // in the running formation snapshot.
+        const pu = partyUnits.get(e.partyId);
+        if (pu && pu.formation) {
+          const f = pu.formation;
+          const reserve = f.reserve.filter((id) => id !== e.unitId);
+          if (e.slot === 'front') {
+            pu.formation = { front: [...f.front, e.unitId], back: f.back, reserve };
+          } else {
+            pu.formation = { front: f.front, back: [...f.back, e.unitId], reserve };
+          }
+        }
+        break;
+      }
       default:
         break;
     }
@@ -930,6 +962,11 @@ function renderPartiesPanel(state) {
         jellyDoses: p.jellyDoses,
         // Round 14 — equipped persistent item, or null when slot empty.
         item: p.item ?? null,
+        // Round 20 — per-party row layout (mechanics memo §1.5).
+        // `front`/`back`/`reserve` are unit-id arrays. Older replays
+        // without `formation-assigned` events leave the field
+        // omitted (engine treats as "all front" / row-blind).
+        formation: p.formation ?? { front: [], back: [], reserve: [] },
         units: [...p.units.values()].map((u) => ({
           id: u.id,
           templateId: u.templateId,

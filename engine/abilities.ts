@@ -18,6 +18,7 @@
  */
 
 import { coordKey } from './coord.ts';
+import { assignFormation } from './formation.ts';
 import type { AbilitiesFile, JellyFile } from './schemas/index.ts';
 import type {
   AbilityId,
@@ -484,11 +485,15 @@ const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
     parties.set(party.id, {
       ...party,
       units: newSourceUnits,
+      // Round 20 — recompute formation so the recruited unit gets
+      // an active slot (otherwise it'd silently land in reserve).
+      formation: assignFormation(newSourceUnits, state.unitTemplates),
       orders: dropOrderAt(party.orders, slot.index),
     });
     parties.set(target.id, {
       ...target,
       units: newTargetUnits,
+      formation: assignFormation(newTargetUnits, state.unitTemplates),
       leaderless: newTargetUnits.every((u) => u.currentHp <= 0),
     });
   } else {
@@ -567,6 +572,9 @@ const handleSpawnSpiderlings = (args: HandlerArgs): HandlerResult => {
       strategyModifiers: [],
       jellyDoses: 0,
       leaderless: false,
+      // Round 20 — single-unit party: the spiderling sits in front
+      // by default (size: small, no caster/ranged tags).
+      formation: { front: [unitId], back: [], reserve: [] },
     });
     newPartyIds.push(partyId);
   }

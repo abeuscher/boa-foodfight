@@ -18,6 +18,12 @@ import {
   type StrategyMultipliers,
 } from './combat.ts';
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
+import {
+  backRowMeleeAttackPenalty,
+  formationOrAllFront,
+  promoteReserve,
+  slotForUnit,
+} from './formation.ts';
 import { goldForKill } from './gold-table.ts';
 import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
@@ -29,6 +35,7 @@ import type {
   BattleRound,
   DayNightPhase,
   Faction,
+  Formation,
   GameState,
   Order,
   Party,
@@ -100,6 +107,11 @@ interface LiveUnit {
   /** Round-8: source templateId. Used by the cockroach friendly-fire
    * branch (10% redirect on attack) which keys off the template. */
   readonly templateId: UnitTemplateId;
+  /** Round 20 — formation slot at battle start. Mutated when a
+   * reserve unit is promoted into front/back mid-battle. Reserve
+   * units are NOT included in `live`; they're tracked on the side's
+   * `Formation` and only enter the live array on promotion. */
+  slot: 'front' | 'back';
   hp: number;
   killed: boolean;
   /** Number of upcoming rounds in which this unit cannot attack
@@ -144,6 +156,7 @@ const buildLiveUnits = (
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
   battlePlane: Plane,
   phase: DayNightPhase,
+  formation: Formation,
 ): LiveUnit[] => {
   // Round 14: equipped persistent item buffs the whole party's stats
   // additively (brass-knuckles +1 atk, leather-pad +1 armor,
@@ -152,26 +165,46 @@ const buildLiveUnits = (
   // affinity / phase offsets so a +1 from items never doubles into
   // 1.5-2x reach.
   const itemOffset = partyItemOffset(party);
-  return party.units.map((u) => {
+  // Round 20 — reserve units don't fight. Skip them at build time so
+  // they're absent from `live` (no targeting, no actions, no damage
+  // intake). They re-enter on promotion via `promoteReserve`.
+  const reserveSet = new Set<UnitId>(formation.reserve);
+  const out: LiveUnit[] = [];
+  for (const u of party.units) {
+    if (reserveSet.has(u.id)) continue;
     const tmpl = templates.get(u.templateId);
     if (!tmpl) throw new Error(`battle: unknown templateId '${u.templateId}' for unit '${u.id}'`);
     const phaseOffset = phaseStatOffsetFor(tmpl, phase);
     const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
     const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
-    return {
+    const slot = slotForUnit(formation, u.id);
+    // A unit not in front/back/reserve was filtered above; here it's
+    // safe to coerce 'reserve' away — but be defensive.
+    const liveSlot: 'front' | 'back' = slot === 'back' ? 'back' : 'front';
+    // Round 20 — back-row melee `-1 attack` (floored at 1 in
+    // `computeDamage`). Apply here so the per-round combat math sees
+    // the penalty without re-deriving the slot.
+    const meleePenalty = backRowMeleeAttackPenalty(formation, u.id, tmpl);
+    const finalStats: Stats =
+      meleePenalty < 0
+        ? { ...itemAdjusted, attack: Math.max(1, itemAdjusted.attack + meleePenalty) }
+        : itemAdjusted;
+    out.push({
       id: u.id,
       side,
-      stats: itemAdjusted,
+      stats: finalStats,
       abilities: tmpl.abilities,
       isLeader: u.id === party.leaderId,
       affinity: planeAffinityForPlane(tmpl, battlePlane),
       templateId: u.templateId,
+      slot: liveSlot,
       hp: u.currentHp,
       killed: u.currentHp <= 0,
       immobilizedRounds: 0,
       snareUsed: false,
-    };
-  });
+    });
+  }
+  return out;
 };
 
 const livingOnSide = (units: readonly LiveUnit[], side: Side): readonly LiveUnit[] =>
@@ -240,6 +273,10 @@ const applyRoundStartPassives = (units: readonly LiveUnit[], abilities: Abilitie
 
 /**
  * Targeting policy:
+ *   0. Round 20 — front-row absorbs first. If the opposing front row
+ *      has any living units, restrict candidates to them. Only when
+ *      all opposing front-row units are dead can the back row be
+ *      targeted. This applies on top of every other strategy.
  *   1. `target-weakest` on actor side: pick the lowest-HP enemy.
  *   2. `protect-leader` on enemy side: prefer non-leader enemies (round-robin).
  *   3. Otherwise round-robin: actor[i] hits enemies[i % enemies.length].
@@ -251,16 +288,21 @@ const pickTarget = (
   fallbackIndex: number,
 ): LiveUnit | null => {
   if (enemies.length === 0) return null;
+  // Round 20 — narrow to opposing front row first. Reserves are
+  // already absent from the live array (they don't engage); only
+  // front + back living units appear here.
+  const livingFront = enemies.filter((e) => !e.killed && e.slot === 'front');
+  const candidates = livingFront.length > 0 ? livingFront : enemies;
   if (actorStrategies.includes('target-weakest')) {
     let best: LiveUnit | null = null;
-    for (const e of enemies) if (best === null || e.hp < best.hp) best = e;
+    for (const e of candidates) if (best === null || e.hp < best.hp) best = e;
     return best;
   }
   if (enemyStrategies.includes('protect-leader')) {
-    const nonLeaders = enemies.filter((e) => !e.isLeader);
+    const nonLeaders = candidates.filter((e) => !e.isLeader);
     if (nonLeaders.length > 0) return nonLeaders[fallbackIndex % nonLeaders.length] ?? null;
   }
-  return enemies[fallbackIndex % enemies.length] ?? null;
+  return candidates[fallbackIndex % candidates.length] ?? null;
 };
 
 const HOME_POST_BY_FACTION: Readonly<Record<Faction, string | null>> = {
@@ -370,27 +412,66 @@ const maybeRedirectCockroach = (
   return friends[rng.int(friends.length)] ?? null;
 };
 
+interface RoundResult {
+  readonly round: BattleRound;
+  readonly promotions: readonly {
+    readonly side: Side;
+    readonly slot: 'front' | 'back';
+    readonly unitId: UnitId;
+  }[];
+}
+
 /**
  * Run one battle round. When `actingSide` is provided (round 15 — the
  * post-failed-flee bonus round), only that side's units fire and the
  * other side skips. Default behavior (both sides fire by agility
  * order) is preserved when the parameter is omitted.
+ *
+ * Round 20 — formation row ordering: within a side, front-row units
+ * fire before back-row units. Order is stable across the two row
+ * groups (each row independently agility-sorted by `computeAgilityOrder`).
+ * When a casualty empties the front row, the next reserve unit (if
+ * any) is promoted into front and joins `units` as a freshly-built
+ * `LiveUnit` immediately, but only acts on the next round.
  */
+interface FormationSlots {
+  attacker: Formation;
+  defender: Formation;
+}
+
 const runRound = (
   index: number,
-  units: readonly LiveUnit[],
+  units: LiveUnit[],
   ctx: ResolveContext,
   agilityRng: Rng,
   targetCounter: { atk: number; def: number },
+  formations: FormationSlots,
+  promote: (side: Side, slot: 'front' | 'back') => { unitId: UnitId; live: LiveUnit } | null,
   actingSide?: Side,
-): BattleRound => {
-  const order = computeAgilityOrder(
+): RoundResult => {
+  // Round 20 — agility-sort all living non-reserve units in one pass
+  // (preserves the prior RNG draw count: one tiebreak per unit), then
+  // partition the resulting order by row so front-row units across
+  // both sides fire before any back-row unit. Within a row group the
+  // agility-sorted order is preserved.
+  const fullOrder = computeAgilityOrder(
     units.filter((u) => !u.killed).map((u) => ({ id: u.id, stats: u.stats })),
     agilityRng,
   );
+  const slotById = new Map<UnitId, 'front' | 'back'>();
+  for (const u of units) slotById.set(u.id, u.slot);
+  const frontOrder: UnitId[] = [];
+  const backOrder: UnitId[] = [];
+  for (const id of fullOrder) {
+    if (slotById.get(id) === 'back') backOrder.push(id);
+    else frontOrder.push(id);
+  }
+  const order: UnitId[] = [...frontOrder, ...backOrder];
+
   const byId = new Map<UnitId, LiveUnit>();
   for (const u of units) byId.set(u.id, u);
   const actions: BattleAction[] = [];
+  const promotions: { side: Side; slot: 'front' | 'back'; unitId: UnitId }[] = [];
 
   for (const actorId of order) {
     const actor = byId.get(actorId);
@@ -425,7 +506,37 @@ const runRound = (
     );
     target.hp = Math.max(0, target.hp - dmg);
     const killed = target.hp <= 0;
-    if (killed) target.killed = true;
+    if (killed) {
+      target.killed = true;
+      // Round 20 — promotion fires immediately when a front- or
+      // back-row casualty resolves. Promote from reserve into the
+      // emptied row. Promoted unit joins `units` but doesn't act
+      // this round (the round's `order` array was frozen above).
+      const promotion = promote(target.side, target.slot);
+      if (promotion) {
+        promotions.push({ side: target.side, slot: target.slot, unitId: promotion.unitId });
+        units.push(promotion.live);
+        byId.set(promotion.live.id, promotion.live);
+        // Mutate the side's formation list so `pickTarget`'s
+        // front/back filter sees the new unit immediately on
+        // subsequent actions.
+        const f = target.side === 'attacker' ? formations.attacker : formations.defender;
+        const updated: Formation =
+          target.slot === 'front'
+            ? {
+                front: [...f.front, promotion.unitId],
+                back: f.back,
+                reserve: f.reserve.filter((id) => id !== promotion.unitId),
+              }
+            : {
+                front: f.front,
+                back: [...f.back, promotion.unitId],
+                reserve: f.reserve.filter((id) => id !== promotion.unitId),
+              };
+        if (target.side === 'attacker') formations.attacker = updated;
+        else formations.defender = updated;
+      }
+    }
     actions.push({ attackerId: actor.id, defenderId: target.id, damage: dmg, killed });
   }
 
@@ -434,7 +545,7 @@ const runRound = (
     if (u.immobilizedRounds > 0) u.immobilizedRounds -= 1;
   }
 
-  return { index, actions };
+  return { round: { index, actions }, promotions };
 };
 
 const updateUnits = (
@@ -659,9 +770,31 @@ export const resolveBattle = (
   // floor uses its floor row, not its ceiling row).
   const battlePlane: Plane = defender.location.plane;
   const phase: DayNightPhase = state.phase;
+  // Round 20 — formation slots. Reserve units are excluded from
+  // `live` until promotion. Old replays / hand-built test parties
+  // without `formation` fall through to "all front" so existing
+  // tests keep working.
+  const formations: FormationSlots = {
+    attacker: formationOrAllFront(attacker),
+    defender: formationOrAllFront(defender),
+  };
   const live: LiveUnit[] = [
-    ...buildLiveUnits(attacker, 'attacker', state.unitTemplates, battlePlane, phase),
-    ...buildLiveUnits(defender, 'defender', state.unitTemplates, battlePlane, phase),
+    ...buildLiveUnits(
+      attacker,
+      'attacker',
+      state.unitTemplates,
+      battlePlane,
+      phase,
+      formations.attacker,
+    ),
+    ...buildLiveUnits(
+      defender,
+      'defender',
+      state.unitTemplates,
+      battlePlane,
+      phase,
+      formations.defender,
+    ),
   ];
 
   // Snapshot every participant's HP at battle start (post-opening, since
@@ -771,9 +904,94 @@ export const resolveBattle = (
     }
 
     applyRoundStartPassives(live, input.abilities);
-    rounds.push(
-      runRound(i, live, ctx, agilityRng, targetCounter, pendingBonusActingSide ?? undefined),
+    // Round 20 — promotion callback. When the round detects a
+    // casualty in front/back, it asks for the next reserve unit on
+    // the same side; we build a fresh `LiveUnit` for that promoted
+    // reserve and update `formations`. Liveness map: a reserve
+    // unit's `currentHp` is the source unit's HP (reserve units
+    // never enter `live` so their HP doesn't change mid-battle).
+    const buildLive = (side: Side, unitId: UnitId, slot: 'front' | 'back'): LiveUnit | null => {
+      const sourceParty = side === 'attacker' ? attacker : defender;
+      const u = sourceParty.units.find((su) => su.id === unitId);
+      if (!u) return null;
+      const tmpl = state.unitTemplates.get(u.templateId);
+      if (!tmpl) return null;
+      if (u.currentHp <= 0) return null;
+      const itemOffset = partyItemOffset(sourceParty);
+      const phaseOffset = phaseStatOffsetFor(tmpl, phase);
+      const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
+      const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
+      // Re-derive the back-row melee penalty against a temporary
+      // formation that has the unit in `slot` already (so the
+      // helper short-circuits to "back" when slot === 'back').
+      const tmpFormation: Formation = { front: [], back: [], reserve: [] };
+      const slottedFormation: Formation =
+        slot === 'front'
+          ? { ...tmpFormation, front: [unitId] }
+          : { ...tmpFormation, back: [unitId] };
+      const meleePenalty = backRowMeleeAttackPenalty(slottedFormation, unitId, tmpl);
+      const finalStats: Stats =
+        meleePenalty < 0
+          ? { ...itemAdjusted, attack: Math.max(1, itemAdjusted.attack + meleePenalty) }
+          : itemAdjusted;
+      return {
+        id: unitId,
+        side,
+        stats: finalStats,
+        abilities: tmpl.abilities,
+        isLeader: unitId === sourceParty.leaderId,
+        affinity: planeAffinityForPlane(tmpl, battlePlane),
+        templateId: u.templateId,
+        slot,
+        hp: u.currentHp,
+        killed: false,
+        immobilizedRounds: 0,
+        snareUsed: false,
+      };
+    };
+    const promote = (
+      side: Side,
+      slot: 'front' | 'back',
+    ): { unitId: UnitId; live: LiveUnit } | null => {
+      const f = side === 'attacker' ? formations.attacker : formations.defender;
+      // Build liveness map from the source party so dead reserves
+      // (rare — reserves never take damage in v1) aren't promoted.
+      const sourceParty = side === 'attacker' ? attacker : defender;
+      const liveByUnitId = new Map<UnitId, boolean>();
+      for (const u of sourceParty.units) liveByUnitId.set(u.id, u.currentHp > 0);
+      const result = promoteReserve(f, slot, liveByUnitId);
+      if (result.promotedId === null) return null;
+      const liveUnit = buildLive(side, result.promotedId, slot);
+      if (!liveUnit) return null;
+      // Mutation of `formations` is also done inside runRound after
+      // it inspects this return; do it here too so any future early-
+      // return caller sees the updated state.
+      if (side === 'attacker') formations.attacker = result.formation;
+      else formations.defender = result.formation;
+      return { unitId: result.promotedId, live: liveUnit };
+    };
+    const rr = runRound(
+      i,
+      live,
+      ctx,
+      agilityRng,
+      targetCounter,
+      formations,
+      promote,
+      pendingBonusActingSide ?? undefined,
     );
+    rounds.push(rr.round);
+    for (const p of rr.promotions) {
+      const partyId = p.side === 'attacker' ? attacker.id : defender.id;
+      fleeEvents.push({
+        kind: 'formation-promoted',
+        turn: turnNum,
+        tick: tick(),
+        partyId,
+        slot: p.slot,
+        unitId: p.unitId,
+      });
+    }
     pendingBonusActingSide = null;
   }
 
@@ -929,6 +1147,12 @@ export const resolveBattle = (
     location: loserId === attacker.id && retreatTo !== null ? retreatTo : attacker.location,
     leaderless: attacker.leaderless || attackerLeaderKilled,
     orders: attackerOrders,
+    // Round 20 — persist any mid-battle promotions so the next
+    // battle's formation reflects the casualty churn. (Dead units
+    // remain in the formation slot lists; combat skips them via
+    // the live filter, but the slot id stays so a subsequent
+    // promotion doesn't double-up.)
+    formation: formations.attacker,
   };
   const newDefender: Party = {
     ...defender,
@@ -936,6 +1160,7 @@ export const resolveBattle = (
     location: loserId === defender.id && retreatTo !== null ? retreatTo : defender.location,
     leaderless: defender.leaderless || defenderLeaderKilled,
     orders: defenderOrders,
+    formation: formations.defender,
   };
 
   const newParties = new Map(state.parties);

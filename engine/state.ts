@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { coordKey } from './coord.ts';
+import { assignFormation } from './formation.ts';
 import { spawnItems } from './items.ts';
 import { generateRandomMap } from './map-gen.ts';
 import { spawnNeutrals } from './neutrals.ts';
@@ -233,6 +234,10 @@ const buildParties = (
         );
       }
       const id = partyDef.id as PartyId;
+      // Round 20 — auto-assign the formation (mechanics memo §1.5)
+      // from template tags + size. Front cap 3, back cap 2,
+      // overflow goes to reserve. Deterministic in roster order.
+      const formation = assignFormation(units, templates);
       parties.set(id, {
         id,
         faction: roster.faction,
@@ -244,6 +249,7 @@ const buildParties = (
         strategyModifiers: [],
         jellyDoses: 0,
         leaderless: false,
+        formation,
       });
     }
   }
