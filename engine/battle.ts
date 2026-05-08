@@ -39,6 +39,11 @@ import {
 import { goldForKill } from './gold-table.ts';
 import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
+import {
+  computePostOccupationOffsets,
+  offsetForFaction,
+  type PostOccupationOffset,
+} from './post-bonus.ts';
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
@@ -169,6 +174,7 @@ const buildLiveUnits = (
   battlePlane: Plane,
   phase: DayNightPhase,
   formation: Formation,
+  postOccupationOffset: PostOccupationOffset,
 ): LiveUnit[] => {
   // Round 14: equipped persistent item buffs the whole party's stats
   // additively (brass-knuckles +1 atk, leather-pad +1 armor,
@@ -195,10 +201,15 @@ const buildLiveUnits = (
     const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
     const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
     // Round 25 — fold card attack/armor in alongside item offsets.
+    // Round 28 — POST-occupation bonus stacks in the same additive
+    // lane (every owned non-base POST gives +1 attack / +1 armor
+    // party-wide). Same lane as item / phase / plane-affinity
+    // offsets, so a +1 bonus per POST never multiplies into the
+    // posture / jelly / queen stack.
     const cardAdjusted: Stats = {
       ...itemAdjusted,
-      attack: itemAdjusted.attack + cardOffset.attack,
-      armor: itemAdjusted.armor + cardOffset.armor,
+      attack: itemAdjusted.attack + cardOffset.attack + postOccupationOffset.attack,
+      armor: itemAdjusted.armor + cardOffset.armor + postOccupationOffset.armor,
     };
     const slot = slotForUnit(formation, u.id);
     // A unit not in front/back/reserve was filtered above; here it's
@@ -813,6 +824,12 @@ export const resolveBattle = (
     attacker: formationOrAllFront(attacker),
     defender: formationOrAllFront(defender),
   };
+  // Round 28 — POST-occupation party-wide combat bonus (mechanics
+  // spec §28). Compute once per battle from the current POST
+  // ownership; apply per-faction at unit-build time.
+  const postOccupationOffsets = computePostOccupationOffsets(state);
+  const attackerPostOffset = offsetForFaction(postOccupationOffsets, attacker.faction);
+  const defenderPostOffset = offsetForFaction(postOccupationOffsets, defender.faction);
   const live: LiveUnit[] = [
     ...buildLiveUnits(
       attacker,
@@ -821,6 +838,7 @@ export const resolveBattle = (
       battlePlane,
       phase,
       formations.attacker,
+      attackerPostOffset,
     ),
     ...buildLiveUnits(
       defender,
@@ -829,6 +847,7 @@ export const resolveBattle = (
       battlePlane,
       phase,
       formations.defender,
+      defenderPostOffset,
     ),
   ];
 
@@ -956,6 +975,17 @@ export const resolveBattle = (
       const phaseOffset = phaseStatOffsetFor(tmpl, phase);
       const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
       const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
+      // Round 28 — promoted reserves inherit the same POST-occupation
+      // bonus their party already enjoys. Apply on the additive lane
+      // so a +1 / +1 from a single owned mid-POST is comparable in
+      // magnitude to an item buff and never multiplies into the
+      // posture / jelly stack.
+      const sidePostOffset = side === 'attacker' ? attackerPostOffset : defenderPostOffset;
+      const postAdjusted: Stats = {
+        ...itemAdjusted,
+        attack: itemAdjusted.attack + sidePostOffset.attack,
+        armor: itemAdjusted.armor + sidePostOffset.armor,
+      };
       // Re-derive the back-row melee penalty against a temporary
       // formation that has the unit in `slot` already (so the
       // helper short-circuits to "back" when slot === 'back').
@@ -967,8 +997,8 @@ export const resolveBattle = (
       const meleePenalty = backRowMeleeAttackPenalty(slottedFormation, unitId, tmpl);
       const finalStats: Stats =
         meleePenalty < 0
-          ? { ...itemAdjusted, attack: Math.max(1, itemAdjusted.attack + meleePenalty) }
-          : itemAdjusted;
+          ? { ...postAdjusted, attack: Math.max(1, postAdjusted.attack + meleePenalty) }
+          : postAdjusted;
       return {
         id: unitId,
         side,
@@ -1091,6 +1121,25 @@ export const resolveBattle = (
   const events: ReplayEvent[] = [...openingEvents, ...fleeEvents];
   const turn = state.turn;
   events.push({ kind: 'battle-resolved', turn, tick: tick(), result });
+  // Round 28 — POST-occupation bonus summary. Captures the active
+  // per-faction party-wide combat bonus at battle resolution time so
+  // the viewer / critics can attribute damage swings to POST
+  // ownership without re-deriving from `state.posts`.
+  events.push({
+    kind: 'post-occupation-bonus-summary',
+    turn,
+    tick: tick(),
+    ant: {
+      posts: postOccupationOffsets.ant.attack,
+      attack: postOccupationOffsets.ant.attack,
+      armor: postOccupationOffsets.ant.armor,
+    },
+    spider: {
+      posts: postOccupationOffsets.spider.attack,
+      attack: postOccupationOffsets.spider.attack,
+      armor: postOccupationOffsets.spider.armor,
+    },
+  });
   for (const id of attackerCasualties) {
     events.push({ kind: 'unit-died', turn, tick: tick(), unitId: id });
   }

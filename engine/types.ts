@@ -1177,6 +1177,31 @@ export type ReplayEvent =
       readonly toTemplate: UnitTemplateId;
     })
   | (ReplayEventCommon & {
+      /**
+       * Round 28 — POST-occupation combat bonus summary (mechanics
+       * spec §28). Emitted at the end of every resolved battle and
+       * captures the active per-faction party-wide combat bonus
+       * derived from owned non-base POSTs (every owned mid-POST grants
+       * +1 attack / +1 armor; storm-drain and spider-web are excluded
+       * as home bases). `posts` is the count of owned non-base POSTs
+       * for that faction; `attack` and `armor` are the per-unit flat
+       * offsets folded into the additive combat lane. Old replays
+       * loading this event-less stream are unaffected — the viewer
+       * treats a missing summary as "no bonus" and renders normally.
+       */
+      readonly kind: 'post-occupation-bonus-summary';
+      readonly ant: {
+        readonly posts: number;
+        readonly attack: number;
+        readonly armor: number;
+      };
+      readonly spider: {
+        readonly posts: number;
+        readonly attack: number;
+        readonly armor: number;
+      };
+    })
+  | (ReplayEventCommon & {
       readonly kind: 'scenario-end';
       readonly winner: Faction;
       /**
