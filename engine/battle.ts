@@ -9,6 +9,17 @@
 import { applyOpeningAbilities } from './battle-abilities.ts';
 import { partyCardOffset } from './cards.ts';
 import {
+  CHARISMA_FLEE_LOSS,
+  CHARISMA_PARITY_GAIN,
+  CHARISMA_QUEEN_KILL_GAIN,
+  categorizeEngagement,
+  clampCharisma,
+  deltaForCategory,
+  partySlotCount,
+  reasonForCategory,
+} from './charisma.ts';
+import type { CharismaUnitUpdate } from './charisma.ts';
+import {
   computeAgilityOrder,
   computeDamage,
   computePostureMultipliers,
@@ -564,11 +575,19 @@ const updateUnits = (
   party: Party,
   liveById: ReadonlyMap<UnitId, LiveUnit>,
   xpDelta: number,
+  charismaById?: ReadonlyMap<UnitId, number>,
 ): readonly Unit[] =>
   party.units.map((u) => {
     const live = liveById.get(u.id);
-    if (!live) return u;
-    return { ...u, currentHp: live.hp, ...(live.killed ? {} : { xp: u.xp + xpDelta }) };
+    const newCharisma = charismaById?.get(u.id);
+    const charismaPatch = newCharisma !== undefined ? { charisma: newCharisma } : {};
+    if (!live) return { ...u, ...charismaPatch };
+    return {
+      ...u,
+      currentHp: live.hp,
+      ...(live.killed ? {} : { xp: u.xp + xpDelta }),
+      ...charismaPatch,
+    };
   });
 
 // ---------------------------------------------------------------------------
@@ -1150,6 +1169,118 @@ export const resolveBattle = (
   const liveById = new Map<UnitId, LiveUnit>();
   for (const u of live) liveById.set(u.id, u);
 
+  // Round 26 — charisma adjustments (mechanics memo §1.4). Each
+  // ant/spider battle nudges the attacker's living units up or down
+  // based on the defender's slot-count delta, and (separately) fires
+  // a +20 queen-kill bump on the unit that landed the killing blow on
+  // an enemy queen + a -5 flee penalty on the fleeing party's living
+  // units. Neutral-vs-* battles skip the engagement category bump
+  // entirely (only ant/spider can promote); queen-kill and flee still
+  // apply when the relevant side is ant/spider.
+  const charismaUpdatesById = new Map<UnitId, number>();
+  const charismaEvents: ReplayEvent[] = [];
+  const queueCharismaDelta = (
+    party: Party,
+    delta: number,
+    reason: CharismaUnitUpdate['reason'],
+    eligibleIds?: ReadonlySet<UnitId>,
+  ): void => {
+    for (const u of party.units) {
+      if (u.charisma === undefined) continue;
+      if (eligibleIds && !eligibleIds.has(u.id)) continue;
+      // Living check: the live array (post-battle) is the source of
+      // truth for who survived. Reserve units (not in `live`) keep
+      // full HP and remain eligible — they didn't engage but they
+      // were part of the engaging party. Spec wording is "attacker
+      // units" — interpret broadly as the entire surviving roster.
+      const liveUnit = liveById.get(u.id);
+      const isReserve = liveUnit === undefined;
+      const aliveAfter = isReserve ? u.currentHp > 0 : !liveUnit.killed;
+      if (!aliveAfter) continue;
+      const baseline =
+        charismaUpdatesById.get(u.id) === undefined
+          ? u.charisma
+          : (charismaUpdatesById.get(u.id) ?? u.charisma);
+      const oldCharisma = baseline;
+      const newCharisma = clampCharisma(oldCharisma + delta);
+      if (newCharisma === oldCharisma) continue;
+      charismaUpdatesById.set(u.id, newCharisma);
+      charismaEvents.push({
+        kind: 'charisma-changed',
+        turn,
+        tick: tick(),
+        partyId: party.id,
+        unitId: u.id,
+        oldCharisma,
+        newCharisma,
+        reason,
+      });
+    }
+  };
+
+  // Engagement category — the spec adjusts the *attacker's* units
+  // based on attacker-vs-defender slot count, plus "participating
+  // units" on parity. Apply the categorized delta to the attacker;
+  // additionally grant the parity-bullet's "+1 to participating
+  // units" reading by mirroring the parity case to the defender too.
+  // Underdog/overdog are explicitly attacker-only ("attacker units
+  // gain +5", "-3 charisma to attacker units" — the defender is the
+  // passive recipient of the engagement, not the agent).
+  const atkSlots = partySlotCount(attacker, state.unitTemplates);
+  const defSlots = partySlotCount(defender, state.unitTemplates);
+  if (attacker.faction === 'ant' || attacker.faction === 'spider') {
+    const category = categorizeEngagement(atkSlots, defSlots);
+    const delta = deltaForCategory(category);
+    queueCharismaDelta(attacker, delta, reasonForCategory(category));
+  }
+  if (defender.faction === 'ant' || defender.faction === 'spider') {
+    const category = categorizeEngagement(atkSlots, defSlots);
+    if (category === 'parity') {
+      // Parity bullet's "participating units" reading: the defender
+      // also accrues +1 when the slot-count gap is small. This
+      // surfaces queen-guard / home-base defender promotion paths
+      // that would otherwise never accumulate charisma.
+      queueCharismaDelta(defender, CHARISMA_PARITY_GAIN, 'parity');
+    }
+  }
+
+  // Queen-kill bonus: walk every `killed` action across the rounds
+  // and credit the killer with +20 charisma when the dead unit is a
+  // queen. Friendly-fire (rare) is excluded by the side check.
+  for (const round of rounds) {
+    for (const action of round.actions) {
+      if (!action.killed) continue;
+      const attackerSide = sideById.get(action.attackerId);
+      const defenderSide = sideById.get(action.defenderId);
+      if (attackerSide === undefined || defenderSide === undefined) continue;
+      if (attackerSide === defenderSide) continue;
+      const deadTemplateId = templateById.get(action.defenderId);
+      if (!deadTemplateId) continue;
+      const deadTemplate = state.unitTemplates.get(deadTemplateId);
+      if (!deadTemplate) continue;
+      if (!deadTemplate.tags.includes('queen')) continue;
+      const killerParty = attackerSide === 'attacker' ? attacker : defender;
+      queueCharismaDelta(
+        killerParty,
+        CHARISMA_QUEEN_KILL_GAIN,
+        'queen-kill',
+        new Set([action.attackerId]),
+      );
+    }
+  }
+
+  // Flee penalty: -5 charisma to every living unit in the party that
+  // succeeded a flee this battle. Failed flee attempts do not apply
+  // the penalty (spec is "fleeing" — interpret as a successful retreat
+  // out of the battle).
+  if (fleeSucceeded && fleeingPartyId !== null) {
+    const fleeingParty = fleeingPartyId === attacker.id ? attacker : defender;
+    if (fleeingParty.faction === 'ant' || fleeingParty.faction === 'spider') {
+      queueCharismaDelta(fleeingParty, CHARISMA_FLEE_LOSS, 'flee');
+    }
+  }
+  events.push(...charismaEvents);
+
   // Locations: winner stays. Loser moves to retreatTo if available; otherwise
   // stays in place (caller treats retreatTo === null as loser stuck/destroyed).
   // Round 15: the fleer's knockback tile is stored in retreatTo and the
@@ -1159,7 +1290,7 @@ export const resolveBattle = (
   // the next turn doesn't double-fire on a stale order.
   const newAttacker: Party = {
     ...attacker,
-    units: updateUnits(attacker, liveById, attackerXp),
+    units: updateUnits(attacker, liveById, attackerXp, charismaUpdatesById),
     location: loserId === attacker.id && retreatTo !== null ? retreatTo : attacker.location,
     leaderless: attacker.leaderless || attackerLeaderKilled,
     orders: attackerOrders,
@@ -1172,7 +1303,7 @@ export const resolveBattle = (
   };
   const newDefender: Party = {
     ...defender,
-    units: updateUnits(defender, liveById, defenderXp),
+    units: updateUnits(defender, liveById, defenderXp, charismaUpdatesById),
     location: loserId === defender.id && retreatTo !== null ? retreatTo : defender.location,
     leaderless: defender.leaderless || defenderLeaderKilled,
     orders: defenderOrders,

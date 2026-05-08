@@ -414,6 +414,190 @@
         "ceiling": { "attack": 0, "armor": 0 },
         "wall": { "attack": 0, "armor": 0 }
       }
+    },
+    {
+      "id": "ant-veteran-footman",
+      "name": "Ant Veteran Footman",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 8,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 7
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "infantry", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-sharpshooter",
+      "name": "Ant Sharpshooter",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 7,
+        "agility": 7,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": ["volley"],
+      "tags": ["ranged", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-archmage",
+      "name": "Ant Archmage",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 6,
+        "agility": 5,
+        "armor": 1,
+        "intelligence": 9,
+        "constitution": 6
+      },
+      "abilities": ["ant-plane-switch", "mend", "jelly-apply", "recruit"],
+      "tags": ["caster", "leader-eligible", "support", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-scout-elite",
+      "name": "Ant Scout Elite",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 5,
+        "agility": 11,
+        "armor": 0,
+        "intelligence": 3,
+        "constitution": 6
+      },
+      "abilities": ["pheroblast", "scout-ping"],
+      "tags": ["scout", "leader-eligible", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-veteran-soldier",
+      "name": "Spider Veteran Soldier",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 15,
+        "attack": 6,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["melee", "infantry", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-knight",
+      "name": "Spider Knight",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 16,
+        "attack": 5,
+        "agility": 5,
+        "armor": 2,
+        "intelligence": 3,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["melee", "elite", "queen-guard", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-weaver",
+      "name": "Spider Weaver",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 16,
+        "attack": 6,
+        "agility": 4,
+        "armor": 2,
+        "intelligence": 6,
+        "constitution": 5
+      },
+      "abilities": ["web-tangle", "spin-web", "venom-blast"],
+      "tags": ["debuffer", "support", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-stalker",
+      "name": "Spider Stalker",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 12,
+        "attack": 4,
+        "agility": 8,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["scout", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
     }
   ]
 }

@@ -51,7 +51,12 @@ export interface FactionScoreBreakdown {
   /** Sum of living-unit currentHp across all the faction's parties
    * (including the queen-guard / queen party). */
   readonly hp: number;
-  /** Charisma-promoted units (placeholder for round 24): always 0. */
+  /** Round 26 — sum of `(unit.charisma - 50)` across all living
+   * promotable units of the faction (mechanics memo §1.4). Acts as a
+   * meaningful tiebreaker in score-resolved games: a faction that
+   * routinely engaged uphill (underdog +5s) carries a positive
+   * column; a faction that bullied small parties (overdog -3s)
+   * carries a negative one. */
   readonly charisma: number;
   /** Sum of the components above. */
   readonly total: number;
@@ -139,12 +144,23 @@ const livingHpBonus = (state: GameState, faction: Faction): number => {
   return hp;
 };
 
-const charismaBonus = (_state: GameState, _faction: Faction): number => {
-  // Round 24 (mechanics memo §1.4 / queue order 6) will populate this
-  // column with a count of charisma-promoted units. Today there is no
-  // charisma stat; the column is reserved so the score-formula
-  // structure stays stable across rounds.
-  return 0;
+const charismaBonus = (state: GameState, faction: Faction): number => {
+  // Round 26 — sum of (charisma - 50) across all living promotable
+  // units of the faction (mechanics memo §1.4). The 50 baseline
+  // means a faction that has done nothing nets 0 here; the column
+  // turns positive when the faction has accumulated underdog or
+  // queen-kill bonuses, negative when it has overwhelmingly bullied
+  // smaller parties or fled.
+  let total = 0;
+  for (const party of state.parties.values()) {
+    if (party.faction !== faction) continue;
+    for (const unit of party.units) {
+      if (unit.currentHp <= 0) continue;
+      if (unit.charisma === undefined) continue;
+      total += unit.charisma - 50;
+    }
+  }
+  return total;
 };
 
 const scoreFaction = (state: GameState, faction: 'ant' | 'spider'): FactionScoreBreakdown => {
