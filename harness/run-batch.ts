@@ -114,6 +114,13 @@ const main = (): void => {
   let antWins = 0;
   let spiderWins = 0;
   let timeouts = 0;
+  // Round 19 — count games resolved at max-turn via score
+  // (mechanics memo §1.6). These are reported as ant/spider wins
+  // (not timeouts), but tracked separately so we can see how often
+  // the score path fires and which faction it favors.
+  let scoreResolvedWins = 0;
+  let scoreResolvedAntWins = 0;
+  let scoreResolvedSpiderWins = 0;
   let totalVictoryTurns = 0;
   let totalTimeoutTurns = 0;
   let totalEvents = 0;
@@ -141,21 +148,52 @@ const main = (): void => {
       const post = outcome.finalState.posts.get(id);
       if (post?.owner === 'ant') antPosts += 1;
     }
+    // Round 19 — detect score-resolved wins by walking the events for
+    // a `scenario-end` carrying `scoreBreakdown`. (Decisive wins emit
+    // the same event without the field.) This lets the harness count
+    // them as faction wins per the new spec while still tracking the
+    // path for telemetry.
+    let scoreResolved = false;
+    for (const ev of outcome.events) {
+      if (ev.kind === 'scenario-end' && ev.scoreBreakdown !== undefined) {
+        scoreResolved = true;
+        break;
+      }
+    }
     perSeed.push({
       seed,
       winner,
       turns: outcome.turnsPlayed,
       antPostsAtEnd: antPosts,
       events: outcome.events.length,
+      scoreResolved,
     });
     totalEvents += outcome.events.length;
     if (winner === 'ant') {
       antWins += 1;
+      // Score-resolved games end at max-turn, so their `turnsPlayed`
+      // == maxTurns. Including them in the avg-turns-to-victory
+      // metric accurately reflects "how long ant wins took on
+      // average" — many of those wins came at the buzzer.
       totalVictoryTurns += outcome.turnsPlayed;
+      if (scoreResolved) {
+        scoreResolvedAntWins += 1;
+        scoreResolvedWins += 1;
+        totalTimeoutTurns += outcome.turnsPlayed;
+      }
     } else if (winner === 'spider') {
       spiderWins += 1;
       totalVictoryTurns += outcome.turnsPlayed;
+      if (scoreResolved) {
+        scoreResolvedSpiderWins += 1;
+        scoreResolvedWins += 1;
+        totalTimeoutTurns += outcome.turnsPlayed;
+      }
     } else {
+      // With round-19 score-resolution, a null winner shouldn't
+      // happen — the engine awards the timeout via score. Kept for
+      // safety: a zero-policies harness call could in theory hit
+      // this branch.
       timeouts += 1;
       totalTimeoutTurns += outcome.turnsPlayed;
     }
@@ -168,9 +206,13 @@ const main = (): void => {
     antWins,
     spiderWins,
     timeouts,
+    scoreResolvedWins,
+    scoreResolvedAntWins,
+    scoreResolvedSpiderWins,
     antWinRate: antWins / args.seeds.length,
     avgTurnsToVictory: decided > 0 ? totalVictoryTurns / decided : null,
-    avgTurnsAtTimeout: timeouts > 0 ? totalTimeoutTurns / timeouts : null,
+    avgTurnsAtTimeout:
+      timeouts + scoreResolvedWins > 0 ? totalTimeoutTurns / (timeouts + scoreResolvedWins) : null,
     avgEventsPerRun: totalEvents / args.seeds.length,
     perSeed,
   };
@@ -181,6 +223,9 @@ const main = (): void => {
   );
   console.log(
     `Outcomes: ant=${String(antWins)} spider=${String(spiderWins)} timeout=${String(timeouts)}`,
+  );
+  console.log(
+    `Score-resolved wins: ${String(scoreResolvedWins)} (ant=${String(scoreResolvedAntWins)} spider=${String(scoreResolvedSpiderWins)})`,
   );
   console.log(`Ant win rate: ${(summary.antWinRate * 100).toFixed(1)}% (target 65–80%)`);
   if (summary.avgTurnsToVictory !== null) {

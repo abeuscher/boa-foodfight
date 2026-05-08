@@ -135,6 +135,11 @@ function reduceWithInitial(events, targetTick) {
   let antGold = 0;
   let spiderGold = 0;
   let winner = null;
+  // Round 19 — per-faction score breakdown attached to a timeout-
+  // resolved scenario-end. Null when the win was decisive (queen
+  // kill / spider-web capture / field-force wipe). Surfaced in the
+  // parties JSON viewer panel for inspection.
+  let scoreBreakdown = null;
   for (const e of events) {
     // scenario-start carries the initial map state. Its emit tick (1)
     // is technically AFTER targetTick=0 (the initial frame the viewer
@@ -357,6 +362,11 @@ function reduceWithInitial(events, targetTick) {
       }
       case 'scenario-end':
         winner = e.winner;
+        // Round 19 — capture score-resolved win telemetry (mechanics
+        // memo §1.6). Decisive wins leave the field undefined and we
+        // keep `scoreBreakdown` null so the parties panel doesn't
+        // render it for capture-path wins.
+        if (e.scoreBreakdown) scoreBreakdown = e.scoreBreakdown;
         break;
       default:
         break;
@@ -378,6 +388,7 @@ function reduceWithInitial(events, targetTick) {
     antGold,
     spiderGold,
     winner,
+    scoreBreakdown,
   };
 }
 
@@ -928,6 +939,13 @@ function renderPartiesPanel(state) {
         })),
       })),
     };
+    // Round 19 — surface the score breakdown for timeout-resolved
+    // wins (mechanics memo §1.6) so a viewer-side reader can verify
+    // the awarded faction and per-component points without reading
+    // the raw JSONL. Decisive wins leave the field absent.
+    if (state.scoreBreakdown) {
+      snapshot.scoreBreakdown = state.scoreBreakdown;
+    }
   }
   document.getElementById('parties-content').textContent = JSON.stringify(snapshot, null, 2);
 }
@@ -1416,8 +1434,17 @@ function describeEvent(e) {
       return `${e.partyId} ${e.abilityId}`;
     case 'queen-ultimate-fired':
       return '';
-    case 'scenario-end':
+    case 'scenario-end': {
+      // Round 19 — score-resolved wins carry a per-faction breakdown.
+      // Render the totals inline so the reader can see at a glance
+      // why the score awarded the win.
+      if (e.scoreBreakdown) {
+        const a = e.scoreBreakdown.ant;
+        const s = e.scoreBreakdown.spider;
+        return `winner=${e.winner} (score: ant=${String(a.total)} [posts=${String(a.posts)} queen=${String(a.queen)} web=${a.webProgress.toFixed(1)} hp=${String(a.hp)}] spider=${String(s.total)} [posts=${String(s.posts)} queen=${String(s.queen)} hp=${String(s.hp)}])`;
+      }
       return `winner=${e.winner}`;
+    }
     case 'turn-start':
       return `turn ${e.turn}`;
     case 'neutral-spawned':
