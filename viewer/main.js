@@ -1453,6 +1453,8 @@ function describeEvent(e) {
       return `${e.partyId} fled ${e.knockbackFrom.plane}(${e.knockbackFrom.x},${e.knockbackFrom.y})→${e.knockbackTo.plane}(${e.knockbackTo.x},${e.knockbackTo.y})`;
     case 'battle-flee-failed':
       return `${e.partyId} flee failed`;
+    case 'web-mended':
+      return `${e.partyId} +${String(e.hpHealed)} HP (${String(e.perUnit?.length ?? 0)} units)`;
     case 'flee-queued': {
       // Round 16 — AI-side flee intent. `reason` distinguishes the
       // round-15 HP-threshold trigger from the round-16 threat

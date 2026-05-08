@@ -606,6 +606,22 @@ export type ReplayEvent =
       readonly newPartyIds: readonly PartyId[];
     })
   | (ReplayEventCommon & {
+      /**
+       * Round 18 — `web-mend` use-ability fires. Captures the per-unit
+       * heal so the viewer / critics can attribute regeneration. The
+       * existing `web-mend` battle-passive (engine/battle.ts) does NOT
+       * emit this event; it only fires from `resolveAbilityOrders`.
+       */
+      readonly kind: 'web-mended';
+      readonly partyId: PartyId;
+      readonly hpHealed: number;
+      readonly perUnit: readonly {
+        readonly unitId: UnitId;
+        readonly hpBefore: number;
+        readonly hpAfter: number;
+      }[];
+    })
+  | (ReplayEventCommon & {
       readonly kind: 'corner-crossed';
       readonly partyId: PartyId;
       readonly from: TileCoord;
