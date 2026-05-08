@@ -7,6 +7,7 @@
  */
 
 import { applyOpeningAbilities } from './battle-abilities.ts';
+import { partyCardOffset } from './cards.ts';
 import {
   computeAgilityOrder,
   computeDamage,
@@ -165,6 +166,11 @@ const buildLiveUnits = (
   // affinity / phase offsets so a +1 from items never doubles into
   // 1.5-2x reach.
   const itemOffset = partyItemOffset(party);
+  // Round 25 — commander-card buffs (mechanics memo §1.3). Frenzy
+  // contributes +attack and bulwark contributes +armor in the same
+  // additive lane as item / plane-affinity offsets so the buff never
+  // multiplies into the queen / jelly stack.
+  const cardOffset = partyCardOffset(party);
   // Round 20 — reserve units don't fight. Skip them at build time so
   // they're absent from `live` (no targeting, no actions, no damage
   // intake). They re-enter on promotion via `promoteReserve`.
@@ -177,6 +183,12 @@ const buildLiveUnits = (
     const phaseOffset = phaseStatOffsetFor(tmpl, phase);
     const phaseAdjusted = applyPhaseOffsetToStats(tmpl.baseStats, phaseOffset);
     const itemAdjusted = applyItemOffsetToStats(phaseAdjusted, itemOffset);
+    // Round 25 — fold card attack/armor in alongside item offsets.
+    const cardAdjusted: Stats = {
+      ...itemAdjusted,
+      attack: itemAdjusted.attack + cardOffset.attack,
+      armor: itemAdjusted.armor + cardOffset.armor,
+    };
     const slot = slotForUnit(formation, u.id);
     // A unit not in front/back/reserve was filtered above; here it's
     // safe to coerce 'reserve' away — but be defensive.
@@ -187,8 +199,8 @@ const buildLiveUnits = (
     const meleePenalty = backRowMeleeAttackPenalty(formation, u.id, tmpl);
     const finalStats: Stats =
       meleePenalty < 0
-        ? { ...itemAdjusted, attack: Math.max(1, itemAdjusted.attack + meleePenalty) }
-        : itemAdjusted;
+        ? { ...cardAdjusted, attack: Math.max(1, cardAdjusted.attack + meleePenalty) }
+        : cardAdjusted;
     out.push({
       id: u.id,
       side,

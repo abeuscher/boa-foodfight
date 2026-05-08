@@ -17,6 +17,14 @@ export type AbilityId = string & { readonly __brand: 'AbilityId' };
 export type UnitTemplateId = string & { readonly __brand: 'UnitTemplateId' };
 /** Round 14 — items. Identifies one of the templates in items.json. */
 export type ItemId = string & { readonly __brand: 'ItemId' };
+/**
+ * Round 25 — commander cards (mechanics memo §1.3, Risk 2210 inspired
+ * gold sink). Identifies one of the card templates in `engine/cards.ts`
+ * (`CARD_POOL`). Cards live in two places: the public `cardMarket`
+ * (deterministic shop visible to both factions) and per-faction
+ * `cardHand` slots (cap 3) until played.
+ */
+export type CardId = string & { readonly __brand: 'CardId' };
 
 // ---------------------------------------------------------------------------
 // World
@@ -217,7 +225,49 @@ export interface FleeOrder {
   readonly kind: 'flee';
 }
 
-export type Order = MoveOrder | CaptureOrder | AbilityOrder | HoldOrder | FleeOrder;
+/**
+ * Round 25 — commander cards (mechanics memo §1.3). Buy a card from the
+ * public market for the issuing party's faction. Cost is deducted from
+ * `state.playerGold[faction]`; the bought card is appended to that
+ * faction's `cardHand` (cap 3). The market then refills the freed
+ * slot from the deck. Issued by an AI policy at any turn-start;
+ * resolved before movement / battle. If the faction can't afford the
+ * card, the hand is full, or the card isn't in the market, the order
+ * silently fails (no event, no gold deduction).
+ */
+export interface BuyCardOrder {
+  readonly kind: 'buy-card';
+  readonly cardId: CardId;
+  /** Faction issuing the order. Preserved on the order so a single
+   * resolver pass can dispatch by faction without scanning every
+   * party's faction field at execution time. */
+  readonly faction: 'ant' | 'spider';
+}
+
+/**
+ * Round 25 — play a card from the issuing faction's hand. Effects vary
+ * by card (see `engine/cards.ts`'s `applyCardEffect` switch). The
+ * optional `partyId` carries a friendly target (e.g., the party
+ * `frenzy` should buff); `targetPartyId` carries an enemy target
+ * (e.g., `quick-strike`'s damage target). One-shot: the card is
+ * removed from the hand on play.
+ */
+export interface PlayCardOrder {
+  readonly kind: 'play-card';
+  readonly cardId: CardId;
+  readonly faction: 'ant' | 'spider';
+  readonly partyId?: PartyId;
+  readonly targetPartyId?: PartyId;
+}
+
+export type Order =
+  | MoveOrder
+  | CaptureOrder
+  | AbilityOrder
+  | HoldOrder
+  | FleeOrder
+  | BuyCardOrder
+  | PlayCardOrder;
 
 // ---------------------------------------------------------------------------
 // Parties
@@ -291,6 +341,31 @@ export interface Party {
    * as "all units front" by combat resolution (legacy row-blind
    * behavior), so older replays / hand-built test parties still work. */
   readonly formation?: Formation;
+  /**
+   * Round 25 — transient card-driven buffs (mechanics memo §1.3). Set
+   * by the corresponding `play-card` order (`extra-charge`, `frenzy`,
+   * `bulwark`, `forced-march`) and decayed by the end-of-turn tick.
+   * Optional for backwards compatibility: a missing field is treated
+   * as "no active buff" by combat / movement.
+   *
+   * - `attackBonus` — flat per-unit attack add (frenzy: +2 for the
+   *   current battle).
+   * - `armorBonus` — flat per-unit armor add (bulwark: +2 for 3 turns).
+   * - `extraMovement` — extra movement allowance per turn
+   *   (extra-charge: +2 for 3 turns).
+   * - `forcedMarch` — when true, the party may take 2 movement
+   *   actions this turn (consumed at end-of-turn).
+   * - `bonusTurnsRemaining` — turns left for attack/armor/movement
+   *   bonuses; reaches 0 → buffs drop. Frenzy uses 1; bulwark/extra-
+   *   charge use 3.
+   */
+  readonly cardBuffs?: {
+    readonly attackBonus: number;
+    readonly armorBonus: number;
+    readonly extraMovement: number;
+    readonly forcedMarch: boolean;
+    readonly bonusTurnsRemaining: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +582,34 @@ export interface GameState {
    * equivalent to `[]`.
    */
   readonly pendingPolicyEvents?: readonly ReplayEvent[];
+  /**
+   * Round 25 — commander cards (mechanics memo §1.3, Risk 2210
+   * inspired gold sink). Public 6-card market (visible to both
+   * factions) seeded by a deterministic RNG fork at scenario start.
+   * Each entry pairs a card id with its current cost (cost is
+   * baked into the slot so reprice tweaks can be made without
+   * changing the underlying card pool entry). Slots refill from
+   * `cardDeck` after a buy. Optional for backwards compatibility:
+   * older replays / hand-built test states without the field
+   * behave as if no cards are available (buy orders silently fail).
+   */
+  readonly cardMarket?: readonly { readonly cardId: CardId; readonly cost: number }[];
+  /**
+   * Round 25 — per-faction card hand (cap 3). A bought card sits in
+   * the hand until played; a played card is removed. Optional for
+   * backwards compatibility (treated as empty hands).
+   */
+  readonly cardHand?: {
+    readonly ant: readonly CardId[];
+    readonly spider: readonly CardId[];
+  };
+  /**
+   * Round 25 — undrawn cards in the deck. Drawn from to refill the
+   * market after each buy, in deterministic order (the deck is
+   * shuffled once at scenario start by a seeded RNG fork). Optional
+   * for backwards compatibility.
+   */
+  readonly cardDeck?: readonly CardId[];
   readonly winner: Faction | null;
 }
 
@@ -967,6 +1070,50 @@ export type ReplayEvent =
       readonly targetPartyId: PartyId;
       readonly totalDamage: number;
       readonly debuffApplied?: 'venom-storm';
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 25 — commander cards (mechanics memo §1.3). Emitted when
+       * a faction's `buy-card` order successfully resolves: gold is
+       * deducted, the card moves from market to that faction's hand,
+       * and the market draws a replacement (which fires its own
+       * `market-refreshed` event in the same tick). `newGold` is the
+       * faction's gold AFTER the deduction so a viewer can render the
+       * running balance without re-summing.
+       */
+      readonly kind: 'card-bought';
+      readonly faction: 'ant' | 'spider';
+      readonly cardId: CardId;
+      readonly cost: number;
+      readonly newGold: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 25 — emitted when a faction plays a card from its hand.
+       * `partyId` carries the friendly target (when applicable);
+       * `targetPartyId` carries the enemy target (e.g.,
+       * `quick-strike`). `effectSummary` is a short human-readable
+       * description of the resolved effect (e.g., "+2 attack for 1
+       * turn", "8 dmg to spider-soldier").
+       */
+      readonly kind: 'card-played';
+      readonly faction: 'ant' | 'spider';
+      readonly cardId: CardId;
+      readonly partyId?: PartyId;
+      readonly targetPartyId?: PartyId;
+      readonly effectSummary: string;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 25 — emitted when a market slot is refilled from the
+       * deck after a buy (or, in principle, after any other slot
+       * vacancy). `position` is the 0-indexed slot in the market
+       * being refilled. When the deck is exhausted the slot stays
+       * empty and no event fires.
+       */
+      readonly kind: 'market-refreshed';
+      readonly newCard: CardId;
+      readonly position: number;
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

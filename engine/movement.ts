@@ -33,6 +33,7 @@
  *   a later iteration.
  */
 
+import { partyCardOffset } from './cards.ts';
 import { coordKey, inPlaneNeighbors, sameCoord } from './coord.ts';
 import { edgeAnchor, edgeNeighbor, isCornerCross } from './edges.ts';
 import { ITEM_MOVEMENT_CAP, partyItemOffset } from './item-effects.ts';
@@ -332,6 +333,20 @@ const resolveParty = (
   const itemMoveBonus = partyItemOffset(partyIn).movement;
   if (itemMoveBonus > 0) {
     allowance = Math.min(ITEM_MOVEMENT_CAP, allowance + itemMoveBonus);
+  }
+  // Round 25 — extra-charge card buff (mechanics memo §1.3). Adds a
+  // flat +N tile allowance for the duration of the buff. Applied
+  // AFTER the item cap so a card-bought card can intentionally exceed
+  // the round-14 cap (cards are a deliberate gold sink, not bounded
+  // by the item lane). Forced-march doubles the per-turn budget by
+  // adding the base allowance again — same effect as "two movement
+  // actions this turn".
+  const cardOffset = partyCardOffset(partyIn);
+  if (cardOffset.extraMovement > 0) {
+    allowance = allowance + cardOffset.extraMovement;
+  }
+  if (partyIn.cardBuffs?.forcedMarch === true) {
+    allowance = allowance * 2;
   }
   let location = partyIn.location;
   const steps: PartyMoveStep[] = [];

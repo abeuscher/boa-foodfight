@@ -20,6 +20,7 @@
 import { coordKey } from './coord.ts';
 import { assignFormation } from './formation.ts';
 import { canCastTier, spendSlot, tierForAbility } from './mp-tiers.ts';
+import { healUnits } from './parties.ts';
 import type { AbilitiesFile, JellyFile } from './schemas/index.ts';
 import type {
   AbilityId,
@@ -708,22 +709,11 @@ const handleWebMend = (
   // active-cast value. The `abilities` arg is reserved for future
   // tuning if a designer wants to surface a separate active-heal key.
   void abilities;
-  const heal = WEB_MEND_ACTIVE_HEAL;
-  const perUnit: { unitId: UnitId; hpBefore: number; hpAfter: number }[] = [];
-  let totalHealed = 0;
-  const newUnits = party.units.map((u) => {
-    if (u.currentHp <= 0) return u;
-    const tmpl = state.unitTemplates.get(u.templateId);
-    if (!tmpl) return u;
-    const cap = tmpl.baseStats.hp;
-    if (u.currentHp >= cap) return u;
-    const after = Math.min(cap, u.currentHp + heal);
-    const delta = after - u.currentHp;
-    if (delta <= 0) return u;
-    perUnit.push({ unitId: u.id, hpBefore: u.currentHp, hpAfter: after });
-    totalHealed += delta;
-    return { ...u, currentHp: after };
-  });
+  const {
+    units: newUnits,
+    perUnit,
+    totalHealed,
+  } = healUnits(party, state.unitTemplates, WEB_MEND_ACTIVE_HEAL);
   parties.set(party.id, {
     ...party,
     units: newUnits,

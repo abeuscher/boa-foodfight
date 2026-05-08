@@ -11,6 +11,7 @@
 import { resolveAbilityOrders } from './abilities.ts';
 import { resolveBattle } from './battle.ts';
 import type { BattleInput } from './battle.ts';
+import { resolveCardOrders } from './cards.ts';
 import { distance } from './coord.ts';
 import { endOfTurn } from './end-of-turn.ts';
 import { resolveMovement } from './movement.ts';
@@ -161,6 +162,16 @@ export const runTurn = (
 ): TurnOutcome => {
   let working = state;
   const events: ReplayEvent[] = [];
+
+  // 0a. Round 25 — commander cards (mechanics memo §1.3). Resolve
+  //     buy-card / play-card orders before abilities so a card played
+  //     this turn (e.g., frenzy +2 attack) is active when this turn's
+  //     battle fires. Buys fire before plays within a single party's
+  //     order queue, so a "buy frenzy then play it" sequence on the
+  //     same turn works.
+  const cardOutcome = resolveCardOrders(working, working.turn, tick);
+  working = cardOutcome.state;
+  events.push(...cardOutcome.events);
 
   // 0. Ability orders (use-ability). Resolved before movement so the
   //    jelly buff is active when movement-triggered battles fire.

@@ -74,6 +74,7 @@ import type {
   UnitTemplateId,
 } from '../engine/types.ts';
 
+import { buyCardOrderFor, playCardOrderFor } from './card-helpers.ts';
 import { spiderPlacement } from './placement-helpers.ts';
 import {
   getSpiderVisibleAntTrail,
@@ -824,6 +825,12 @@ export const spiderL1: AIPolicy = {
       pid.startsWith('spiderling-'),
     );
 
+    // Round 25 — commander cards (mechanics memo §1.3). The web-guard
+    // hosts the spider faction's card buy / play orders. Computed
+    // once per turn so the buy/play targets see consistent state.
+    const spiderBuyOrder = buyCardOrderFor(state, 'spider');
+    const spiderPlayOrder = playCardOrderFor(state, 'spider');
+
     const nextParties = new Map<PartyId, Party>();
     for (const [id, party] of state.parties) {
       if (party.faction !== 'spider') {
@@ -958,9 +965,22 @@ export const spiderL1: AIPolicy = {
         nextOrders = ordersForPatrolOrThreat(party, threat.defend, webLoc, isResponder);
       }
 
+      // Round 25 — commander cards (mechanics memo §1.3). Prepend
+      // the spider faction's buy / play card orders to the web-
+      // guard's queue. Other spider parties don't host the cards
+      // (the orders are faction-level; one host is enough). Buy
+      // before play so a buy-and-immediately-play in the same turn
+      // works.
+      const cardOrders: readonly Order[] =
+        id === WEB_GUARD
+          ? [
+              ...(spiderBuyOrder ? [spiderBuyOrder] : []),
+              ...(spiderPlayOrder ? [spiderPlayOrder] : []),
+            ]
+          : [];
       // Prepend any opportunistic hypnotize order so the engine fires
       // it (resolveAbilityOrders runs before movement).
-      const ordersWithHypno: readonly Order[] = [...hypnoOrders, ...nextOrders];
+      const ordersWithHypno: readonly Order[] = [...cardOrders, ...hypnoOrders, ...nextOrders];
       // Round 15 — HP-threshold flee. Queen-guard (web-guard) and
       // deep-raider stay put; web-guard never flees (queen), and
       // deep-raider's interceptor role outranks self-preservation.
