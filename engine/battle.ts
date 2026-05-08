@@ -41,6 +41,7 @@ import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
 import {
   computePostOccupationOffsets,
+  countNonBasePostsOwned,
   offsetForFaction,
   type PostOccupationOffset,
 } from './post-bonus.ts';
@@ -1124,18 +1125,22 @@ export const resolveBattle = (
   // Round 28 — POST-occupation bonus summary. Captures the active
   // per-faction party-wide combat bonus at battle resolution time so
   // the viewer / critics can attribute damage swings to POST
-  // ownership without re-deriving from `state.posts`.
+  // ownership without re-deriving from `state.posts`. `posts` is the
+  // raw owned-non-base count (uncapped); `attack` / `armor` reflect
+  // the (possibly-capped) additive offset actually folded into combat.
+  const antRawPosts = countNonBasePostsOwned(state, 'ant');
+  const spiderRawPosts = countNonBasePostsOwned(state, 'spider');
   events.push({
     kind: 'post-occupation-bonus-summary',
     turn,
     tick: tick(),
     ant: {
-      posts: postOccupationOffsets.ant.attack,
+      posts: antRawPosts,
       attack: postOccupationOffsets.ant.attack,
       armor: postOccupationOffsets.ant.armor,
     },
     spider: {
-      posts: postOccupationOffsets.spider.attack,
+      posts: spiderRawPosts,
       attack: postOccupationOffsets.spider.attack,
       armor: postOccupationOffsets.spider.armor,
     },

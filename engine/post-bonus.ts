@@ -66,17 +66,28 @@ export const countNonBasePostsOwned = (state: GameState, faction: Faction): numb
 };
 
 /**
+ * Per-POST cap on the additive bonus (mechanics spec §28). The
+ * round-28 bonus is +1 attack / +1 armor per owned non-base POST,
+ * capped at `MAX_BONUS_POINTS` so a faction that has snowballed every
+ * POST doesn't compound a +5/+5 offset and trivialize combat. The cap
+ * was set after the initial gate-pass ran outside the [50%, 70%] band
+ * with raw +N scaling.
+ */
+export const MAX_BONUS_POINTS = 1;
+
+/**
  * Compute the per-faction POST-occupation offsets for a `GameState`.
- * Bonus is +1 attack / +1 armor per owned non-base POST, applied
- * party-wide to every battle that faction participates in this turn.
+ * Bonus is +1 attack / +1 armor per owned non-base POST (capped at
+ * `MAX_BONUS_POINTS`), applied party-wide to every battle that faction
+ * participates in this turn.
  *
  * Determinism: pure read off `state.posts`; no RNG, no ordering
  * dependence (Map iteration order is preserved by the engine's state
  * shape but the count is order-independent anyway).
  */
 export const computePostOccupationOffsets = (state: GameState): PostOccupationOffsets => {
-  const antPosts = countNonBasePostsOwned(state, 'ant');
-  const spiderPosts = countNonBasePostsOwned(state, 'spider');
+  const antPosts = Math.min(MAX_BONUS_POINTS, countNonBasePostsOwned(state, 'ant'));
+  const spiderPosts = Math.min(MAX_BONUS_POINTS, countNonBasePostsOwned(state, 'spider'));
   return {
     ant: antPosts === 0 ? ZERO_OFFSET : { attack: antPosts, armor: antPosts },
     spider: spiderPosts === 0 ? ZERO_OFFSET : { attack: spiderPosts, armor: spiderPosts },

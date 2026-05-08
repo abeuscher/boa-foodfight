@@ -4,7 +4,7 @@
  * Covers:
  *   1. Owning 0 mid-POSTs → 0 bonus.
  *   2. Owning 1 mid-POST → +1/+1 bonus.
- *   3. Owning all 3 mid-POSTs → +3/+3 bonus.
+ *   3. Owning all mid-POSTs → bonus capped at MAX_BONUS_POINTS.
  *   4. storm-drain + spider-web do NOT count toward bonus (home bases).
  *   5. Bonus is applied to combat damage for the correct faction.
  *   6. Capture in progress (round 17) doesn't grant bonus until
@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveBattle, type BattleInput } from './battle.ts';
 import {
+  MAX_BONUS_POINTS,
   computePostOccupationOffsets,
   countNonBasePostsOwned,
   isHomeBasePost,
@@ -106,7 +107,7 @@ describe('engine/post-bonus offsets', () => {
     expect(offsets.spider).toEqual({ attack: 0, armor: 0 });
   });
 
-  it('3. owning all mid-POSTs → +N/+N bonus (count of mid-POSTs)', () => {
+  it('3. owning all mid-POSTs → bonus capped at MAX_BONUS_POINTS', () => {
     const { state } = loadScenario(DATA_DIR, 1);
     const cleared = clearAllOwners(state);
     const ids = midPostIds(cleared);
@@ -115,8 +116,14 @@ describe('engine/post-bonus offsets', () => {
       owned = setOwner(owned, id, 'ant');
     }
     const offsets = computePostOccupationOffsets(owned);
-    expect(offsets.ant.attack).toBe(ids.length);
-    expect(offsets.ant.armor).toBe(ids.length);
+    // Bonus is +1 attack / +1 armor per owned non-base POST, capped
+    // at MAX_BONUS_POINTS so a snowballed ant team doesn't compound a
+    // multi-point swing through every battle. The raw count is
+    // exposed through `countNonBasePostsOwned` for telemetry.
+    const cap = Math.min(ids.length, MAX_BONUS_POINTS);
+    expect(offsets.ant.attack).toBe(cap);
+    expect(offsets.ant.armor).toBe(cap);
+    expect(countNonBasePostsOwned(owned, 'ant')).toBe(ids.length);
     // The map generator picks 3-5 mid-POSTs per scenario (storm-drain
     // and spider-web are fixed home bases).
     expect(ids.length).toBeGreaterThanOrEqual(3);
@@ -179,7 +186,8 @@ describe('engine/post-bonus offsets', () => {
 
     // Direct check: the bonus offsets are non-zero.
     const offsets = computePostOccupationOffsets(stateBonus);
-    expect(offsetForFaction(offsets, 'ant').attack).toBe(ids.length);
+    const cap = Math.min(ids.length, MAX_BONUS_POINTS);
+    expect(offsetForFaction(offsets, 'ant').attack).toBe(cap);
     expect(offsetForFaction(offsets, 'spider').attack).toBe(0);
     // The bonus must affect the damage stream — at least one
     // battle-resolved event should differ between the two runs.
@@ -238,9 +246,13 @@ describe('engine/post-bonus offsets', () => {
     const summary = out.events.find((e) => e.kind === 'post-occupation-bonus-summary');
     expect(summary).toBeDefined();
     if (summary?.kind === 'post-occupation-bonus-summary') {
+      const cap = Math.min(ids.length, MAX_BONUS_POINTS);
+      // `posts` reports the raw count (pre-cap, for telemetry);
+      // `attack` / `armor` reflect the capped offset folded into
+      // combat math.
       expect(summary.ant.posts).toBe(ids.length);
-      expect(summary.ant.attack).toBe(ids.length);
-      expect(summary.ant.armor).toBe(ids.length);
+      expect(summary.ant.attack).toBe(cap);
+      expect(summary.ant.armor).toBe(cap);
       expect(summary.spider.posts).toBe(0);
       expect(summary.spider.attack).toBe(0);
       expect(summary.spider.armor).toBe(0);
@@ -262,7 +274,7 @@ describe('engine/post-bonus party-wide application', () => {
     // attacker / defender faction's offset and applies it party-
     // wide; this assertion captures the offset shape.
     const offsets = computePostOccupationOffsets(owned);
-    expect(offsets.ant.attack).toBe(ids.length);
+    expect(offsets.ant.attack).toBe(Math.min(ids.length, MAX_BONUS_POINTS));
     let antPartyCount = 0;
     for (const p of owned.parties.values()) {
       if (p.faction === 'ant') antPartyCount += 1;
