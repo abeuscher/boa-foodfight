@@ -14,16 +14,23 @@ import { turtlePlayer } from './turtle.ts';
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
 describe('rush variant', () => {
-  it('targets spider-web from turn 1', () => {
+  it('targets spider-web from turn 1: floor-only alpha rushes the web; ceiling-capable parties take the launch-tile dive', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = rushPlayer.decide(state, data, createRng(1));
-    const web = state.posts.get('spider-web' as PostId);
+    const web = state.posts.get('spider-web' as PostId)!;
+    const launch = { plane: 'floor' as const, x: web.location.x, y: web.location.y };
     let fieldOrders = 0;
     for (const party of next.parties.values()) {
       if (party.faction !== 'ant' || party.id === ('queen-guard' as PartyId)) continue;
       expect(party.orders).toHaveLength(1);
       const order = party.orders[0] as MoveOrder;
-      expect(order.target).toEqual(web?.location);
+      // Ceiling-capable parties dive via the launch tile (floor under
+      // the web); vanguard-alpha (floor-only) walks straight to the
+      // web. Both targets count as "rushing the web" — the launch
+      // tile is one move away from the kill plane-switch.
+      const isCeilingCapable =
+        party.id === ('pathfinders' as PartyId) || party.id === ('vanguard-bravo' as PartyId);
+      expect(order.target).toEqual(isCeilingCapable ? launch : web.location);
       fieldOrders += 1;
     }
     expect(fieldOrders).toBeGreaterThan(0);
@@ -121,7 +128,7 @@ describe('flank variant', () => {
     }
   });
 
-  it('ceiling-capable parties walk to opposite floor corners after the opening turn', () => {
+  it('after the opening turn: pathfinders takes the launch-tile dive; vanguard-bravo heads to the NE corner', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const turnOne = { ...state, turn: 1 };
     const next = flankPlayer.decide(turnOne, data, createRng(1));
@@ -129,7 +136,13 @@ describe('flank variant', () => {
     const vanguardBravo = next.parties.get('vanguard-bravo' as PartyId);
     const pfOrder = pathfinders?.orders[0] as MoveOrder | undefined;
     const vbOrder = vanguardBravo?.orders[0] as MoveOrder | undefined;
-    expect(pfOrder?.target).toEqual({ plane: 'floor', x: 0, y: 9 });
+    const web = state.posts.get('spider-web' as PostId)!;
+    // Round-23: pathfinders pivots from the SW corner (0,9) to the
+    // launch-tile dive (floor under the web) so it bypasses web-watch
+    // via plane-switch — survives the round-22 venom-blast wipe.
+    // Vanguard-bravo retains the NE corner approach so the variant
+    // still presents a corner flank.
+    expect(pfOrder?.target).toEqual({ plane: 'floor', x: web.location.x, y: web.location.y });
     expect(vbOrder?.target).toEqual({ plane: 'floor', x: 9, y: 0 });
   });
 

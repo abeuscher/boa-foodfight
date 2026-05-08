@@ -191,13 +191,18 @@ describe('spiderL1', () => {
     expect(after?.orders).toBe(sentinelOrders);
   });
 
-  it('round-9 placement softens deep-raider off the (4-5, 4-5) ant approach lane', () => {
+  it('round-23 placement softens deep-raider further off the rush/flank approach lane', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const placement = spiderL1.placement;
     expect(placement).toBeDefined();
     const placed = placement!(state, data, createRng(1));
     const raider = placed.parties.get('deep-raider' as PartyId);
-    expect(raider?.location).toEqual({ plane: 'floor', x: 7, y: 3 });
+    // Round 23 — pulled one column east from r9's (7, 3) to (8, 3)
+    // so rush's vanguard-bravo (3, 3) staging tile and flank's (5, 5)
+    // ceiling waypoint stay outside the raider's first-2-turn reach.
+    // The raider remains in the storm-drain column for the
+    // forward-pressure path.
+    expect(raider?.location).toEqual({ plane: 'floor', x: 8, y: 3 });
     // The (4-5, 4-5) box must be unobstructed by the raider on turn 0.
     expect(raider?.location.x).toBeGreaterThan(5);
     const silk = placed.parties.get('silk-line' as PartyId);
