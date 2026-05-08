@@ -118,38 +118,6 @@ export const controlsBothPair = (state: GameState, postId: PostId, faction: Fact
   return partner.owner === faction;
 };
 
-/**
- * Apply post-capture rules at the end of a turn's combat phase. A POST
- * changes ownership when exactly one non-neutral faction's parties sit on
- * its tile and the current owner differs. Spec: "POSTs are captured by
- * defeating the garrisoning party in battle ... and then occupying the
- * now-undefended POST with a friendly party." A contested tile (both
- * factions present) keeps the existing owner.
- */
-export const resolveCaptures = (state: GameState, tick: () => number): SetPostOwnerOutcome => {
-  let working = state;
-  const allEvents: ReplayEvent[] = [];
-
-  for (const post of state.posts.values()) {
-    const factions = new Set<Faction>();
-    for (const party of working.parties.values()) {
-      if (!sameCoord(party.location, post.location)) continue;
-      // Skip wiped parties — a party with no living units shouldn't
-      // count as "occupying" the tile for capture purposes. Without this
-      // check, a defender wiped in battle still blocks the winner from
-      // capturing the POST they just took.
-      const alive = party.units.some((u) => u.currentHp > 0);
-      if (!alive) continue;
-      factions.add(party.faction);
-    }
-    factions.delete('neutral');
-    if (factions.size !== 1) continue;
-    const [newOwner] = factions;
-    if (newOwner === undefined || post.owner === newOwner) continue;
-    const outcome = setPostOwner(working, post.id, newOwner, tick);
-    working = outcome.state;
-    allEvents.push(...outcome.events);
-  }
-
-  return { state: working, events: allEvents };
-};
+// Round-1 instant `resolveCaptures` was removed in round 17 in favor
+// of the 2-turn POST hold mechanic. See `engine/post-capture.ts` for
+// the replacement: trigger + tick driven by movement and end-of-turn.

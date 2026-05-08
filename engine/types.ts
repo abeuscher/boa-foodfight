@@ -119,6 +119,19 @@ export interface Post {
   readonly healingRate: number;
   readonly pairedWith?: PostId;
   readonly tags: readonly string[];
+  /**
+   * Round 17 — POST hold mechanic. When a non-owner faction party walks
+   * onto a capturable POST, it starts a 2-turn hold for that faction.
+   * `capturingFaction` is the faction currently attempting capture
+   * (null when no capture is in progress); `captureTurnsRemaining` is
+   * the number of end-of-turn ticks left before ownership flips
+   * (null when no capture is in progress). Storm-drain is excluded
+   * from the mechanic (faction-locked); spider-web supports capture
+   * (the ant win condition). Both fields are null on already-owned
+   * and unowned POSTs at scenario start.
+   */
+  readonly capturingFaction: Faction | null;
+  readonly captureTurnsRemaining: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -511,6 +524,50 @@ export type ReplayEvent =
       readonly kind: 'post-captured';
       readonly postId: PostId;
       readonly newOwner: Faction;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 17 — POST hold mechanic. Emitted when a party of a
+       * non-owner faction first walks onto a capturable POST and
+       * starts a 2-turn hold. `fromOwner` is the POST's owner at the
+       * moment capture started ('neutral' for unowned mid-POSTs, or
+       * the faction that previously held it). Subsequent reinforcing
+       * arrivals by the same faction do NOT re-emit this event;
+       * a swap (opposing-faction party arrives mid-capture) does emit
+       * a new started event for the new capturer.
+       */
+      readonly kind: 'post-capture-started';
+      readonly postId: PostId;
+      readonly capturingFaction: Faction;
+      readonly fromOwner: Faction;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 17 — emitted at end-of-turn each tick the holder's
+       * party remains alone on the POST, before the final flip.
+       * `turnsRemaining` is the count AFTER decrement (1 → "one
+       * more turn", 0 → "ownership about to flip; post-captured
+       * fires next").
+       */
+      readonly kind: 'post-capture-progressed';
+      readonly postId: PostId;
+      readonly capturingFaction: Faction;
+      readonly turnsRemaining: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 17 — emitted when an in-progress capture is aborted
+       * because the holder's party left the tile (without an enemy
+       * present to pause the capture). On abort, the POST's owner
+       * is reset to neutral — the user's directive is that failed/
+       * abandoned mid-capture attempts strip prior ownership.
+       * `previousOwner` is the owner BEFORE the abort (so 'spider'
+       * appears when ants started capturing the spider-web but got
+       * killed off before the hold completed).
+       */
+      readonly kind: 'post-capture-aborted';
+      readonly postId: PostId;
+      readonly previousOwner: Faction;
     })
   | (ReplayEventCommon & {
       readonly kind: 'ability-used';

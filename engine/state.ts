@@ -189,6 +189,11 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
       healingRate: p.healingRate,
       ...(p.pairedWith !== undefined ? { pairedWith: p.pairedWith as PostId } : {}),
       tags: p.tags,
+      // Round 17 — POST hold mechanic. No capture in progress at
+      // scenario start for any POST (faction-locked, neutral, or
+      // mid-POST alike).
+      capturingFaction: null,
+      captureTurnsRemaining: null,
     });
   }
   return posts;
