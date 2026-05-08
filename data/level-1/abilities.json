@@ -268,14 +268,14 @@
       "name": "Venom Blast",
       "category": "special-attack",
       "target": "party",
-      "uses": 2,
+      "uses": 4,
       "cooldown": 0,
       "tier": 2,
       "params": {
-        "damagePerUnit": 2,
+        "damagePerUnit": 4,
         "minSpinnersOrQueen": 1
       },
-      "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for moderate damage. Reserved for combos in later turns."
+      "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for heavy damage. Reserved for combos in later turns."
     }
   ]
 }
