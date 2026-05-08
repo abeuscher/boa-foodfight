@@ -910,6 +910,28 @@ export type ReplayEvent =
       readonly unitId: UnitId;
     })
   | (ReplayEventCommon & {
+      /**
+       * Round 22 — `venom-blast` pre-battle ability fires. A spider
+       * party with at least one living spider-spinner or spider-queen
+       * sprays venom across the opposing front rank (or back rank when
+       * front is empty), dealing flat per-unit damage. Captures the
+       * targeted rank, the per-unit HP delta, and the total damage so
+       * the viewer / critics can attribute the spike. Does not emit
+       * when the cast fizzles (no eligible caster, no living target,
+       * tier-2 MP exhausted, or `uses` exhausted).
+       */
+      readonly kind: 'venom-blasted';
+      readonly partyId: PartyId;
+      readonly targetPartyId: PartyId;
+      readonly targetRank: 'front' | 'back';
+      readonly damagedUnits: readonly {
+        readonly unitId: UnitId;
+        readonly hpBefore: number;
+        readonly hpAfter: number;
+      }[];
+      readonly totalDamage: number;
+    })
+  | (ReplayEventCommon & {
       readonly kind: 'scenario-end';
       readonly winner: Faction;
       /**

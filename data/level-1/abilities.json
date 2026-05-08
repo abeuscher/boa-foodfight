@@ -262,6 +262,20 @@
         "minFootmen": 2
       },
       "description": "Two or more footmen lock shields and barrel forward as one. Hits every enemy in the target party for moderate damage."
+    },
+    {
+      "id": "venom-blast",
+      "name": "Venom Blast",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 2,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "damagePerUnit": 2,
+        "minSpinnersOrQueen": 1
+      },
+      "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for moderate damage. Reserved for combos in later turns."
     }
   ]
 }

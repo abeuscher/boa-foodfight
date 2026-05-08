@@ -30,9 +30,12 @@ const VOLLEY: AbilityId = 'volley' as AbilityId;
 const MEND: AbilityId = 'mend' as AbilityId;
 const MAGIC_ARROW: AbilityId = 'magic-arrow' as AbilityId;
 const PHALANX_CHARGE: AbilityId = 'phalanx-charge' as AbilityId;
+const VENOM_BLAST: AbilityId = 'venom-blast' as AbilityId;
 const FOOTMAN_TEMPLATE = 'ant-footman';
 const ARCHER_TEMPLATE = 'ant-archer';
 const MAGE_TEMPLATE = 'ant-mage';
+const SPINNER_TEMPLATE = 'spider-spinner';
+const SPIDER_QUEEN_TEMPLATE = 'spider-queen';
 
 export interface OpeningAbilityResult {
   readonly attacker: Party;
@@ -421,6 +424,137 @@ const firePhalanxCharge = (args: OpeningArgs): OpeningResult => {
   };
 };
 
+/**
+ * Round 22 — Venom Blast (spider damage parity ability).
+ *
+ * A spider party with at least one living spider-spinner OR spider-queen
+ * sprays a fan of venom across the enemy front rank, hitting every
+ * living unit there for `damagePerUnit` flat damage. When the front
+ * rank is empty (or no formation data lists it), it falls through to
+ * the back rank; if both are empty the cast fizzles silently.
+ *
+ * Caster pick: spider-queen first, else first living spider-spinner.
+ * The caster must have a tier-2 MP slot remaining; otherwise the cast
+ * silently fails (matches the round-21 MP-tier shape). Tracked at the
+ * party level via `usedAbilities` occurrences across all units —
+ * `uses: 2` means two firings per party per scenario regardless of who
+ * casts them. The cast marks the casting unit's `usedAbilities` so the
+ * count grows on each fire.
+ *
+ * Forward-compat: this ability is intended as a combo ingredient when
+ * mechanic #2 (combo abilities) lands in a later round; for now it
+ * stands alone as a pre-battle fan attack.
+ */
+const fireVenomBlast = (args: OpeningArgs): OpeningResult => {
+  const { shooter, target, abilities, turn, tick } = args;
+  const def = findAbility(abilities, VENOM_BLAST);
+  if (!def) return { shooter, target, events: [] };
+  const damagePerUnit = def.params.damagePerUnit ?? 0;
+  if (damagePerUnit <= 0) return { shooter, target, events: [] };
+  const usesCap = def.params.uses ?? 0;
+  // Per-scenario per-party `uses` cap. Sum venom-blast occurrences in
+  // the shooter's units' `usedAbilities`; cast aborts when the count
+  // already meets/exceeds the cap. The data file's `uses: 2` lives on
+  // the ability definition, not in `params`, so we read it via the
+  // surrounding ability record.
+  const ability = abilities.abilities.find((a) => a.id === VENOM_BLAST);
+  const usesAllowed = ability?.uses ?? usesCap;
+  const usesSoFar = shooter.units.reduce(
+    (n, u) => n + (u.usedAbilities ?? []).filter((id) => id === VENOM_BLAST).length,
+    0,
+  );
+  if (usesAllowed !== null && usesSoFar >= usesAllowed) {
+    return { shooter, target, events: [] };
+  }
+  // Caster pick: spider-queen (living) first; else first living spinner.
+  const tier = tierForAbility(abilities, VENOM_BLAST);
+  let caster: Unit | undefined;
+  for (const u of shooter.units) {
+    if (!isLiving(u)) continue;
+    if (u.templateId !== SPIDER_QUEEN_TEMPLATE) continue;
+    if (!canCastTier(u, tier)) continue;
+    caster = u;
+    break;
+  }
+  if (!caster) {
+    for (const u of shooter.units) {
+      if (!isLiving(u)) continue;
+      if (u.templateId !== SPINNER_TEMPLATE) continue;
+      if (!canCastTier(u, tier)) continue;
+      caster = u;
+      break;
+    }
+  }
+  if (!caster) return { shooter, target, events: [] };
+  // Pick the rank: front if it has any living unit, else back.
+  // Falls back to "all units front" semantics for legacy parties
+  // without `formation` (matches `formationOrAllFront`).
+  const formation = formationOrAllFront(target);
+  const livingIn = (rank: readonly Unit['id'][]): Unit[] =>
+    target.units.filter((u) => rank.includes(u.id) && isLiving(u));
+  const frontLiving = livingIn(formation.front);
+  const backLiving = livingIn(formation.back);
+  let chosenRank: 'front' | 'back';
+  let victims: Unit[];
+  if (frontLiving.length > 0) {
+    chosenRank = 'front';
+    victims = frontLiving;
+  } else if (backLiving.length > 0) {
+    chosenRank = 'back';
+    victims = backLiving;
+  } else {
+    return { shooter, target, events: [] };
+  }
+  // Apply damage and build per-unit deltas.
+  const damaged: { unitId: Unit['id']; hpBefore: number; hpAfter: number }[] = [];
+  let totalDamage = 0;
+  const deathEvents: ReplayEvent[] = [];
+  const newTargetUnits = target.units.map((u) => {
+    if (!victims.some((v) => v.id === u.id)) return u;
+    const hpAfter = Math.max(0, u.currentHp - damagePerUnit);
+    const delta = u.currentHp - hpAfter;
+    if (delta <= 0) return u;
+    damaged.push({ unitId: u.id, hpBefore: u.currentHp, hpAfter });
+    totalDamage += delta;
+    if (u.currentHp > 0 && hpAfter <= 0) {
+      deathEvents.push({ kind: 'unit-died', turn, tick: tick(), unitId: u.id });
+    }
+    return { ...u, currentHp: hpAfter };
+  });
+  // Mark caster's `usedAbilities` and decrement MP. The unit's
+  // usedAbilities can hold multiple `'venom-blast'` entries — one per
+  // fire — so the per-party cap above stays accurate across battles.
+  const used = markUsed(caster, VENOM_BLAST);
+  const mpResult = consumeMpForCast(used, VENOM_BLAST, tier, shooter.id, turn, tick);
+  const newShooterUnits = shooter.units.map((u) => (u.id === caster.id ? mpResult.unit : u));
+  const events: ReplayEvent[] = [
+    {
+      kind: 'ability-used',
+      turn,
+      tick: tick(),
+      partyId: shooter.id,
+      abilityId: VENOM_BLAST,
+    },
+  ];
+  if (mpResult.event) events.push(mpResult.event);
+  events.push({
+    kind: 'venom-blasted',
+    turn,
+    tick: tick(),
+    partyId: shooter.id,
+    targetPartyId: target.id,
+    targetRank: chosenRank,
+    damagedUnits: damaged,
+    totalDamage,
+  });
+  events.push(...deathEvents);
+  return {
+    shooter: { ...shooter, units: newShooterUnits },
+    target: { ...target, units: newTargetUnits },
+    events,
+  };
+};
+
 export const applyOpeningAbilities = (
   attacker: Party,
   defender: Party,
@@ -466,9 +600,30 @@ export const applyOpeningAbilities = (
   });
   events.push(...atkPhalanx.events);
 
-  const atkMend = fireMends(atkPhalanx.shooter, templates, abilities, turn, tick);
+  // Round 22 — venom-blast (spider damage parity). Each side gets a
+  // chance to fire if it has a living spinner or queen. The attacker
+  // resolves first for determinism; the defender's blast (if any)
+  // lands against whatever's left after the attacker's events.
+  const atkVenom = fireVenomBlast({
+    shooter: atkPhalanx.shooter,
+    target: atkPhalanx.target,
+    abilities,
+    turn,
+    tick,
+  });
+  events.push(...atkVenom.events);
+  const defVenom = fireVenomBlast({
+    shooter: atkVenom.target,
+    target: atkVenom.shooter,
+    abilities,
+    turn,
+    tick,
+  });
+  events.push(...defVenom.events);
+
+  const atkMend = fireMends(defVenom.target, templates, abilities, turn, tick);
   events.push(...atkMend.events);
-  const defMend = fireMends(atkPhalanx.target, templates, abilities, turn, tick);
+  const defMend = fireMends(defVenom.shooter, templates, abilities, turn, tick);
   events.push(...defMend.events);
 
   // The attacker is whichever party's units we threaded through the

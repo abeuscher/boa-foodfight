@@ -200,7 +200,7 @@
         "intelligence": 9,
         "constitution": 6
       },
-      "abilities": ["web-tangle", "web-mend", "web-snare", "spawn-spiderlings"],
+      "abilities": ["web-tangle", "web-mend", "web-snare", "spawn-spiderlings", "venom-blast"],
       "tags": ["queen", "leader-eligible"],
       "planeAffinity": {
         "floor": { "attack": -1, "armor": 0 },
@@ -269,7 +269,7 @@
         "intelligence": 5,
         "constitution": 5
       },
-      "abilities": ["web-tangle", "spin-web"],
+      "abilities": ["web-tangle", "spin-web", "venom-blast"],
       "tags": ["debuffer", "support"],
       "planeAffinity": {
         "floor": { "attack": -1, "armor": 0 },
