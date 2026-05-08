@@ -10,6 +10,7 @@ import { applyOpeningAbilities } from './battle-abilities.ts';
 import { partyCardOffset } from './cards.ts';
 import {
   CHARISMA_FLEE_LOSS,
+  CHARISMA_PARITY_GAIN,
   CHARISMA_QUEEN_KILL_GAIN,
   categorizeEngagement,
   clampCharisma,
@@ -1218,15 +1219,29 @@ export const resolveBattle = (
   };
 
   // Engagement category — the spec adjusts the *attacker's* units
-  // based on attacker-vs-defender slot count. Skip neutral attackers
-  // (no charisma seeded). Skip when attacker has no charisma-carrying
-  // units at all (queen-only parties / specialty parties).
+  // based on attacker-vs-defender slot count, plus "participating
+  // units" on parity. Apply the categorized delta to the attacker;
+  // additionally grant the parity-bullet's "+1 to participating
+  // units" reading by mirroring the parity case to the defender too.
+  // Underdog/overdog are explicitly attacker-only ("attacker units
+  // gain +5", "-3 charisma to attacker units" — the defender is the
+  // passive recipient of the engagement, not the agent).
+  const atkSlots = partySlotCount(attacker, state.unitTemplates);
+  const defSlots = partySlotCount(defender, state.unitTemplates);
   if (attacker.faction === 'ant' || attacker.faction === 'spider') {
-    const atkSlots = partySlotCount(attacker, state.unitTemplates);
-    const defSlots = partySlotCount(defender, state.unitTemplates);
     const category = categorizeEngagement(atkSlots, defSlots);
     const delta = deltaForCategory(category);
     queueCharismaDelta(attacker, delta, reasonForCategory(category));
+  }
+  if (defender.faction === 'ant' || defender.faction === 'spider') {
+    const category = categorizeEngagement(atkSlots, defSlots);
+    if (category === 'parity') {
+      // Parity bullet's "participating units" reading: the defender
+      // also accrues +1 when the slot-count gap is small. This
+      // surfaces queen-guard / home-base defender promotion paths
+      // that would otherwise never accumulate charisma.
+      queueCharismaDelta(defender, CHARISMA_PARITY_GAIN, 'parity');
+    }
   }
 
   // Queen-kill bonus: walk every `killed` action across the rounds
