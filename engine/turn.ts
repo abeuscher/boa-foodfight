@@ -406,6 +406,19 @@ export const runScenario = (
       buried: ev.buried,
     });
   }
+  // Round 29 — spider blitz mode (mechanics memo §1.7). When the
+  // per-scenario 5% coin flip lands true, emit a single
+  // `spider-blitz-activated` event at scenario-start so downstream
+  // tooling (gate analyzers, the viewer) can attribute the variance
+  // to the originating seed without scanning state.
+  if (working.spiderBlitzMode) {
+    events.push({
+      kind: 'spider-blitz-activated',
+      turn: 0,
+      tick: tick(),
+      seed: working.seed,
+    });
+  }
   // Round 20 — emit `formation-assigned` for every party so viewers /
   // critics can attribute combat behavior to the row layout. Sorted
   // by partyId for deterministic output, same convention as the

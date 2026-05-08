@@ -248,6 +248,78 @@ const allPostsOfTypeOwnedByAnt = (state: GameState, type: string): boolean => {
 const moveTo = (target: TileCoord): Order => ({ kind: 'move-to', target });
 
 /**
+ * Round 29 — mid-POST detour (mechanics memo §1.7). When silk-line or
+ * advance-scout is mid-route to its existing target, check if there's
+ * a closer unowned mid-POST that's still off-route by ≤ 2 tiles
+ * (Chebyshev). If so, detour to it first to capture (round-17 hold
+ * mechanic, 2 turns). After the hold completes, the spider resumes
+ * its original target.
+ *
+ * Returns the detour POST's location, or null if no detour is
+ * worthwhile. The caller decides whether to issue a move-to (toward
+ * the detour) or hold (party already on the detour tile, finishing
+ * its 2-turn capture). Capture progresses purely from movement +
+ * battle resolution in the engine; the AI only needs to keep the
+ * spider stationary on the POST tile until the flip.
+ *
+ * Off-route budget: Chebyshev(here, post) + Chebyshev(post, target) ≤
+ * Chebyshev(here, target) + DETOUR_BUDGET. With DETOUR_BUDGET = 2 the
+ * detour pays for itself in 1-2 turns of POST-bonus accrual.
+ *
+ * Tiebreak: lowest `id` (stable across replays).
+ */
+const DETOUR_BUDGET = 2;
+const pickMidPostDetour = (
+  state: GameState,
+  here: TileCoord,
+  finalTarget: TileCoord,
+): Post | null => {
+  // Already on a same-plane unowned mid-POST? That's a "stay put for
+  // the hold tick" trigger.
+  for (const type of [SOAP_DISH_TYPE, TOWEL_RACK_TYPE, WALL_CRACK_TYPE]) {
+    for (const post of postsOfType(state, type)) {
+      if (post.owner === 'spider') continue;
+      if (post.location.plane !== here.plane) continue;
+      if (sameCoord(post.location, here)) return post;
+    }
+  }
+  // When the primary target is cross-plane, `distance(here, finalTarget)`
+  // is Infinity (Chebyshev across planes is undefined). In that case
+  // any same-plane unowned mid-POST is a strict improvement: the
+  // spider needs to walk somewhere on this plane anyway before the
+  // engine can resolve a plane transition, so prefer one that flips
+  // a POST en route. Pick the closest by Chebyshev with id tiebreak.
+  const sameTargetPlane = finalTarget.plane === here.plane;
+  const directDist = sameTargetPlane ? distance(here, finalTarget) : 0;
+  let best: Post | null = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (const type of [SOAP_DISH_TYPE, TOWEL_RACK_TYPE, WALL_CRACK_TYPE]) {
+    for (const post of postsOfType(state, type)) {
+      if (post.owner === 'spider') continue;
+      // Skip cross-plane posts — Chebyshev distance there is infinite,
+      // and the AI's stepToward helper can't bridge planes anyway.
+      if (post.location.plane !== here.plane) continue;
+      const here2post = distance(here, post.location);
+      let score: number;
+      if (sameTargetPlane) {
+        const post2target = distance(post.location, finalTarget);
+        const extra = here2post + post2target - directDist;
+        if (extra > DETOUR_BUDGET) continue;
+        score = extra;
+      } else {
+        // Cross-plane primary target: pick the closest same-plane post.
+        score = here2post;
+      }
+      if (best === null || score < bestScore || (score === bestScore && post.id < best.id)) {
+        best = post;
+        bestScore = score;
+      }
+    }
+  }
+  return best;
+};
+
+/**
  * Stale-entry weight for the spider's trail-based scans (rec 1.5).
  * The trail carries entries aged 0..3. The spider AI trusts the most
  * recent observation fully and adds 1 phantom tile of distance per
@@ -540,16 +612,26 @@ const stepToward = (from: TileCoord, target: TileCoord): TileCoord => {
  *     ceiling, so rush's plane-switch route is untouched.
  */
 const ordersForScout = (state: GameState, party: Party, soapLoc: TileCoord): readonly Order[] => {
-  // If every soap-dish is ant-owned, harass the (first un-owned) towel-rack.
-  if (allPostsOfTypeOwnedByAnt(state, SOAP_DISH_TYPE)) {
-    const towelLoc = requireFirstPostOfType(state, TOWEL_RACK_TYPE);
-    if (sameCoord(party.location, towelLoc)) return [];
-    if (distance(party.location, towelLoc) <= 1) return [];
-    return [moveTo(towelLoc)];
+  // Round 29 — mid-POST capture detour. If there's a soap-dish or
+  // towel-rack on the same plane that's only ≤ 2 tiles off the
+  // primary route, divert to it first to capture (round-17 hold
+  // mechanic). Once the spider OWNS the POST it earns the round-28
+  // POST bonus (+1/+1 capped) and the ant POST bonus is denied —
+  // a real swing in baseline win rate. After the flip the existing
+  // soap-dish-then-towel-rack chain takes over.
+  // Pick the primary target the way the legacy logic did, then ask
+  // the detour helper if a better intermediate sits within budget.
+  const primaryTarget = allPostsOfTypeOwnedByAnt(state, SOAP_DISH_TYPE)
+    ? requireFirstPostOfType(state, TOWEL_RACK_TYPE)
+    : soapLoc;
+  const detour = pickMidPostDetour(state, party.location, primaryTarget);
+  if (detour !== null) {
+    if (sameCoord(party.location, detour.location)) return [];
+    return [moveTo(detour.location)];
   }
-  if (sameCoord(party.location, soapLoc)) return [];
-  if (distance(party.location, soapLoc) <= 1) return [];
-  return [moveTo(soapLoc)];
+  if (sameCoord(party.location, primaryTarget)) return [];
+  if (distance(party.location, primaryTarget) <= 1) return [];
+  return [moveTo(primaryTarget)];
 };
 
 const ordersForPatrolOrThreat = (
@@ -859,6 +941,28 @@ export const spiderL1: AIPolicy = {
         : [];
 
       let nextOrders: readonly Order[];
+      // Round 29 — blitz-mode override (mechanics memo §1.7). When the
+      // per-scenario 5% coin flip lands true, every non-queen-guard
+      // spider party (silk-line, deep-raider, advance-scout, counter-
+      // push pusher, spiderlings) marches DIRECTLY toward the storm-
+      // drain. Web-guard still fires web-mend / venom-blast pre-battle
+      // and stays at the web. No POST-capture detours, no patrols, no
+      // pursuit — just one objective: kill the ant queen.
+      if (state.spiderBlitzMode === true && id !== WEB_GUARD) {
+        // Cross-plane: emit the off-plane target directly so the
+        // engine's edge-adjacency path resolves it; same-plane: step
+        // toward storm-drain along the Chebyshev gradient.
+        let moveOrders: readonly Order[];
+        if (party.location.plane === stormDrainLoc.plane) {
+          const stepped = stepToward(party.location, stormDrainLoc);
+          moveOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
+        } else {
+          moveOrders = [moveTo(stormDrainLoc)];
+        }
+        nextOrders = [...hypnoOrders, ...moveOrders];
+        nextParties.set(id, { ...party, orders: nextOrders });
+        continue;
+      }
       // Spiderling chase: step toward the closest same-plane ant party
       // every turn. A pointed swarm is a real flanking threat.
       if (id.startsWith('spiderling-')) {
@@ -952,8 +1056,26 @@ export const spiderL1: AIPolicy = {
         id !== scout?.id &&
         !(responder !== null && responder.id === SILK_LINE && threat.defend !== null)
       ) {
-        const stepped = stepToward(party.location, stormDrainLoc);
-        nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
+        // Round 29 — mid-POST detour. While walking to storm-drain
+        // pick up any unowned mid-POST that's only ≤ 2 tiles off the
+        // direct route. The 2-turn hold (round 17) pauses silk-line
+        // on the POST tile; once flipped, the round-28 +1/+1 bonus
+        // is denied to ants and the raid resumes its storm-drain
+        // approach. The detour helper returns null when nothing's
+        // worthwhile; the legacy direct-step path runs in that case.
+        const detour = pickMidPostDetour(state, party.location, stormDrainLoc);
+        if (detour !== null) {
+          if (sameCoord(party.location, detour.location)) {
+            // Already on the POST — hold for the capture tick.
+            nextOrders = [];
+          } else {
+            const stepped = stepToward(party.location, detour.location);
+            nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
+          }
+        } else {
+          const stepped = stepToward(party.location, stormDrainLoc);
+          nextOrders = sameCoord(party.location, stepped) ? [] : [moveTo(stepped)];
+        }
       } else if (pursuer !== null && id === pursuer.id && pursueTarget !== null) {
         nextOrders = sameCoord(party.location, pursueTarget.loc) ? [] : [moveTo(pursueTarget.loc)];
       } else if (isOnWeb(party, webLoc)) {

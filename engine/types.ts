@@ -636,6 +636,18 @@ export interface GameState {
    * for backwards compatibility.
    */
   readonly cardDeck?: readonly CardId[];
+  /**
+   * Round 29 — spider blitz mode (mechanics memo §1.7). Per-scenario
+   * 5% coin flip rolled at scenario init via
+   * `createRng(seed).fork('spider-blitz').next() < 0.05`. When true,
+   * all non-queen-guard spider parties march directly at the storm-
+   * drain (ant home base) for the entire scenario, ignoring POST
+   * captures, patrols, and flee triggers. Adds variance to the
+   * baseline win rate without altering the dominant-strategy median.
+   * Optional for backwards compatibility: a missing field is
+   * equivalent to `false` and old replays load unchanged.
+   */
+  readonly spiderBlitzMode?: boolean;
   readonly winner: Faction | null;
 }
 
@@ -1200,6 +1212,21 @@ export type ReplayEvent =
         readonly attack: number;
         readonly armor: number;
       };
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Round 29 — emitted at scenario-start (turn 0) when the per-
+       * scenario blitz coin flip lands true (5% rate). When present,
+       * the spider AI overrides per-party orders to march every non-
+       * queen-guard party at the ant home base (storm-drain) for the
+       * entire scenario. Carries the originating scenario seed so
+       * downstream tooling (gate analyzers, the viewer) can attribute
+       * the variance to the correct seed without scanning state. The
+       * event is purely informational; the engine does not consume
+       * it back from the replay log.
+       */
+      readonly kind: 'spider-blitz-activated';
+      readonly seed: number;
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

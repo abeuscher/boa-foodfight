@@ -349,6 +349,15 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const cardsRng = createRng(seed).fork('cards-deck');
   const initialMarket = buildInitialMarket(cardsRng);
 
+  // Round 29 — spider blitz mode (mechanics memo §1.7). Per-scenario
+  // 5% coin flip on a dedicated fork so the dice are independent of
+  // every other subsystem's entropy. When true, the spider AI
+  // overrides per-party orders to march every non-queen-guard party
+  // at the storm-drain for the whole scenario. Adds variance to the
+  // baseline win rate without changing the dominant-strategy median.
+  const blitzRng = createRng(seed).fork('spider-blitz');
+  const spiderBlitzMode = blitzRng.next() < 0.05;
+
   const state: GameState = {
     turn: 0,
     seed,
@@ -371,6 +380,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     cardMarket: initialMarket.cardMarket,
     cardHand: { ant: [], spider: [] },
     cardDeck: initialMarket.cardDeck,
+    spiderBlitzMode,
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({

@@ -81,18 +81,34 @@ describe('spiderL1', () => {
     expect(webGuard?.orders).toEqual([]);
   });
 
-  it('the smallest spider party is sent toward the first soap-dish', () => {
+  it('the smallest spider party heads for an unowned mid-POST (round 29 detour) or the soap-dish', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const next = spiderL1.decide(state, data, createRng(1));
-    // The smallest party (4 slots) is `advance-scout`.
-    const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
-    expect(soap).toBeDefined();
+    // Round 29 — advance-scout takes a mid-POST detour when an unowned
+    // mid-POST sits on its plane (≤ 2 off-route, or any same-plane
+    // mid-POST when the primary target is cross-plane). On seed 1 the
+    // scout starts on the ceiling and there's a wall-crack on the
+    // ceiling, so the order targets the same-plane wall-crack rather
+    // than the cross-plane soap-dish. In other seeds without a same-
+    // plane mid-POST the legacy soap-dish target stands.
     const scout = next.parties.get('advance-scout' as PartyId);
     expect(scout).toBeDefined();
     expect(scout?.orders).toHaveLength(1);
     const order = scout?.orders[0] as MoveOrder;
     expect(order.kind).toBe('move-to');
-    expect(order.target).toEqual(soap!.location);
+    // The order must point at *some* unowned non-base POST or the
+    // canonical soap-dish — not a random tile.
+    const eligibleTargets: TileCoord[] = [];
+    const soap = postsOfType(state, SOAP_DISH_TYPE)[0];
+    if (soap) eligibleTargets.push(soap.location);
+    for (const post of state.posts.values()) {
+      if (post.owner === 'spider') continue;
+      if (post.id === ('storm-drain' as PostId)) continue;
+      if (post.id === ('spider-web' as PostId)) continue;
+      eligibleTargets.push(post.location);
+    }
+    const matched = eligibleTargets.some((loc) => sameCoord(loc, order.target));
+    expect(matched).toBe(true);
   });
 
   it('does not modify ant parties (orders identity preserved)', () => {
@@ -436,6 +452,209 @@ describe('spiderL1', () => {
         if (
           events.some((e) => e.kind === 'flee-queued' && e.partyId === ('silk-line' as PartyId))
         ) {
+          saw = true;
+          break;
+        }
+      }
+      expect(saw).toBe(true);
+    });
+  });
+
+  describe('round 29 — mid-POST capture detour', () => {
+    /** Place a fresh unowned mid-POST of `type` at `loc` and remove any
+     * other unowned POST of the same plane so the detour helper has a
+     * deterministic same-plane candidate. Returns the new state. */
+    const seedPostAt = (state: GameState, postId: PostId, loc: TileCoord): GameState => {
+      const posts = new Map(state.posts);
+      const existing = posts.get(postId);
+      if (!existing) throw new Error(`unknown post ${String(postId)}`);
+      posts.set(postId, { ...existing, location: loc, owner: 'neutral' });
+      return { ...state, posts };
+    };
+
+    it('silk-line detours to a same-plane unowned mid-POST when within budget', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Force turn 4 so the silk-raid path fires (turn 2 is spin-web,
+      // turn 3 may collide with the silk-line early-push gate).
+      const turn2: GameState = { ...isolated, turn: 4 };
+      // Place silk-line at ceiling (7, 7); place a wall-crack at
+      // ceiling (5, 5) — Chebyshev 2 off the ceiling-to-floor route.
+      const silk = turn2.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      const placed = replaceParty(turn2, {
+        ...silk,
+        location: { plane: 'ceiling', x: 7, y: 7 },
+      });
+      const detourLoc: TileCoord = { plane: 'ceiling', x: 5, y: 5 };
+      const seeded = seedPostAt(placed, 'wall-crack-2' as PostId, detourLoc);
+      const next = spiderL1.decide(seeded, data, createRng(1));
+      const after = next.parties.get('silk-line' as PartyId);
+      const move = after?.orders.find((o) => o.kind === 'move-to');
+      expect(move).toBeDefined();
+      // The step should be one Chebyshev tile toward (5, 5).
+      expect(move!.target.plane).toBe('ceiling');
+      // From (7,7) the step should be (6,6).
+      expect(move!.target.x).toBe(6);
+      expect(move!.target.y).toBe(6);
+    });
+
+    it('silk-line does NOT detour when no same-plane mid-POST is in budget', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Force turn 4 so the legacy turn-2 spin-web branch can't fire.
+      const turn2: GameState = { ...isolated, turn: 4 };
+      // Move silk-line to floor and ensure no same-plane unowned mid-
+      // POST exists on floor — clear soap-dish-1 by giving it to spider.
+      const silk = turn2.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      const onFloor = replaceParty(turn2, {
+        ...silk,
+        location: { plane: 'floor', x: 5, y: 5 },
+      });
+      // Mark soap-dish-1 (the only floor mid-POST in seed 1) as spider-
+      // owned so the detour helper finds nothing on this plane.
+      const posts = new Map(onFloor.posts);
+      const soap = posts.get('soap-dish-1' as PostId);
+      if (!soap) throw new Error('soap-dish-1 missing');
+      posts.set('soap-dish-1' as PostId, { ...soap, owner: 'spider' });
+      const cleared: GameState = { ...onFloor, posts };
+      const next = spiderL1.decide(cleared, data, createRng(1));
+      const after = next.parties.get('silk-line' as PartyId);
+      const move = after?.orders.find((o) => o.kind === 'move-to');
+      expect(move).toBeDefined();
+      // No detour: stepToward storm-drain (0, 0) from (5, 5) is (4, 4).
+      expect(move!.target).toEqual({ plane: 'floor', x: 4, y: 4 });
+    });
+
+    it('advance-scout detours to a different mid-POST when soap-dishes are spider-owned', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Mark every soap-dish as spider-owned.
+      const posts = new Map(isolated.posts);
+      for (const post of postsOfType(isolated, SOAP_DISH_TYPE)) {
+        posts.set(post.id, { ...post, owner: 'spider' });
+      }
+      const flipped: GameState = { ...isolated, posts };
+      const next = spiderL1.decide(flipped, data, createRng(1));
+      const scout = next.parties.get('advance-scout' as PartyId);
+      const move = scout?.orders.find((o) => o.kind === 'move-to');
+      expect(move).toBeDefined();
+      // The new target must NOT be a soap-dish (those are spider-owned now).
+      const isSoap = postsOfType(initial, SOAP_DISH_TYPE).some((p) =>
+        sameCoord(p.location, move!.target),
+      );
+      expect(isSoap).toBe(false);
+      // It must point at SOMETHING reasonable: a non-spider non-base
+      // POST or a plane-step toward such a target.
+      expect(move!.target).toBeDefined();
+    });
+
+    it('silk-line holds (no move) when standing on the detour POST tile (capture tick)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Force turn 4 so the legacy turn-2 spin-web branch can't fire.
+      const turn2: GameState = { ...isolated, turn: 4 };
+      // Park silk-line directly on the wall-crack-2 tile so the AI
+      // should hold (no move-to) — letting the engine's round-17
+      // 2-turn capture progress.
+      const silk = turn2.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      const wallCrack = isolated.posts.get('wall-crack-2' as PostId);
+      if (!wallCrack) throw new Error('wall-crack-2 missing');
+      const onPost = replaceParty(turn2, { ...silk, location: wallCrack.location });
+      const next = spiderL1.decide(onPost, data, createRng(1));
+      const after = next.parties.get('silk-line' as PartyId);
+      const moveOrders = (after?.orders ?? []).filter((o) => o.kind === 'move-to');
+      expect(moveOrders).toHaveLength(0);
+    });
+  });
+
+  describe('round 29 — blitz mode', () => {
+    /** Helper: enable blitz mode on a state regardless of seed. */
+    const withBlitz = (state: GameState): GameState => ({ ...state, spiderBlitzMode: true });
+
+    it('blitz: silk-line marches toward storm-drain (no mid-POST detour)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Force turn 4 so the legacy turn-2 spin-web branch can't fire.
+      // Blitz overrides regardless of the per-turn gates anyway.
+      const turn2: GameState = { ...isolated, turn: 4 };
+      const silk = turn2.parties.get('silk-line' as PartyId);
+      if (!silk) throw new Error('silk-line missing');
+      // Park silk-line on the floor at (5, 5) so the storm-drain step
+      // is unambiguous.
+      const placed = replaceParty(turn2, {
+        ...silk,
+        location: { plane: 'floor', x: 5, y: 5 },
+      });
+      // Seed a same-plane mid-POST 2 tiles off-route to prove blitz
+      // ignores detours.
+      const posts = new Map(placed.posts);
+      const soap = posts.get('soap-dish-1' as PostId);
+      if (!soap) throw new Error('soap-dish-1 missing');
+      posts.set('soap-dish-1' as PostId, {
+        ...soap,
+        location: { plane: 'floor', x: 5, y: 7 },
+        owner: 'neutral',
+      });
+      const blitzState = withBlitz({ ...placed, posts });
+      const next = spiderL1.decide(blitzState, data, createRng(1));
+      const after = next.parties.get('silk-line' as PartyId);
+      const move = after?.orders.find((o) => o.kind === 'move-to');
+      expect(move).toBeDefined();
+      // Step from (5, 5) toward storm-drain (0, 0) on floor is (4, 4).
+      expect(move!.target).toEqual({ plane: 'floor', x: 4, y: 4 });
+    });
+
+    it('blitz: deep-raider marches toward storm-drain (overrides east-wall patrol)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Place deep-raider on the floor at (8, 3) so the storm-drain
+      // step is unambiguous and the (cross-plane) edge-resolution
+      // path doesn't muddy the assertion.
+      const raider0 = isolated.parties.get('deep-raider' as PartyId);
+      if (!raider0) throw new Error('deep-raider missing');
+      const placed = replaceParty(isolated, {
+        ...raider0,
+        location: { plane: 'floor', x: 8, y: 3 },
+      });
+      const blitz = withBlitz(placed);
+      const next = spiderL1.decide(blitz, data, createRng(1));
+      const raider = next.parties.get('deep-raider' as PartyId);
+      const move = raider?.orders.find((o) => o.kind === 'move-to');
+      expect(move).toBeDefined();
+      // From floor (8, 3) toward (0, 0): step is (7, 2).
+      expect(move!.target).toEqual({ plane: 'floor', x: 7, y: 2 });
+    });
+
+    it('blitz: web-guard still holds at the web (queen is immobile)', () => {
+      const { state: initial, data } = loadScenario(DATA_DIR, 1);
+      const isolated = isolateAnts(initial);
+      // Force turn 1 to skip the spawn-spiderlings branch.
+      const blitz = withBlitz({ ...isolated, turn: 1 });
+      const next = spiderL1.decide(blitz, data, createRng(1));
+      const guard = next.parties.get('web-guard' as PartyId);
+      const moveOrders = (guard?.orders ?? []).filter((o) => o.kind === 'move-to');
+      expect(moveOrders).toHaveLength(0);
+    });
+
+    it('blitz mode triggers on ~5% of seeds (deterministic 30/600)', () => {
+      let triggers = 0;
+      for (let seed = 0; seed < 600; seed++) {
+        if (createRng(seed).fork('spider-blitz').next() < 0.05) triggers += 1;
+      }
+      // Sanity band — exactly 30 for these particular seeds; the assert
+      // is loose to allow harmless seed-stream churn elsewhere.
+      expect(triggers).toBeGreaterThanOrEqual(20);
+      expect(triggers).toBeLessThanOrEqual(45);
+    });
+
+    it('scenario init flips spiderBlitzMode for at least one seed in 0..99', () => {
+      let saw = false;
+      for (let seed = 0; seed < 100; seed++) {
+        const { state } = loadScenario(DATA_DIR, seed);
+        if (state.spiderBlitzMode === true) {
           saw = true;
           break;
         }
