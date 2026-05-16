@@ -14,10 +14,17 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { createRng } from './rng.ts';
 import { loadScenario, loadScenarioData } from './state.ts';
-import type { PartyId, PostId, UnitTemplateId } from './types.ts';
+import { runScenario } from './turn.ts';
+import type { GameState, PartyId, PostId, UnitTemplateId } from './types.ts';
 
 const L2_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-2');
+
+const tickClock = (): (() => number) => {
+  let t = 0;
+  return () => ++t;
+};
 
 describe('Level 2 — data set', () => {
   it('loads and schema-validates', () => {
@@ -92,5 +99,86 @@ describe('Level 2 — data set', () => {
     const entrance = a.state.posts.get('pipe-entrance' as PostId);
     const exit = a.state.posts.get('pipe-exit' as PostId);
     expect(entrance?.location.plane).toBe(exit?.location.plane);
+  });
+
+  it('the pipe floor channel is greedy-navigable end-to-end', () => {
+    // The engine movement resolver is greedy Manhattan-descent only
+    // (no BFS). Every navigable floor channel tile must therefore
+    // have a passable 4-neighbor strictly closer (Manhattan) to the
+    // exit, or a single move-to(exit) would stall against a wall.
+    const { state } = loadScenario(L2_DIR, 4);
+    const exit = state.posts.get('pipe-exit' as PostId);
+    if (!exit) throw new Error('no exit post');
+    const ex = exit.location;
+    const passable = (x: number, y: number): boolean => {
+      const t = state.tiles.get(`floor:${String(x)},${String(y)}`);
+      return t !== undefined && t.terrain.movementCost < 99;
+    };
+    const man = (x: number, y: number): number => Math.abs(ex.x - x) + Math.abs(ex.y - y);
+    const offsets: readonly { dx: number; dy: number }[] = [
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+    ];
+    let stuck = 0;
+    for (let y = 0; y < 10; y++) {
+      for (let x = 0; x < 10; x++) {
+        if (!passable(x, y)) continue;
+        if (x === ex.x && y === ex.y) continue;
+        const d = man(x, y);
+        const hasDescent = offsets.some(
+          (o) => passable(x + o.dx, y + o.dy) && man(x + o.dx, y + o.dy) < d,
+        );
+        if (!hasDescent) stuck += 1;
+      }
+    }
+    expect(stuck).toBe(0);
+  });
+
+  it('escort objective wins via the engine when the escort reaches the exit', () => {
+    const loaded = loadScenario(L2_DIR, 4);
+    const { data, neutralSpawnEvents, itemSpawnEvents } = loaded;
+    // Strip the spider pinch parties so this test isolates the
+    // escort-OBJECTIVE + greedy-pipe-navigation + win-detection path
+    // (combat survivability of an under-guarded Aunt Ant is a
+    // separate balance concern; the spider ambush is exercised in
+    // ai/spider-l2.test.ts and the world-loop integration).
+    const noSpiders = new Map([...loaded.state.parties].filter(([, p]) => p.faction !== 'spider'));
+    const state: GameState = { ...loaded.state, parties: noSpiders };
+    const exit = state.posts.get('pipe-exit' as PostId);
+    if (!exit) throw new Error('no exit post');
+    // Minimal escort player: every turn, order the escort-column
+    // (Aunt Ant's party) to march to the exit. Greedy movement walks
+    // the whole pipe because the channel is greedy-navigable.
+    const escortPlayer = {
+      name: 'test-escort',
+      faction: 'ant' as const,
+      decide(s: GameState): GameState {
+        const parties = new Map(s.parties);
+        const ec = parties.get('escort-column' as PartyId);
+        if (ec) {
+          parties.set('escort-column' as PartyId, {
+            ...ec,
+            orders: [{ kind: 'move-to', target: exit.location }],
+          });
+        }
+        return { ...s, parties };
+      },
+    };
+    const out = runScenario(state, data, createRng(4), tickClock(), {
+      maxTurns: 100,
+      policies: [escortPlayer],
+      neutralSpawnEvents,
+      itemSpawnEvents,
+    });
+    expect(out.finalState.winner).toBe('ant');
+    const end = [...out.events].reverse().find((e) => e.kind === 'scenario-end');
+    expect(end?.kind).toBe('scenario-end');
+    if (end?.kind === 'scenario-end') {
+      expect(end.winner).toBe('ant');
+      // An escort WIN must not be score-resolved either.
+      expect(end.scoreBreakdown).toBeUndefined();
+    }
   });
 });
