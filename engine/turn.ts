@@ -21,6 +21,7 @@ import { resolvePostCapture } from './post-capture.ts';
 import { postAt } from './posts.ts';
 import { scoreScenario, winnerFromScore } from './score.ts';
 import type { ItemSpawnEvent, NeutralSpawnEvent, ScenarioData } from './state.ts';
+import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
 
 export interface TurnOutcome {
@@ -475,17 +476,36 @@ export const runScenario = (
   // spider (defender bias). The engine emits a `scenario-end` event
   // with the score breakdown attached so the harness / viewer / critics
   // can attribute the win to the score path.
+  //
+  // L2 (escort): the score path is a capture-objective construct
+  // (POST ownership + web-hold progress). An escort scenario that
+  // reaches the turn cap means the escortee never made it through —
+  // that is an unambiguous ant loss (spider win) with no score
+  // tiebreak, per roadmap §4.3.1. The decision keys off the scenario
+  // `victoryCondition.kind`; a state without the field defaults to
+  // capture-post, so the L1 path is byte-identical.
   if (working.winner === null) {
-    const breakdown = scoreScenario(working);
-    const winner = winnerFromScore(breakdown);
-    working = { ...working, winner };
-    events.push({
-      kind: 'scenario-end',
-      turn: working.turn,
-      tick: tick(),
-      winner,
-      scoreBreakdown: breakdown,
-    });
+    const vc = working.victoryCondition ?? DEFAULT_VICTORY_CONDITION;
+    if (vc.kind === 'escort') {
+      working = { ...working, winner: 'spider' };
+      events.push({
+        kind: 'scenario-end',
+        turn: working.turn,
+        tick: tick(),
+        winner: 'spider',
+      });
+    } else {
+      const breakdown = scoreScenario(working);
+      const winner = winnerFromScore(breakdown);
+      working = { ...working, winner };
+      events.push({
+        kind: 'scenario-end',
+        turn: working.turn,
+        tick: tick(),
+        winner,
+        scoreBreakdown: breakdown,
+      });
+    }
   }
 
   return { finalState: working, events, turnsPlayed };
