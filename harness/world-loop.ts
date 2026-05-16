@@ -35,8 +35,9 @@ import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
 import { runScenario } from '../engine/turn.ts';
-import type { Faction, GameState } from '../engine/types.ts';
+import type { Faction, GameState, ReplayEvent } from '../engine/types.ts';
 import { extractGold, extractWorldRoster } from '../engine/world-extract.ts';
+import type { LeveledUnitSummary } from '../engine/world-inject.ts';
 import { injectWorldRoster, scaffoldFromState } from '../engine/world-inject.ts';
 import { applyRosterLevelUps } from '../engine/world-levelup.ts';
 import { findLatestSave, loadWorldStateFile, saveWorldState } from '../engine/world-save.ts';
@@ -103,9 +104,16 @@ const runOneScenario = (
   const seed = scenarioSeed(args.seed, scenarioIndex);
   const loaded = loadScenario(args.dataDir, seed);
   let state = loaded.state;
+  // Phase-B follow-up: leveled units placed by the inject pass. Empty
+  // for the static (non-injected) scenario 0 and for any campaign
+  // roster with no level-2+ unit — the summary event is then skipped
+  // entirely so non-campaign / pre-leveling replays stay clean.
+  let leveledUnits: readonly LeveledUnitSummary[] = [];
   if (injectRoster) {
     const scaffold = scaffoldFromState(state);
-    state = injectWorldRoster(state, injectRoster, scaffold).state;
+    const injected = injectWorldRoster(state, injectRoster, scaffold);
+    state = injected.state;
+    leveledUnits = injected.report.leveledUnits;
   }
   const player = PLAYER_AIS.baseline;
   const enemy = ENEMY_AIS['spider-l1'];
@@ -123,7 +131,30 @@ const runOneScenario = (
     neutralSpawnEvents: loaded.neutralSpawnEvents,
     itemSpawnEvents: loaded.itemSpawnEvents,
   });
-  for (const ev of outcome.events) sink.emit(ev);
+  // Phase-B follow-up: emit a one-time `roster-levels-summary` right
+  // after `scenario-start` (same turn 0) so the viewer / critics can
+  // attribute the campaign power swing to leveling. Skipped entirely
+  // when no unit is leveled (keeps non-campaign replays byte-identical
+  // to the pre-folding stream). The event is world-loop telemetry the
+  // engine never reads back, so it reuses the scenario-start tick to
+  // sit immediately after it in stream order without perturbing the
+  // engine's tick sequence.
+  for (const ev of outcome.events) {
+    sink.emit(ev);
+    if (ev.kind === 'scenario-start' && leveledUnits.length > 0) {
+      const summary: ReplayEvent = {
+        kind: 'roster-levels-summary',
+        turn: 0,
+        tick: ev.tick,
+        units: leveledUnits.map((u) => ({
+          unitId: u.unitId,
+          level: u.level,
+          levelBonus: u.levelBonus,
+        })),
+      };
+      sink.emit(summary);
+    }
+  }
   sink.close();
   return {
     finalState: outcome.finalState,

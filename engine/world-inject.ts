@@ -29,31 +29,36 @@
  * `promoted` flag (and thus its promoted `templateId`). MP slots are
  * re-seeded fresh per-scenario (decision (b): MP is per-scenario).
  *
- * ## Level-up stat folding — documented Phase-B follow-up
+ * ## Level-up stat folding — Phase-B follow-up (now wired through)
  *
- * The B3 `levelUpBonus` is persisted + computed, but folding the bonus
- * into LIVE combat stats would require forking `UnitTemplate` (shared,
- * immutable scenario data keyed by templateId across gold-table,
- * promotion-tree, formation, etc.). Per the hard Phase-B constraint
- * "the scenario engine itself should not change behavior — Phase B
- * wraps it", we deliberately do NOT fork templates in this milestone.
- * Level/XP/charisma/promoted/item all carry and are visible in saves
- * and the world-loop summary; the stat-delta application into combat
- * is the Phase-B follow-up (alongside the full shop and a real L2).
- * `promoted` units DO get their stronger stats already, because
- * promotion swaps `templateId` to an evolved template that the engine
- * already knows.
+ * The B3 `levelUpBonus` is persisted + computed. Rather than forking
+ * the shared, immutable `UnitTemplate` map, the bonus rides on each
+ * rebuilt scenario `Unit` as the optional `levelBonus` field
+ * (`engine/types`): the cumulative combat delta for the unit's carried
+ * `level`, derived from `engine/world-levelup`'s `cumulativeLevelBonus`
+ * (single curve owner — no duplication). `engine/combat` folds the
+ * attack / armor / agility / intelligence lanes additively into the
+ * established item / phase / plane-affinity / POST / card offset lane;
+ * the hp lane is realized HERE as a larger spawn HP pool (the unit
+ * spawns the scenario healed to its leveled max — Phase-B decision
+ * (a), units rest at the home base between scenarios). `promoted`
+ * units additionally get their evolved-template stats as before.
+ *
+ * The static `loadScenario` path (batch / diversity / coevo) never
+ * sets `levelBonus`, so combat treats it as all-zero — a strict no-op
+ * preserving byte-identical non-campaign replays.
  *
  * Determinism: pure transformation, no RNG, no I/O.
  *
  * Imports allowed: `engine/types`, `engine/world-state`, `engine/mp-tiers`,
- * `engine/charisma`, `engine/formation`.
+ * `engine/charisma`, `engine/formation`, `engine/world-levelup`.
  */
 
 import { isPromotableTemplate } from './charisma.ts';
 import { assignFormation } from './formation.ts';
 import { INITIAL_MP_SLOTS, isCasterTemplate } from './mp-tiers.ts';
 import type { GameState, Party, PartyId, Unit, UnitId, UnitTemplate } from './types.ts';
+import { cumulativeLevelBonus } from './world-levelup.ts';
 import type { WorldRoster } from './world-state.ts';
 
 /** Default party slot cap in Tier 1 (game-outline "Campaign structure"). */
@@ -61,6 +66,26 @@ const PARTY_SLOT_CAP = 8;
 /** The queen-guard's exceptional 12-slot capacity (game-outline). */
 const QUEEN_GUARD_SLOT_CAP = 12;
 const QUEEN_GUARD_PARTY_ID = 'queen-guard' as PartyId;
+
+/**
+ * Phase-B follow-up — a leveled unit's combat-relevant level facts,
+ * surfaced on the inject report so the world loop can emit the
+ * `roster-levels-summary` replay event without re-deriving the curve.
+ * Only units with `level >= 2` appear here; an all-empty list means no
+ * unit is leveled and the event is skipped (keeps non-campaign replays
+ * clean).
+ */
+export interface LeveledUnitSummary {
+  readonly unitId: UnitId;
+  readonly level: number;
+  readonly levelBonus: {
+    readonly attack: number;
+    readonly armor: number;
+    readonly hp: number;
+    readonly agility: number;
+    readonly intelligence: number;
+  };
+}
 
 export interface InjectReport {
   /** Party ids that were rebuilt from the carried roster. */
@@ -71,6 +96,12 @@ export interface InjectReport {
   readonly trimmedUnitIds: readonly UnitId[];
   /** Total ant units placed into the scenario. */
   readonly antUnitsPlaced: number;
+  /**
+   * Phase-B follow-up — every placed ant unit with `level >= 2`, with
+   * its level and folded `levelBonus`. Empty when nothing is leveled.
+   * In placement (scaffold) order then party-unit order for determinism.
+   */
+  readonly leveledUnits: readonly LeveledUnitSummary[];
 }
 
 export interface InjectResult {
@@ -85,8 +116,15 @@ const slotCapForParty = (partyId: PartyId): number =>
  * Rebuild a single `Unit` from a carried world unit. Re-seeds the
  * per-scenario MP pool (caster-eligible units only) and charisma
  * (promotable templates only); carries level / xp / promoted / the
- * carried charisma value forward. currentHp is the unit's carried HP
- * (template-max post-heal-between).
+ * carried charisma value forward.
+ *
+ * Phase-B follow-up: the unit's cumulative campaign `levelBonus` is
+ * derived from its carried `level` (single curve owner in
+ * `engine/world-levelup`) and attached when non-trivial (level >= 2).
+ * The hp lane raises the spawn HP pool: the unit enters the scenario
+ * healed to `template hp + bonus.hp` (Phase-B decision (a) — units
+ * rest at the home base between scenarios). A level-1 unit gets no
+ * `levelBonus` field (all-zero curve) so combat is a strict no-op.
  */
 const rebuildUnit = (worldUnit: WorldRoster['units'][number], tmpl: UnitTemplate): Unit => {
   const mpField = isCasterTemplate(tmpl) ? { mpSlots: INITIAL_MP_SLOTS } : {};
@@ -94,15 +132,23 @@ const rebuildUnit = (worldUnit: WorldRoster['units'][number], tmpl: UnitTemplate
   // field at all (mirrors loadScenario's seeding rule).
   const charismaField = isPromotableTemplate(tmpl.id) ? { charisma: worldUnit.charisma } : {};
   const promotedField = worldUnit.promoted ? { promoted: true } : {};
+  const bonus = cumulativeLevelBonus(worldUnit.level, tmpl);
+  const isLeveled = worldUnit.level >= 2;
+  // Spawn healed to the (possibly larger) leveled max HP pool. Derive
+  // from the template base + hp bonus rather than the carried
+  // currentHp so the pool is correct independent of the carried value.
+  const currentHp = tmpl.baseStats.hp + bonus.hp;
+  const levelBonusField = isLeveled ? { levelBonus: bonus } : {};
   return {
     id: worldUnit.id,
     templateId: tmpl.id,
-    currentHp: worldUnit.currentHp,
+    currentHp,
     level: worldUnit.level,
     xp: worldUnit.xp,
     ...mpField,
     ...charismaField,
     ...promotedField,
+    ...levelBonusField,
   };
 };
 
@@ -121,6 +167,7 @@ export const injectWorldRoster = (
   const rebuiltParties: PartyId[] = [];
   const droppedParties: PartyId[] = [];
   const trimmedUnitIds: UnitId[] = [];
+  const leveledUnits: LeveledUnitSummary[] = [];
   let antUnitsPlaced = 0;
 
   const worldUnitById = new Map(roster.units.map((u) => [u.id, u] as const));
@@ -148,7 +195,15 @@ export const injectWorldRoster = (
         trimmedUnitIds.push(unitId);
         continue;
       }
-      units.push(rebuildUnit(wu, tmpl));
+      const built = rebuildUnit(wu, tmpl);
+      units.push(built);
+      if (built.levelBonus !== undefined) {
+        leveledUnits.push({
+          unitId: built.id,
+          level: built.level,
+          levelBonus: built.levelBonus,
+        });
+      }
       slots += tmpl.slotCost;
     }
     if (units.length === 0) {
@@ -189,7 +244,7 @@ export const injectWorldRoster = (
 
   return {
     state: { ...base, parties: newParties },
-    report: { rebuiltParties, droppedParties, trimmedUnitIds, antUnitsPlaced },
+    report: { rebuiltParties, droppedParties, trimmedUnitIds, antUnitsPlaced, leveledUnits },
   };
 };
 

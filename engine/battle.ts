@@ -20,6 +20,7 @@ import {
 } from './charisma.ts';
 import type { CharismaUnitUpdate } from './charisma.ts';
 import {
+  applyLevelBonusToStats,
   computeAgilityOrder,
   computeDamage,
   computePostureMultipliers,
@@ -212,6 +213,10 @@ const buildLiveUnits = (
       attack: itemAdjusted.attack + cardOffset.attack + postOccupationOffset.attack,
       armor: itemAdjusted.armor + cardOffset.armor + postOccupationOffset.armor,
     };
+    // Phase-B follow-up — per-unit campaign level bonus folds into the
+    // same additive lane (attack / armor / agility / intelligence +
+    // the hp pool). Undefined for non-campaign units → strict no-op.
+    const levelAdjusted = applyLevelBonusToStats(cardAdjusted, u.levelBonus);
     const slot = slotForUnit(formation, u.id);
     // A unit not in front/back/reserve was filtered above; here it's
     // safe to coerce 'reserve' away — but be defensive.
@@ -222,8 +227,8 @@ const buildLiveUnits = (
     const meleePenalty = backRowMeleeAttackPenalty(formation, u.id, tmpl);
     const finalStats: Stats =
       meleePenalty < 0
-        ? { ...cardAdjusted, attack: Math.max(1, cardAdjusted.attack + meleePenalty) }
-        : cardAdjusted;
+        ? { ...levelAdjusted, attack: Math.max(1, levelAdjusted.attack + meleePenalty) }
+        : levelAdjusted;
     out.push({
       id: u.id,
       side,
@@ -987,6 +992,10 @@ export const resolveBattle = (
         attack: itemAdjusted.attack + sidePostOffset.attack,
         armor: itemAdjusted.armor + sidePostOffset.armor,
       };
+      // Phase-B follow-up — a promoted reserve inherits the same
+      // per-unit campaign level bonus its source unit carries, on the
+      // same additive lane as the initial build above.
+      const levelAdjusted = applyLevelBonusToStats(postAdjusted, u.levelBonus);
       // Re-derive the back-row melee penalty against a temporary
       // formation that has the unit in `slot` already (so the
       // helper short-circuits to "back" when slot === 'back').
@@ -998,8 +1007,8 @@ export const resolveBattle = (
       const meleePenalty = backRowMeleeAttackPenalty(slottedFormation, unitId, tmpl);
       const finalStats: Stats =
         meleePenalty < 0
-          ? { ...postAdjusted, attack: Math.max(1, postAdjusted.attack + meleePenalty) }
-          : postAdjusted;
+          ? { ...levelAdjusted, attack: Math.max(1, levelAdjusted.attack + meleePenalty) }
+          : levelAdjusted;
       return {
         id: unitId,
         side,

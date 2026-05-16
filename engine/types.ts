@@ -181,6 +181,30 @@ export interface Unit {
    * `false` (never promoted).
    */
   readonly promoted?: boolean;
+  /**
+   * Phase-B follow-up — per-unit, campaign-accumulated stat delta
+   * from leveling up across scenarios. Set only by
+   * `engine/world-inject` when a carried `WorldUnit` is rebuilt into
+   * a scenario `Unit` (computed from the unit's `level` via
+   * `engine/world-levelup`'s `cumulativeLevelBonus`). The static
+   * `loadScenario` path (batch / diversity / coevo) never sets it, so
+   * a missing field is treated as all-zero by combat — a strict
+   * no-op that preserves byte-identical non-campaign replays. The
+   * `attack` / `armor` / `agility` / `intelligence` lanes fold
+   * additively into the same combat offset lane as
+   * item / phase / plane-affinity / POST-occupation / card offsets;
+   * the `hp` lane is realized at injection time as a larger spawn
+   * HP pool (not in the per-hit damage roll). The curve never grants
+   * `armor`, so that lane is always 0, but the field carries it for
+   * shape parity with the other additive lanes.
+   */
+  readonly levelBonus?: {
+    readonly attack: number;
+    readonly armor: number;
+    readonly hp: number;
+    readonly agility: number;
+    readonly intelligence: number;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1227,6 +1251,32 @@ export type ReplayEvent =
        */
       readonly kind: 'spider-blitz-activated';
       readonly seed: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Phase-B follow-up — emitted once at scenario-start (turn 0)
+       * ONLY in world-loop-injected (campaign) scenarios that carry
+       * at least one leveled unit (`level >= 2`). Lists every leveled
+       * ant unit with its level and the per-unit `levelBonus` folded
+       * into combat, so the viewer / critics can attribute the power
+       * swing to leveling rather than to items / POSTs / cards. The
+       * event is skipped entirely when no unit is leveled, which
+       * keeps non-campaign (static `loadScenario`) replays byte-
+       * identical. Purely informational; the engine never reads it
+       * back from the replay log.
+       */
+      readonly kind: 'roster-levels-summary';
+      readonly units: readonly {
+        readonly unitId: UnitId;
+        readonly level: number;
+        readonly levelBonus: {
+          readonly attack: number;
+          readonly armor: number;
+          readonly hp: number;
+          readonly agility: number;
+          readonly intelligence: number;
+        };
+      }[];
     })
   | (ReplayEventCommon & {
       readonly kind: 'scenario-end';

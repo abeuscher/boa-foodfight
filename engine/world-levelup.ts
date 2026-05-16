@@ -85,6 +85,29 @@ export type LevelUpBonus = WorldLevelUpBonus;
 
 const ZERO_BONUS: LevelUpBonus = { hp: 0, attack: 0, agility: 0, intelligence: 0 };
 
+/**
+ * Phase-B-followup — the per-`Unit` combat stat delta shape (engine
+ * `Unit.levelBonus`). Superset of `WorldLevelUpBonus`: adds an `armor`
+ * lane so the additive combat offset has the same five dimensions as
+ * the other lanes (the level curve never grants armor, so it stays 0,
+ * but the field exists for completeness / future tuning).
+ */
+export interface CombatLevelBonus {
+  readonly attack: number;
+  readonly armor: number;
+  readonly hp: number;
+  readonly agility: number;
+  readonly intelligence: number;
+}
+
+export const ZERO_COMBAT_LEVEL_BONUS: CombatLevelBonus = {
+  attack: 0,
+  armor: 0,
+  hp: 0,
+  agility: 0,
+  intelligence: 0,
+};
+
 /** Which stat a template's level-ups pour into (first tag match wins). */
 export type PrimaryStat = 'attack' | 'agility' | 'intelligence';
 
@@ -96,6 +119,48 @@ export const primaryStatForTemplate = (tmpl: UnitTemplate | undefined): PrimaryS
     return 'agility';
   }
   return 'attack';
+};
+
+/**
+ * The stat growth from gaining `levelsGained` levels with `primary` as
+ * the template's primary stat. Every level grants `+HP_PER_LEVEL` hp
+ * plus `+PRIMARY_STAT_PER_LEVEL` to the primary stat. Sole owner of the
+ * per-level growth math — `applyLevelUp` (XP-driven, accumulating onto a
+ * prior bonus) and `cumulativeLevelBonus` (level-driven, from scratch)
+ * both delegate here so the curve lives in exactly one place.
+ */
+const growthForLevels = (levelsGained: number, primary: PrimaryStat): LevelUpBonus => {
+  const g = Math.max(0, levelsGained);
+  const primaryGrant = g * PRIMARY_STAT_PER_LEVEL;
+  return {
+    hp: g * HP_PER_LEVEL,
+    attack: primary === 'attack' ? primaryGrant : 0,
+    agility: primary === 'agility' ? primaryGrant : 0,
+    intelligence: primary === 'intelligence' ? primaryGrant : 0,
+  };
+};
+
+/**
+ * Phase-B-followup — the cumulative per-`Unit` combat bonus for a unit
+ * that is currently `level`. Pure function of `level` + template
+ * primary stat (level 1 → zero bonus; deterministic). Reuses the single
+ * `growthForLevels` curve owner so the combat-side delta can never
+ * diverge from the XP-side accumulation. Returns the all-zero bonus for
+ * level ≤ 1 so a never-leveled unit is a strict no-op in combat.
+ */
+export const cumulativeLevelBonus = (
+  level: number,
+  tmpl: UnitTemplate | undefined,
+): CombatLevelBonus => {
+  if (level <= 1) return ZERO_COMBAT_LEVEL_BONUS;
+  const growth = growthForLevels(level - 1, primaryStatForTemplate(tmpl));
+  return {
+    attack: growth.attack,
+    armor: 0,
+    hp: growth.hp,
+    agility: growth.agility,
+    intelligence: growth.intelligence,
+  };
 };
 
 /** A `WorldUnit` after a level-up pass — `levelUpBonus` is now set. */
@@ -128,13 +193,12 @@ export const applyLevelUp = (
       levelsGained: 0,
     };
   }
-  const primary = primaryStatForTemplate(tmpl);
+  const growth = growthForLevels(levelsGained, primaryStatForTemplate(tmpl));
   const bonus: LevelUpBonus = {
-    hp: prior.hp + levelsGained * HP_PER_LEVEL,
-    attack: prior.attack + (primary === 'attack' ? levelsGained * PRIMARY_STAT_PER_LEVEL : 0),
-    agility: prior.agility + (primary === 'agility' ? levelsGained * PRIMARY_STAT_PER_LEVEL : 0),
-    intelligence:
-      prior.intelligence + (primary === 'intelligence' ? levelsGained * PRIMARY_STAT_PER_LEVEL : 0),
+    hp: prior.hp + growth.hp,
+    attack: prior.attack + growth.attack,
+    agility: prior.agility + growth.agility,
+    intelligence: prior.intelligence + growth.intelligence,
   };
   return {
     unit: {
