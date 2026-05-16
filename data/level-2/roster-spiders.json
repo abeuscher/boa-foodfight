@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "faction": "spider",
+  "parties": [
+    {
+      "id": "pinch-command",
+      "leaderClass": "spider-queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "spider-queen",
+          "count": 1
+        },
+        {
+          "templateId": "spider-elite",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 5,
+        "y": 5
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "pinch-bend-upper",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 3
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "pinch-bend-lower",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 7
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "pinch-midspan",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        },
+        {
+          "templateId": "spider-scout",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 5,
+        "y": 4
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "pinch-exit-ambush",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-elite",
+          "count": 2
+        },
+        {
+          "templateId": "spider-spinner",
+          "count": 1
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 8
+      },
+      "posture": "fight"
+    }
+  ]
+}

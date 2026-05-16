@@ -1,0 +1,626 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "ant-queen",
+      "name": "Ant Queen",
+      "faction": "ant",
+      "size": "huge",
+      "slotCost": 4,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 60,
+        "attack": 20,
+        "agility": 3,
+        "armor": 5,
+        "intelligence": 8,
+        "constitution": 10
+      },
+      "abilities": ["queen-ultimate"],
+      "tags": ["queen", "leader-eligible", "immobile"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-footman",
+      "name": "Ant Footman",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 6,
+        "attack": 7,
+        "agility": 5,
+        "armor": 2,
+        "intelligence": 1,
+        "constitution": 7
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "infantry"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-archer",
+      "name": "Ant Archer",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 5,
+        "attack": 5,
+        "agility": 7,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": ["volley"],
+      "tags": ["ranged"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-worker",
+      "name": "Ant Worker",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 3,
+        "agility": 4,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 8
+      },
+      "abilities": ["boat-form", "jelly-apply"],
+      "tags": ["worker", "support"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-scout",
+      "name": "Ant Scout",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 5,
+        "attack": 5,
+        "agility": 10,
+        "armor": 0,
+        "intelligence": 3,
+        "constitution": 6
+      },
+      "abilities": ["pheroblast", "scout-ping"],
+      "tags": ["scout", "leader-eligible"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-potato-bug",
+      "name": "Ant Potato Bug",
+      "faction": "ant",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 12,
+        "attack": 9,
+        "agility": 3,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 9
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "heavy"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-mage",
+      "name": "Ant Mage",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 6,
+        "attack": 6,
+        "agility": 5,
+        "armor": 1,
+        "intelligence": 8,
+        "constitution": 6
+      },
+      "abilities": ["ant-plane-switch", "mend", "jelly-apply", "recruit"],
+      "tags": ["caster", "leader-eligible", "support"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-tank",
+      "name": "Ant Tank",
+      "faction": "ant",
+      "size": "large",
+      "slotCost": 3,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 22,
+        "attack": 8,
+        "agility": 2,
+        "armor": 4,
+        "intelligence": 1,
+        "constitution": 10
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "heavy", "no-fly"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-queen",
+      "name": "Spider Queen",
+      "faction": "spider",
+      "size": "huge",
+      "slotCost": 4,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 37,
+        "attack": 8,
+        "agility": 4,
+        "armor": 2,
+        "intelligence": 9,
+        "constitution": 6
+      },
+      "abilities": ["web-tangle", "web-mend", "web-snare", "spawn-spiderlings", "venom-blast"],
+      "tags": ["queen", "leader-eligible"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-scout",
+      "name": "Spider Scout",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 10,
+        "attack": 4,
+        "agility": 7,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["scout"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-soldier",
+      "name": "Spider Soldier",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 13,
+        "attack": 5,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["melee", "infantry"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-spinner",
+      "name": "Spider Spinner",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 14,
+        "attack": 6,
+        "agility": 4,
+        "armor": 2,
+        "intelligence": 5,
+        "constitution": 5
+      },
+      "abilities": ["web-tangle", "spin-web", "venom-blast"],
+      "tags": ["debuffer", "support"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-elite",
+      "name": "Spider Elite",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 14,
+        "attack": 4,
+        "agility": 5,
+        "armor": 1,
+        "intelligence": 3,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["melee", "elite", "queen-guard"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "mouse-merc",
+      "name": "Mouse Mercenary",
+      "faction": "neutral",
+      "size": "large",
+      "slotCost": 3,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 25,
+        "attack": 5,
+        "agility": 3,
+        "armor": 2,
+        "intelligence": 1,
+        "constitution": 8
+      },
+      "abilities": [],
+      "tags": ["tank", "mercenary"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spiderling",
+      "name": "Spiderling",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 3,
+        "attack": 2,
+        "agility": 6,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 2
+      },
+      "abilities": [],
+      "tags": ["scout", "swarm"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "mouse",
+      "name": "Mouse",
+      "faction": "neutral",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 14,
+        "attack": 5,
+        "agility": 4,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 7
+      },
+      "abilities": [],
+      "tags": ["large", "mercenary"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "cockroach",
+      "name": "Cockroach",
+      "faction": "neutral",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 6,
+        "attack": 6,
+        "agility": 7,
+        "armor": 0,
+        "intelligence": 1,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["swarm", "ferocious"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "stinkbug",
+      "name": "Stinkbug",
+      "faction": "neutral",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 3,
+        "agility": 3,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": [],
+      "tags": ["damage-zone"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-veteran-footman",
+      "name": "Ant Veteran Footman",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 8,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 7
+      },
+      "abilities": ["brace"],
+      "tags": ["melee", "infantry", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-sharpshooter",
+      "name": "Ant Sharpshooter",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 7,
+        "agility": 7,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 6
+      },
+      "abilities": ["volley"],
+      "tags": ["ranged", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-archmage",
+      "name": "Ant Archmage",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 8,
+        "attack": 6,
+        "agility": 5,
+        "armor": 1,
+        "intelligence": 9,
+        "constitution": 6
+      },
+      "abilities": ["ant-plane-switch", "mend", "jelly-apply", "recruit"],
+      "tags": ["caster", "leader-eligible", "support", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 1 },
+        "ceiling": { "attack": -1, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "ant-scout-elite",
+      "name": "Ant Scout Elite",
+      "faction": "ant",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 7,
+        "attack": 5,
+        "agility": 11,
+        "armor": 0,
+        "intelligence": 3,
+        "constitution": 6
+      },
+      "abilities": ["pheroblast", "scout-ping"],
+      "tags": ["scout", "leader-eligible", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": 1, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-veteran-soldier",
+      "name": "Spider Veteran Soldier",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 15,
+        "attack": 6,
+        "agility": 5,
+        "armor": 3,
+        "intelligence": 1,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["melee", "infantry", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-knight",
+      "name": "Spider Knight",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 16,
+        "attack": 5,
+        "agility": 5,
+        "armor": 2,
+        "intelligence": 3,
+        "constitution": 5
+      },
+      "abilities": [],
+      "tags": ["melee", "elite", "queen-guard", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-weaver",
+      "name": "Spider Weaver",
+      "faction": "spider",
+      "size": "medium",
+      "slotCost": 2,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 16,
+        "attack": 6,
+        "agility": 4,
+        "armor": 2,
+        "intelligence": 6,
+        "constitution": 5
+      },
+      "abilities": ["web-tangle", "spin-web", "venom-blast"],
+      "tags": ["debuffer", "support", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "spider-stalker",
+      "name": "Spider Stalker",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 12,
+        "attack": 4,
+        "agility": 8,
+        "armor": 1,
+        "intelligence": 2,
+        "constitution": 4
+      },
+      "abilities": [],
+      "tags": ["scout", "promoted"],
+      "planeAffinity": {
+        "floor": { "attack": -1, "armor": 0 },
+        "ceiling": { "attack": 1, "armor": 1 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    },
+    {
+      "id": "aunt-ant",
+      "name": "Aunt Ant",
+      "faction": "ant",
+      "size": "huge",
+      "slotCost": 4,
+      "movement": "ground",
+      "baseStats": {
+        "hp": 50,
+        "attack": 0,
+        "agility": 2,
+        "armor": 2,
+        "intelligence": 4,
+        "constitution": 10
+      },
+      "abilities": [],
+      "tags": ["escort", "non-combatant"],
+      "planeAffinity": {
+        "floor": { "attack": 0, "armor": 0 },
+        "ceiling": { "attack": 0, "armor": 0 },
+        "wall": { "attack": 0, "armor": 0 }
+      }
+    }
+  ]
+}
