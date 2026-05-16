@@ -390,6 +390,10 @@ const fireMagicArrows = (
   if (!consumedMage || !consumedArcher) return { shooter, target, events: [] };
   // Round 20 — back-row caster bonus (+1 intelligence → +1 damage)
   // when the firing mage is in the back row.
+  // Phase-B follow-up — the firing mage's per-unit campaign level
+  // intelligence bonus is read here too (intelligence scales ability
+  // damage): a leveled mage fires a stronger arrow. Undefined
+  // `levelBonus` (non-campaign) contributes 0 — strict no-op.
   let intBonus = 0;
   if (mageUnitId !== null) {
     const mageTmpl = templates.get(MAGE_TEMPLATE as UnitTemplateId);
@@ -397,6 +401,8 @@ const fireMagicArrows = (
       const formation = formationOrAllFront(shooter);
       intBonus = backRowIntelligenceBonus(formation, mageUnitId, mageTmpl);
     }
+    const mageUnit = shooter.units.find((su) => su.id === mageUnitId);
+    intBonus += mageUnit?.levelBonus?.intelligence ?? 0;
   }
   const totalDamage = damage + intBonus;
   // Apply damage.

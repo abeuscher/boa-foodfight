@@ -41,6 +41,51 @@ export interface DamageModifiers {
   readonly rng: Rng;
 }
 
+/**
+ * Phase-B follow-up — the per-`Unit` campaign level-up combat delta
+ * (engine `Unit.levelBonus`). Folded additively onto a unit's stats by
+ * `applyLevelBonusToStats` in the SAME pre-multiplicative offset lane
+ * as item / phase / plane-affinity / POST-occupation / card offsets, so
+ * a leveled +N is comparable in magnitude to a stat swing and never
+ * multiplies into the posture / jelly / queen stack. The structural
+ * twin of `ItemStatOffset`'s combat slice; the curve never grants
+ * `armor` but the lane carries it for parity. Mirrors the
+ * `engine/types` `Unit.levelBonus` shape (kept local so `engine/combat`
+ * stays a `engine/types`-only leaf per CONTRACTS.md).
+ */
+export interface LevelBonusOffset {
+  readonly attack: number;
+  readonly armor: number;
+  readonly hp: number;
+  readonly agility: number;
+  readonly intelligence: number;
+}
+
+/**
+ * Fold a unit's `levelBonus` into a `Stats` record. Additive on
+ * attack / armor / agility / intelligence (combat dimensions) and on
+ * `hp` so the leveled unit's effective max-HP pool grows (the actual
+ * spawn HP is set by `engine/world-inject`; raising `stats.hp` keeps
+ * the max-HP invariant for the web-mend / web-snare HP-fraction gates
+ * and the battle-participant snapshot). A missing / undefined bonus is
+ * a strict no-op — returns the input `stats` reference unchanged so
+ * non-campaign combat is byte-identical.
+ */
+export const applyLevelBonusToStats = (
+  stats: Stats,
+  bonus: LevelBonusOffset | undefined,
+): Stats => {
+  if (!bonus) return stats;
+  return {
+    ...stats,
+    hp: stats.hp + bonus.hp,
+    attack: stats.attack + bonus.attack,
+    armor: stats.armor + bonus.armor,
+    agility: stats.agility + bonus.agility,
+    intelligence: stats.intelligence + bonus.intelligence,
+  };
+};
+
 export interface PostureMultipliers {
   readonly attack: number;
   readonly defense: number;
