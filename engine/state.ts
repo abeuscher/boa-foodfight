@@ -45,6 +45,7 @@ import type {
   ShopFile,
   UnitsFile,
 } from './schemas/index.ts';
+import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
   AbilityId,
   FogTile,
@@ -63,6 +64,7 @@ import type {
   UnitId,
   UnitTemplate,
   UnitTemplateId,
+  VictoryCondition,
 } from './types.ts';
 
 export interface NeutralSpawnEvent {
@@ -310,7 +312,12 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   // (3-5 mid-POSTs subject to ≤2 per plane) and obstacle clusters
   // (2-5 per plane, biased to contiguity). storm-drain (start) and
   // spider-web (finish) stay fixed.
-  const randomizedMap = generateRandomMap({ seed, base: data.map });
+  //
+  // L2-1 — a `static: true` map (the hand-authored L2 pipe corridor,
+  // whose obstacle walls and bespoke POSTs must survive intact) skips
+  // the random pass entirely and is used verbatim. L1's map.json has
+  // no `static` flag so its random-map path is byte-identical.
+  const randomizedMap = data.map.static ? data.map : generateRandomMap({ seed, base: data.map });
   const tiles = buildTiles(randomizedMap);
   const posts = buildPosts(randomizedMap);
   const baseParties = buildParties(data.rosters, unitTemplates, data.abilities);
@@ -358,6 +365,22 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const blitzRng = createRng(seed).fork('spider-blitz');
   const spiderBlitzMode = blitzRng.next() < 0.05;
 
+  // L2-1 — per-scenario win/loss objective. The map may declare it;
+  // a map without it defaults to the L1 capture-spider-web objective
+  // (DEFAULT_VICTORY_CONDITION), so the static L1 path is byte-
+  // identical. Brand the data strings into the engine's id types.
+  const vcData = randomizedMap.victoryCondition;
+  const victoryCondition: VictoryCondition =
+    vcData === undefined
+      ? DEFAULT_VICTORY_CONDITION
+      : vcData.kind === 'capture-post'
+        ? { kind: 'capture-post', postId: vcData.postId as PostId }
+        : {
+            kind: 'escort',
+            escortUnitTemplateId: vcData.escortUnitTemplateId as UnitTemplateId,
+            exitPostId: vcData.exitPostId as PostId,
+          };
+
   const state: GameState = {
     turn: 0,
     seed,
@@ -381,6 +404,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     cardHand: { ant: [], spider: [] },
     cardDeck: initialMarket.cardDeck,
     spiderBlitzMode,
+    victoryCondition,
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({

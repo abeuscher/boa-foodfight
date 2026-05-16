@@ -35,7 +35,7 @@ import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
 import { runScenario } from '../engine/turn.ts';
-import type { Faction, GameState, ReplayEvent } from '../engine/types.ts';
+import type { Faction, GameState, PartyId, ReplayEvent } from '../engine/types.ts';
 import { extractGold, extractWorldRoster } from '../engine/world-extract.ts';
 import type { LeveledUnitSummary } from '../engine/world-inject.ts';
 import { injectWorldRoster, scaffoldFromState } from '../engine/world-inject.ts';
@@ -90,20 +90,63 @@ interface ScenarioRunResult {
   readonly finalState: GameState;
   readonly winner: Faction | null;
   readonly turnsPlayed: number;
+  /** L2-4 — the scenario's win-condition kind, surfaced for the
+   * world-loop summary so the L1 (capture) → L2 (escort) arc is
+   * legible at a glance. */
+  readonly victoryKind: string;
 }
 
 /**
+ * Per-scenario wiring. The campaign is L1 (capture-the-web) followed
+ * by a REAL L2 (the Pipe — escort Aunt Ant). S0 uses the level-1 data
+ * dir + spider-l1; S1 uses level-2 + spider-l2 and preserves the
+ * scenario-provided `escort-column` (Aunt Ant) through the carried-
+ * roster inject.
+ */
+interface ScenarioConfig {
+  readonly dataDir: string;
+  readonly enemyAi: string;
+  /** Ant party ids placed by THIS scenario's roster that must survive
+   * the carried-roster inject verbatim (the L2 Aunt Ant party). */
+  readonly preserveScenarioPartyIds: ReadonlySet<PartyId>;
+}
+
+const L2_ESCORT_PARTY = 'escort-column' as PartyId;
+
+const scenarioConfig = (args: Args, scenarioIndex: number): ScenarioConfig => {
+  if (scenarioIndex === 0) {
+    return {
+      dataDir: args.dataDir,
+      enemyAi: 'spider-l1',
+      preserveScenarioPartyIds: new Set(),
+    };
+  }
+  // S1 = real L2 (the Pipe). Resolve data/level-2 relative to the
+  // configured L1 data dir so a custom --data root still finds L2.
+  return {
+    dataDir: path.join(path.dirname(args.dataDir), 'level-2'),
+    enemyAi: 'spider-l2',
+    preserveScenarioPartyIds: new Set([L2_ESCORT_PARTY]),
+  };
+};
+
+/**
  * Run one scenario. `injectRoster` (when provided) replaces the static
- * ant parties with the carried campaign roster before the run.
+ * ant parties with the carried campaign roster before the run; the
+ * scenario's `preserveScenarioPartyIds` (the L2 Aunt Ant party) are
+ * kept verbatim from scenario data so the campaign roster and the
+ * scenario-provided escortee compose.
  */
 const runOneScenario = (
   args: Args,
   scenarioIndex: number,
   injectRoster: WorldRoster | undefined,
 ): ScenarioRunResult => {
+  const cfg = scenarioConfig(args, scenarioIndex);
   const seed = scenarioSeed(args.seed, scenarioIndex);
-  const loaded = loadScenario(args.dataDir, seed);
+  const loaded = loadScenario(cfg.dataDir, seed);
   let state = loaded.state;
+  const victoryKind = state.victoryCondition?.kind ?? 'capture-post';
   // Phase-B follow-up: leveled units placed by the inject pass. Empty
   // for the static (non-injected) scenario 0 and for any campaign
   // roster with no level-2+ unit — the summary event is then skipped
@@ -111,12 +154,14 @@ const runOneScenario = (
   let leveledUnits: readonly LeveledUnitSummary[] = [];
   if (injectRoster) {
     const scaffold = scaffoldFromState(state);
-    const injected = injectWorldRoster(state, injectRoster, scaffold);
+    const injected = injectWorldRoster(state, injectRoster, scaffold, {
+      preserveScenarioPartyIds: cfg.preserveScenarioPartyIds,
+    });
     state = injected.state;
     leveledUnits = injected.report.leveledUnits;
   }
   const player = PLAYER_AIS.baseline;
-  const enemy = ENEMY_AIS['spider-l1'];
+  const enemy = ENEMY_AIS[cfg.enemyAi];
   if (!player || !enemy) throw new Error('world-loop: missing baseline/spider AI');
 
   const replayDir = path.join(args.outRoot, args.campaignId);
@@ -160,6 +205,7 @@ const runOneScenario = (
     finalState: outcome.finalState,
     winner: outcome.finalState.winner,
     turnsPlayed: outcome.turnsPlayed,
+    victoryKind,
   };
 };
 
@@ -200,8 +246,8 @@ export interface WorldLoopSummary {
   readonly campaignId: string;
   readonly seed: number;
   readonly resumed: boolean;
-  readonly scenario0: { winner: Faction | null; turnsPlayed: number };
-  readonly scenario1: { winner: Faction | null; turnsPlayed: number };
+  readonly scenario0: { winner: Faction | null; turnsPlayed: number; victoryKind: string };
+  readonly scenario1: { winner: Faction | null; turnsPlayed: number; victoryKind: string };
   readonly rosterBefore: number;
   readonly rosterAfter: number;
   readonly goldBefore: number;
@@ -248,7 +294,11 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
     cost: MOUSE_MERC_COST,
   });
 
-  // Scenario 1 (stub copy of L1) with the carried roster injected.
+  // Scenario 1 — real L2 (the Pipe, escort Aunt Ant) with the carried
+  // roster injected. The L2-provided escort-column (Aunt Ant + her
+  // L2 guards) is preserved verbatim; every other ant party is
+  // scaffold-rebuilt from the carried L1 roster, so the campaign
+  // veterans guard a fresh Aunt Ant through the pipe.
   const scenario1Result = runOneScenario(args, 1, shop.state.roster);
   const built1 = buildPostScenarioState(args, 1, scenario1Result);
   saveWorldState(built1.state, args.outRoot);
@@ -260,10 +310,12 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
     scenario0: {
       winner: scenario0Result.winner,
       turnsPlayed: scenario0Result.turnsPlayed,
+      victoryKind: scenario0Result.victoryKind,
     },
     scenario1: {
       winner: scenario1Result.winner,
       turnsPlayed: scenario1Result.turnsPlayed,
+      victoryKind: scenario1Result.victoryKind,
     },
     rosterBefore,
     rosterAfter: rosterSize(built1.state.roster),
@@ -288,14 +340,14 @@ const printSummary = (s: WorldLoopSummary): void => {
   console.log(`Campaign:        ${s.campaignId}${s.resumed ? ' (resumed)' : ''}`);
   console.log(`Campaign seed:   ${String(s.seed)}`);
   console.log(
-    `Scenario 0:      winner=${String(s.scenario0.winner)} turns=${String(
-      s.scenario0.turnsPlayed,
-    )}`,
+    `Scenario 0 (L1): win-condition=${s.scenario0.victoryKind} winner=${String(
+      s.scenario0.winner,
+    )} turns=${String(s.scenario0.turnsPlayed)}`,
   );
   console.log(
-    `Scenario 1:      winner=${String(s.scenario1.winner)} turns=${String(
-      s.scenario1.turnsPlayed,
-    )}`,
+    `Scenario 1 (L2): win-condition=${s.scenario1.victoryKind} winner=${String(
+      s.scenario1.winner,
+    )} turns=${String(s.scenario1.turnsPlayed)}`,
   );
   console.log(
     `Roster size:     ${String(s.rosterBefore)} (post-S0) -> ${String(s.rosterAfter)} (post-S1)`,

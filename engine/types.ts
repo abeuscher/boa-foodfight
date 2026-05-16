@@ -33,6 +33,39 @@ export type CardId = string & { readonly __brand: 'CardId' };
 export type Plane = 'floor' | 'ceiling' | 'north-wall' | 'south-wall' | 'east-wall' | 'west-wall';
 export type Faction = 'ant' | 'spider' | 'neutral';
 
+/**
+ * Per-scenario win/loss objective. Loaded from scenario data (optional;
+ * a scenario data set lacking it defaults to the L1 capture-the-web
+ * objective, keeping L1 byte-identical). Consumed by `checkWinner`
+ * (end-of-turn) which dispatches on `.kind`.
+ *
+ *  - `capture-post`: the historical L1 objective. The ants win when
+ *    `postId` is ant-owned. Loss checks (queen dead / field force
+ *    wiped) plus the round-19 timeout score-resolution are unchanged.
+ *  - `escort`: the L2 (Pipe) objective. The ants win when a *living*
+ *    unit of `escortUnitTemplateId` sits on the tile of `exitPostId`.
+ *    The ants lose if every `escortUnitTemplateId` unit is dead OR the
+ *    ant queen is dead. Timeout (turn cap) is an ant loss — the escort
+ *    failed to make it through.
+ */
+export type VictoryCondition =
+  | { readonly kind: 'capture-post'; readonly postId: PostId }
+  | {
+      readonly kind: 'escort';
+      readonly escortUnitTemplateId: UnitTemplateId;
+      readonly exitPostId: PostId;
+    };
+
+/**
+ * The L1-equivalent default applied when scenario data omits
+ * `victoryCondition`. Reproduces the historical hardcoded behavior
+ * exactly (ants win on owning `spider-web`).
+ */
+export const DEFAULT_VICTORY_CONDITION: VictoryCondition = {
+  kind: 'capture-post',
+  postId: 'spider-web' as PostId,
+};
+
 export interface TileCoord {
   readonly plane: Plane;
   readonly x: number;
@@ -672,6 +705,15 @@ export interface GameState {
    * equivalent to `false` and old replays load unchanged.
    */
   readonly spiderBlitzMode?: boolean;
+  /**
+   * Per-scenario win/loss objective, resolved from scenario data at
+   * load time (`engine/state.ts`). Optional for backwards
+   * compatibility: hand-built test states / pre-L2 replays without the
+   * field are read by `checkWinner` as the L1 default
+   * (`DEFAULT_VICTORY_CONDITION` — capture spider-web), so the static
+   * L1 path stays byte-identical.
+   */
+  readonly victoryCondition?: VictoryCondition;
   readonly winner: Faction | null;
 }
 

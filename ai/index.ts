@@ -12,6 +12,7 @@ import { jellyRushPlayer } from './jelly-rush.ts';
 import { neutralPlayer } from './neutral.ts';
 import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
+import { spiderL2 } from './spider-l2.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
 
@@ -26,6 +27,7 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
 
 export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l1': spiderL1,
+  'spider-l2': spiderL2,
 };
 
 export {
@@ -36,6 +38,7 @@ export {
   neutralPlayer,
   rushPlayer,
   spiderL1,
+  spiderL2,
   turtlePlayer,
 };
 export type { AIPolicy };

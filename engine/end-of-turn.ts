@@ -19,6 +19,7 @@ import { distance, sameCoord } from './coord.ts';
 import { discoverItems } from './items.ts';
 import { PHASE_LENGTH } from './phase.ts';
 import type { ItemsFile, JellyFile, QueenFile } from './schemas/index.ts';
+import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
   DamageZone,
   DayNightPhase,
@@ -37,6 +38,7 @@ import type {
   UnitId,
   UnitTemplate,
   UnitTemplateId,
+  VictoryCondition,
 } from './types.ts';
 
 const HYPNOTIZE_REBOUND_IMMUNITY = 10;
@@ -67,7 +69,6 @@ export interface EndOfTurnOutcome {
 }
 
 const QUEEN_TAG = 'queen';
-const SPIDER_WEB_POST_ID = 'spider-web' as PostId;
 const QUEEN_PARTY_SLOT_CAPACITY = 12;
 
 /** Sum of slotCost across all units in a party, by their template. */
@@ -317,14 +318,76 @@ const antFieldForceWiped = (state: GameState): boolean => {
   return sawAnyFieldParty;
 };
 
-/** Determine winner. Loss is checked before victory. Returns null if neither. */
-const checkWinner = (state: GameState): Faction | null => {
+/** True iff the ant queen exists and is alive. The home-base queen
+ * rule applies to every objective kind (capture and escort alike). */
+const antQueenAlive = (state: GameState): boolean => {
   const queenUnit = findQueenUnit(state);
-  if (!queenUnit || queenUnit.currentHp <= 0) return 'spider';
-  if (antFieldForceWiped(state)) return 'spider';
-  const web = state.posts.get(SPIDER_WEB_POST_ID);
-  if (web?.owner === 'ant') return 'ant';
-  return null;
+  return !(!queenUnit || queenUnit.currentHp <= 0);
+};
+
+/** True iff at least one living unit of `templateId` sits on the tile
+ * occupied by `postId`. Used by the escort objective: the escort
+ * succeeds the instant the (still-living) escort unit reaches the exit
+ * POST's tile. */
+const escortReachedExit = (
+  state: GameState,
+  escortUnitTemplateId: UnitTemplateId,
+  exitPostId: PostId,
+): boolean => {
+  const exit = state.posts.get(exitPostId);
+  if (!exit) return false;
+  for (const party of state.parties.values()) {
+    if (!sameCoord(party.location, exit.location)) continue;
+    for (const u of party.units) {
+      if (u.currentHp <= 0) continue;
+      if (u.templateId === escortUnitTemplateId) return true;
+    }
+  }
+  return false;
+};
+
+/** True iff every unit of `templateId` (across all parties) is dead or
+ * absent. The escort objective is an immediate ant loss when the
+ * escortee can no longer be delivered. */
+const escortUnitLost = (state: GameState, escortUnitTemplateId: UnitTemplateId): boolean => {
+  for (const party of state.parties.values()) {
+    for (const u of party.units) {
+      if (u.templateId === escortUnitTemplateId && u.currentHp > 0) return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Determine winner. Loss is checked before victory. Returns null if
+ * neither. Dispatches on the scenario's `victoryCondition`; a state
+ * without the field defaults to the L1 capture-spider-web objective so
+ * the static L1 path is byte-identical to the historical hardcoded
+ * logic.
+ */
+const checkWinner = (state: GameState): Faction | null => {
+  const vc: VictoryCondition = state.victoryCondition ?? DEFAULT_VICTORY_CONDITION;
+  switch (vc.kind) {
+    case 'capture-post': {
+      // Historical L1 behavior, verbatim: queen-dead loss, then
+      // field-force-wiped loss, then the capture victory.
+      if (!antQueenAlive(state)) return 'spider';
+      if (antFieldForceWiped(state)) return 'spider';
+      const post = state.posts.get(vc.postId);
+      if (post?.owner === 'ant') return 'ant';
+      return null;
+    }
+    case 'escort': {
+      // Escort loss conditions checked before the win: the ant queen
+      // (still at the pipe entrance) dying, or the escortee dying,
+      // ends the run as a spider win. Otherwise the ants win the
+      // moment the living escortee stands on the exit POST.
+      if (!antQueenAlive(state)) return 'spider';
+      if (escortUnitLost(state, vc.escortUnitTemplateId)) return 'spider';
+      if (escortReachedExit(state, vc.escortUnitTemplateId, vc.exitPostId)) return 'ant';
+      return null;
+    }
+  }
 };
 
 /**

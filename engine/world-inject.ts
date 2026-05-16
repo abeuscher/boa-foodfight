@@ -153,6 +153,25 @@ const rebuildUnit = (worldUnit: WorldRoster['units'][number], tmpl: UnitTemplate
 };
 
 /**
+ * Options for `injectWorldRoster`. All optional and backward-
+ * compatible: omitting them reproduces the original behavior exactly
+ * (so the L1 path and the world-loop stub-S1 stay byte-identical).
+ */
+export interface InjectOptions {
+  /**
+   * L2-4 — scenario-provided ant party ids to keep VERBATIM from the
+   * freshly-loaded scenario (not scaffold-rebuilt from the carried
+   * roster). This is how an L2-scenario-provided unit that the carried
+   * L1 roster does not contain — Aunt Ant, placed by
+   * `data/level-2/roster-ants.json` in `escort-column` — survives the
+   * inject. The carried roster still fills every OTHER scaffold party
+   * (queen-guard, the combat escorts), so the campaign roster and the
+   * L2 escortee compose: carried veterans guard a fresh Aunt Ant.
+   */
+  readonly preserveScenarioPartyIds?: ReadonlySet<PartyId>;
+}
+
+/**
  * Inject a carried `WorldState` roster into a freshly-loaded scenario
  * `GameState`. `scaffold` is the static ant `roster-ants.json` party
  * metadata (id → location / posture). Spider / neutral parties in
@@ -163,7 +182,9 @@ export const injectWorldRoster = (
   base: GameState,
   roster: WorldRoster,
   scaffold: ReadonlyMap<PartyId, { location: Party['location']; posture: Party['posture'] }>,
+  options?: InjectOptions,
 ): InjectResult => {
+  const preserve = options?.preserveScenarioPartyIds ?? new Set<PartyId>();
   const rebuiltParties: PartyId[] = [];
   const droppedParties: PartyId[] = [];
   const trimmedUnitIds: UnitId[] = [];
@@ -173,14 +194,17 @@ export const injectWorldRoster = (
   const worldUnitById = new Map(roster.units.map((u) => [u.id, u] as const));
   const newParties = new Map<PartyId, Party>();
 
-  // Keep every non-ant (spider / neutral) party verbatim.
+  // Keep every non-ant (spider / neutral) party verbatim, plus any
+  // ant party explicitly preserved (L2-4: the scenario-provided
+  // escort party carrying Aunt Ant — not in the carried roster).
   for (const [id, party] of base.parties) {
-    if (party.faction !== 'ant') newParties.set(id, party);
+    if (party.faction !== 'ant' || preserve.has(id)) newParties.set(id, party);
   }
 
   // Rebuild ant parties from the carried assignments, in scaffold order
   // for determinism.
   for (const assignment of roster.partyAssignments) {
+    if (preserve.has(assignment.partyId)) continue; // kept verbatim above
     const meta = scaffold.get(assignment.partyId);
     if (!meta) continue; // assignment with no scaffold slot → skip
     const cap = slotCapForParty(assignment.partyId);
@@ -236,6 +260,7 @@ export const injectWorldRoster = (
   // Any scaffold party with no carried assignment is dropped (its units
   // didn't survive). Record it so the summary can show roster attrition.
   for (const partyId of scaffold.keys()) {
+    if (preserve.has(partyId)) continue; // verbatim, not a roster slot
     const hadAssignment = roster.partyAssignments.some((a) => a.partyId === partyId);
     if (!hadAssignment && !droppedParties.includes(partyId)) {
       droppedParties.push(partyId);
