@@ -21,43 +21,43 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
@@ -78,8 +78,45 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          }
+        ],
+        [
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -98,18 +135,33 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
@@ -122,188 +174,6 @@
           {
             "kind": "obstacle",
             "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          }
-        ],
-        [
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          }
-        ],
-        [
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          }
-        ],
-        [
-          {
-            "kind": "path",
-            "movementCost": 1,
-            "defenseModifier": 1,
-            "groundPathBonus": 1
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
             "defenseModifier": 0
           },
           {
@@ -321,33 +191,6 @@
             "movementCost": 1,
             "defenseModifier": 1,
             "groundPathBonus": 1
-          }
-        ],
-        [
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
           },
           {
             "kind": "obstacle",
@@ -377,6 +220,21 @@
         ],
         [
           {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
             "kind": "open",
             "movementCost": 1,
             "defenseModifier": 0
@@ -387,23 +245,8 @@
             "defenseModifier": 0
           },
           {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
+            "kind": "open",
+            "movementCost": 1,
             "defenseModifier": 0
           },
           {
@@ -429,8 +272,23 @@
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -449,8 +307,45 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          }
+        ],
+        [
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -461,6 +356,111 @@
           {
             "kind": "open",
             "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "open",
+            "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          }
+        ],
+        [
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "path",
+            "movementCost": 1,
+            "defenseModifier": 1,
+            "groundPathBonus": 1
+          },
+          {
+            "kind": "open",
+            "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "open",
+            "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          }
+        ],
+        [
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -481,43 +481,43 @@
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -546,55 +546,55 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -603,83 +603,48 @@
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
             "kind": "obstacle",
             "movementCost": 999,
             "defenseModifier": 0
@@ -692,41 +657,46 @@
           {
             "kind": "open",
             "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
             "kind": "obstacle",
             "movementCost": 999,
             "defenseModifier": 0
@@ -744,36 +714,41 @@
           {
             "kind": "open",
             "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
             "kind": "obstacle",
             "movementCost": 999,
             "defenseModifier": 0
@@ -796,11 +771,61 @@
           {
             "kind": "open",
             "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
             "kind": "open",
             "movementCost": 1,
             "defenseModifier": 0
@@ -823,36 +848,41 @@
           {
             "kind": "obstacle",
             "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
             "defenseModifier": 0
           }
         ],
         [
           {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
             "kind": "open",
             "movementCost": 1,
             "defenseModifier": 0
@@ -870,41 +900,46 @@
           {
             "kind": "obstacle",
             "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
             "defenseModifier": 0
           }
         ],
         [
           {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
+            "defenseModifier": 0
+          },
+          {
             "kind": "open",
             "movementCost": 1,
             "defenseModifier": 0
@@ -917,51 +952,11 @@
           {
             "kind": "obstacle",
             "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "obstacle",
-            "movementCost": 999,
-            "defenseModifier": 0
-          },
-          {
-            "kind": "open",
-            "movementCost": 1,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
-            "defenseModifier": 0
-          },
-          {
             "kind": "obstacle",
             "movementCost": 999,
             "defenseModifier": 0
@@ -1004,13 +999,18 @@
           {
             "kind": "open",
             "movementCost": 1,
+            "defenseModifier": 0
+          },
+          {
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           }
         ],
         [
           {
-            "kind": "open",
-            "movementCost": 1,
+            "kind": "obstacle",
+            "movementCost": 999,
             "defenseModifier": 0
           },
           {
@@ -1081,8 +1081,8 @@
       "name": "Pipe Joint",
       "location": {
         "plane": "floor",
-        "x": 9,
-        "y": 5
+        "x": 4,
+        "y": 3
       },
       "owner": "neutral",
       "defensiveBonus": 2,
@@ -1094,8 +1094,8 @@
       "name": "Drain Cap",
       "location": {
         "plane": "floor",
-        "x": 0,
-        "y": 5
+        "x": 6,
+        "y": 7
       },
       "owner": "neutral",
       "defensiveBonus": 2,

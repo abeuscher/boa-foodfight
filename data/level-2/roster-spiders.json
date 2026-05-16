@@ -41,7 +41,7 @@
       ],
       "startingLocation": {
         "plane": "floor",
-        "x": 8,
+        "x": 3,
         "y": 3
       },
       "posture": "fight"
@@ -63,7 +63,7 @@
       ],
       "startingLocation": {
         "plane": "floor",
-        "x": 1,
+        "x": 7,
         "y": 7
       },
       "posture": "fight"
@@ -85,7 +85,7 @@
       ],
       "startingLocation": {
         "plane": "floor",
-        "x": 5,
+        "x": 4,
         "y": 4
       },
       "posture": "fight"
