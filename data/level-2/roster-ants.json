@@ -59,7 +59,7 @@
       "posture": "run"
     },
     {
-      "id": "escort-vanguard",
+      "id": "vanguard-alpha",
       "leaderClass": "sergeant",
       "leaderIndex": 0,
       "slotCapacity": 8,
@@ -85,7 +85,7 @@
       "posture": "fight"
     },
     {
-      "id": "escort-rearguard",
+      "id": "vanguard-bravo",
       "leaderClass": "scout-captain",
       "leaderIndex": 0,
       "slotCapacity": 8,
@@ -107,6 +107,32 @@
         "plane": "floor",
         "x": 1,
         "y": 1
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "pathfinders",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "ant-mage",
+          "count": 1
+        },
+        {
+          "templateId": "ant-scout",
+          "count": 2
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 3,
+        "y": 2
       },
       "posture": "fight"
     }
