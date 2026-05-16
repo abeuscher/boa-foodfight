@@ -30,6 +30,19 @@ const worldUnitSchema = z.object({
   promoted: z.boolean(),
   /** Round-14 equipped item id, or null for an empty slot. */
   item: idSchema.nullable(),
+  /** Phase B (B3) — cumulative campaign level-up stat bonus. Optional
+   * for forward/backward compatibility: a save written before any
+   * level-up (or by an older format) omits it and is read as all-zero.
+   * Must persist so campaign-long growth accumulates across save /
+   * reload boundaries. */
+  levelUpBonus: z
+    .object({
+      hp: z.number().int().nonnegative(),
+      attack: z.number().int().nonnegative(),
+      agility: z.number().int().nonnegative(),
+      intelligence: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 const partyAssignmentSchema = z.object({

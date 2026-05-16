@@ -59,6 +59,27 @@ export interface WorldUnit {
   readonly promoted: boolean;
   /** Round-14 equipped item carries forward; null for an empty slot. */
   readonly item: ItemId | null;
+  /**
+   * Phase B (B3) — cumulative campaign level-up stat bonus. Absent
+   * until the unit's first level-up (treated as all-zero). Persisted
+   * so growth accumulates across save / reload boundaries. The
+   * concrete grant rule lives in `engine/world-levelup.ts`; the field
+   * is declared here (rather than there) to keep it serializable
+   * without a circular import.
+   */
+  readonly levelUpBonus?: WorldLevelUpBonus;
+}
+
+/**
+ * Phase B (B3) — per-unit additive stat bonus from campaign level-ups.
+ * Folded onto template base stats by `engine/world-levelup`'s
+ * `effectiveStats`. Fields the curve doesn't grant stay 0.
+ */
+export interface WorldLevelUpBonus {
+  readonly hp: number;
+  readonly attack: number;
+  readonly agility: number;
+  readonly intelligence: number;
 }
 
 export interface WorldPartyAssignment {
@@ -135,6 +156,9 @@ export const serializeWorldState = (ws: WorldState): string =>
           charisma: u.charisma,
           promoted: u.promoted,
           item: u.item,
+          // Only emit when present so a never-leveled roster's save
+          // stays byte-identical to the pre-B3 format.
+          ...(u.levelUpBonus !== undefined ? { levelUpBonus: u.levelUpBonus } : {}),
         })),
         partyAssignments: ws.roster.partyAssignments.map((a) => ({
           partyId: a.partyId,
@@ -174,6 +198,7 @@ export const deserializeWorldState = (str: string): WorldState => {
         charisma: u.charisma,
         promoted: u.promoted,
         item: u.item === null ? null : (u.item as ItemId),
+        ...(u.levelUpBonus !== undefined ? { levelUpBonus: u.levelUpBonus } : {}),
       })),
       partyAssignments: parsed.roster.partyAssignments.map((a) => ({
         partyId: a.partyId as PartyId,

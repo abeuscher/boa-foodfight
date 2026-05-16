@@ -45,7 +45,7 @@
  */
 
 import type { Stats, UnitTemplate, UnitTemplateId } from './types.ts';
-import type { WorldRoster, WorldUnit } from './world-state.ts';
+import type { WorldLevelUpBonus, WorldRoster, WorldUnit } from './world-state.ts';
 
 /** HP granted per level gained. */
 export const HP_PER_LEVEL = 2;
@@ -77,15 +77,11 @@ export const levelForXp = (xp: number): number => {
 
 /**
  * Per-unit additive stat bonus accumulated from level-ups across the
- * campaign. Folded onto template base stats by `world-inject`. Fields
- * not granted by the curve stay 0.
+ * campaign. The shape lives in `engine/world-state.ts`
+ * (`WorldLevelUpBonus`) so it is serializable without a circular
+ * import; re-exported here as the level-up subsystem's public name.
  */
-export interface LevelUpBonus {
-  readonly hp: number;
-  readonly attack: number;
-  readonly agility: number;
-  readonly intelligence: number;
-}
+export type LevelUpBonus = WorldLevelUpBonus;
 
 const ZERO_BONUS: LevelUpBonus = { hp: 0, attack: 0, agility: 0, intelligence: 0 };
 
@@ -102,10 +98,8 @@ export const primaryStatForTemplate = (tmpl: UnitTemplate | undefined): PrimaryS
   return 'attack';
 };
 
-export interface LeveledWorldUnit extends WorldUnit {
-  /** Cumulative campaign level-up bonus. Absent ⇒ no growth yet. */
-  readonly levelUpBonus: LevelUpBonus;
-}
+/** A `WorldUnit` after a level-up pass — `levelUpBonus` is now set. */
+export type LeveledWorldUnit = WorldUnit & { readonly levelUpBonus: LevelUpBonus };
 
 export interface LevelUpResult {
   readonly unit: LeveledWorldUnit;
@@ -124,7 +118,7 @@ export const applyLevelUp = (
   tmpl: UnitTemplate | undefined,
   templateMaxHp: number,
 ): LevelUpResult => {
-  const prior = (unit as LeveledWorldUnit).levelUpBonus ?? ZERO_BONUS;
+  const prior = unit.levelUpBonus ?? ZERO_BONUS;
   const newLevel = levelForXp(unit.xp);
   const levelsGained = Math.max(0, newLevel - unit.level);
   if (levelsGained === 0) {
@@ -195,7 +189,7 @@ export const applyRosterLevelUps = (
  * Returns the base stats unchanged when the unit has no recorded bonus.
  */
 export const effectiveStats = (base: Stats, unit: WorldUnit): Stats => {
-  const bonus = (unit as LeveledWorldUnit).levelUpBonus;
+  const bonus = unit.levelUpBonus;
   if (!bonus) return base;
   return {
     ...base,
