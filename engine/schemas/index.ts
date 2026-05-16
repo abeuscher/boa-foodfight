@@ -10,3 +10,4 @@ export * from './queen.ts';
 export * from './roster.ts';
 export * from './shop.ts';
 export * from './units.ts';
+export * from './world.ts';

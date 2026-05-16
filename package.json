@@ -22,6 +22,7 @@
     "tune": "tsx harness/tune.ts",
     "diversity": "tsx harness/diversity.ts",
     "coevo": "tsx harness/coevo.ts",
+    "world-loop": "tsx harness/world-loop.ts",
     "viewer": "tsx viewer/serve.ts",
     "build:viewer": "tsx viewer/build-manifest.ts",
     "test:viewer": "playwright test --config viewer/playwright.config.ts",
