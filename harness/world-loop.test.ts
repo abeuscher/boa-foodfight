@@ -96,10 +96,20 @@ describe('harness/world-loop integration', () => {
       expect(escortTemplates.has(u.templateId)).toBe(true);
     }
     // The carried roster genuinely flowed into L2 (queen-guard + the
-    // veteran field parties), and the scenario-provided Aunt Ant is
-    // present — proving the campaign roster + L2 escortee compose.
+    // veteran field parties) — proving the campaign roster composes
+    // with the L2 scenario. This holds regardless of L2 outcome.
     expect(carried).toBeGreaterThan(0);
-    expect(auntAntSeen).toBe(true);
+    // Aunt Ant lifecycle invariant: world-extract prunes dead units,
+    // so she only persists into the post-S1 roster when the escort
+    // SUCCEEDED (ant win = she reached the exit alive). On a spider
+    // win she died mid-pipe and is correctly pruned. Asserting her
+    // unconditional presence couples the test to escort balance /
+    // seed luck; the precise invariant is outcome-conditional.
+    if (summary.scenario1.winner === 'ant') {
+      expect(auntAntSeen).toBe(true);
+    } else {
+      expect(auntAntSeen).toBe(false);
+    }
   });
 
   it('is deterministic: two fresh runs with the same seed match', () => {

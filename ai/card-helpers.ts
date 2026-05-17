@@ -19,6 +19,7 @@ import type {
   BuyCardOrder,
   CardId,
   GameState,
+  Order,
   Party,
   PartyId,
   PlayCardOrder,
@@ -211,6 +212,26 @@ export const playCardOrderFor = (
     if (order) return order;
   }
   return undefined;
+};
+
+/**
+ * The faction's commander-card orders for this turn: the buy order (if
+ * any) followed by the play order (if any), in the engine-resolved
+ * order. A thin convenience wrapper so a policy's queen-guard / idle-
+ * party hook can prepend the faction card work with a single call
+ * instead of repeating the buy-then-play boilerplate (jscpd's
+ * threshold-0 gate flags that 6-line block otherwise).
+ */
+export const factionCardOrders = (
+  state: GameState,
+  faction: 'ant' | 'spider',
+): readonly Order[] => {
+  const orders: Order[] = [];
+  const buy = buyCardOrderFor(state, faction);
+  if (buy) orders.push(buy);
+  const play = playCardOrderFor(state, faction);
+  if (play) orders.push(play);
+  return orders;
 };
 
 const orderFor = (
