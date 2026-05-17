@@ -772,6 +772,17 @@ Where this roadmap defers to other docs:
   tiered MP; §1.2 combo abilities; §1.3 commander cards; §1.4 charisma
   promotion (supersedes TBS §2.3); §1.5 formation slots; §1.6
   score-tiebreaker.
+- **`docs/design-memo-pacing-and-turn-cap.md`** (RECORDED, post-Phase-D
+  L4): real-time-with-pause pacing; stalemate as a real third outcome
+  (NOT score-resolved); L1 exempt on the tutorial/anchor ground (also
+  preserves gate-29); the Phase-D-style engine interface (optional
+  `timeCap`, observer stalemate detector, 3rd reported outcome,
+  default-inert, score path unchanged for L1); stalemate-rate is a
+  reported diagnostic, not a per-scenario gate (reconciles
+  level-progression-plan §4c). Amends the §1.6 "hard turn-cap with
+  score-based tiebreaker" mechanic for L2+ conquest scenarios; the
+  two-dimensional-curve / grandfather-vs-retune / campaign-stalemate
+  questions are its OPEN alignment agenda.
 - **`STATUS.md`**: current Phase-6 coevolution loop state, the within-
   scenario designer-agent system that Tier-1 work inherits.
 - **`PLAN.md`**: original phase-by-phase execution plan; Tier-1 work
