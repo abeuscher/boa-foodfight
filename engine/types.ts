@@ -279,6 +279,17 @@ export interface Post {
    * today, so all shipped maps are byte-identical.
    */
   readonly oneWay?: boolean;
+  /**
+   * L5 (Bedroom) Under-Bed concealment / fog-immunity (§3.7,
+   * Gameplay-owned per §4a). An ant party standing on a `concealment`
+   * POST emits NO pheromone trail that turn and its existing trail is
+   * cleared — it is invisible to the spider's trail-scouting (rec
+   * 1.5 / TBS §1.5). Implemented purely at engine trail-emission;
+   * the locked spider-AI visibility code (`getSpiderVisibleAntTrail`)
+   * is untouched — it simply finds no entries for a concealed party.
+   * Absent everywhere today, so all shipped maps are byte-identical.
+   */
+  readonly concealment?: boolean;
   readonly tags: readonly string[];
   /**
    * Round 17 — POST hold mechanic. When a non-owner faction party walks

@@ -77,6 +77,13 @@ export const postSchema = z.object({
    * may not be used to enter it. Absent/false on every shipped map.
    */
   oneWay: z.boolean().optional(),
+  /**
+   * L5 (Bedroom) Under-Bed concealment (§3.7). An ant party on a
+   * `concealment` POST emits no pheromone trail and its trail is
+   * cleared — invisible to spider trail-scouting. Absent on every
+   * shipped map.
+   */
+  concealment: z.boolean().optional(),
   tags: z.array(z.string()).default([]),
   /**
    * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed

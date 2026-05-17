@@ -730,11 +730,27 @@ export const endOfTurn = (
   //     age existing entries by 1 turn, drop any older than
   //     PHERO_MAX_AGE, then prepend the current location at age 0.
   //     Spider parties don't carry trails (asymmetric visibility).
+  // L5 Under-Bed concealment (§3.7): an ant party standing on a
+  // `concealment` POST leaves it with an EMPTY trail this turn — no
+  // fresh breadcrumb and existing ones dropped — so the spider's
+  // trail-scouting (the locked `getSpiderVisibleAntTrail`, unchanged)
+  // finds nothing for it. No concealment POSTs on any shipped map, so
+  // this branch never fires there and trails stay byte-identical.
+  const concealmentPosts: TileCoord[] = [];
+  for (const post of working.posts.values()) {
+    if (post.concealment) concealmentPosts.push(post.location);
+  }
+  const isConcealed = (loc: TileCoord): boolean => concealmentPosts.some((c) => sameCoord(c, loc));
+
   const newTrails = new Map<PartyId, readonly PheroTrailEntry[]>();
   for (const [id, party] of working.parties) {
     if (party.faction !== 'ant') continue;
     const alive = party.units.some((u) => u.currentHp > 0);
     if (!alive) continue;
+    if (isConcealed(party.location)) {
+      newTrails.set(id, []);
+      continue;
+    }
     const previous = working.pheroTrails.get(id) ?? [];
     const aged: PheroTrailEntry[] = [];
     for (const entry of previous) {
