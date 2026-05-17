@@ -6,6 +6,7 @@
  */
 
 import { baselineL3Player } from './baseline-l3.ts';
+import { baselineL4Player } from './baseline-l4.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
@@ -17,6 +18,7 @@ import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
 import { spiderL2 } from './spider-l2.ts';
 import { spiderL3 } from './spider-l3.ts';
+import { spiderL4 } from './spider-l4.ts';
 import { spiderTutorial } from './spider-tutorial.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
@@ -48,12 +50,15 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
  * scale without perturbing the locked L1 reference sweep. `baseline-l3`
  * (the L3 / Kitchen capture-post player) lives here for the same
  * reason: a scenario-specific player kept OUT of `PLAYER_AIS` so the
- * gate-29 diversity sweep stays byte-identical.
+ * gate-29 diversity sweep stays byte-identical. `baseline-l4` (the L4 /
+ * Hallway capture-post player) is registered here for the identical
+ * reason.
  */
 export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'escort-l2': escortL2Player,
   'baseline-tutorial': baselineTutorialPlayer,
   'baseline-l3': baselineL3Player,
+  'baseline-l4': baselineL4Player,
 };
 
 /**
@@ -67,10 +72,12 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l2': spiderL2,
   'spider-tutorial': spiderTutorial,
   'spider-l3': spiderL3,
+  'spider-l4': spiderL4,
 };
 
 export {
   baselineL3Player,
+  baselineL4Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -82,6 +89,7 @@ export {
   spiderL1,
   spiderL2,
   spiderL3,
+  spiderL4,
   spiderTutorial,
   turtlePlayer,
 };

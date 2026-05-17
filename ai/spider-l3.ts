@@ -23,9 +23,16 @@
  * ants and denies the capture by co-location (the 2-turn capture in
  * `engine/post-capture.ts` only ticks when the capturer is *alone*).
  *
- * This policy does NOT use the shared `buildPicketDefensePolicy`, so
- * `ai/picket-defense.ts` — and therefore `spider-tutorial` — is left
- * exactly as-is and the stripped tutorial still measures 76.
+ * L3 and L4 are the same defensive shape, so both are thin configs over
+ * the shared `buildFortressDefensePolicy` (`ai/capture-chain.ts`) — the
+ * `ai/picket-defense.ts` consolidation precedent applied to the
+ * capture-post defender. This is a pure structural extraction: the
+ * resolved orders are byte-identical to the prior inline policy
+ * (verified by the unchanged gate-29 / tutorial-76 / L3-67
+ * measurements). The shared builder does NOT use
+ * `buildPicketDefensePolicy`, so `ai/picket-defense.ts` — and therefore
+ * `spider-tutorial` — is left exactly as-is and the stripped tutorial
+ * still measures 76.
  *
  * Strategy (one sentence, §3.4.3 learnability):
  *
@@ -57,166 +64,57 @@
  *      the heal is the structural strength-down that calibrates the
  *      defense down off the otherwise-impregnable fortress).
  *
- * Determinism: pure (state) → state. Every scan iterates
- * `state.parties` in insertion order with a lower-party-id tiebreak;
- * no RNG is consulted — fully replayable.
+ * The measured L3 ant win rate is 67% — inside the arbitration's ruled
+ * [67, 69] band (l3-gameplay-pa-arbitration §5/§7), at the lower
+ * shape-preserving edge of the ~68% target. `INTERCEPT_RADIUS` sits on
+ * a wide flat plateau (every value 8–14 measures a stable, deterministic
+ * ant=67/100; an isolated tight leash of 6 measures ~46%, 7 jumps the
+ * band — the muster-gated rover is what flattens 8–14 into the
+ * plateau). 10 is the plateau centre and the shipped value; the
+ * `planeAffinity` magnitudes are ruled and were NOT touched, the
+ * counter-edge defensiveBonus was measured inert here and left at its
+ * ruled debut value of 3, and the spider roster was left at its
+ * authored composition — the spider AI is the sole lever exercised, as
+ * the within-scenario design loop intends.
+ *
+ * Determinism: pure (state) → state inside the shared builder; scans
+ * iterate `state.parties` in insertion order with a lower-party-id
+ * tiebreak; no RNG is consulted — fully replayable.
  */
 
-import { distance } from '../engine/coord.ts';
-import type { GameState, Order, Party, PartyId, PostId } from '../engine/types.ts';
+import type { PartyId, PostId } from '../engine/types.ts';
 
-// `closestAntParty` is reused from the shared scenario-defense module
-// (it is already exported and consumed by `spider-tutorial` via the
-// picket builder). This is a READ-ONLY import — it does not call
-// `buildPicketDefensePolicy` and changes nothing in `picket-defense.ts`,
-// so the stripped tutorial stays byte-for-byte behavior-identical.
-// Reusing it (rather than re-deriving the scan) is also what keeps
-// this file clear of the duplication gate.
-import { closestAntParty } from './picket-defense.ts';
-import { moveToOrHold, partyAlive } from './policy-helpers.ts';
-import { appendPolicyEvents } from './threat-flee.ts';
+import { buildFortressDefensePolicy, type FortressDefenseConfig } from './capture-chain.ts';
 import type { AIPolicy } from './types.ts';
-
-/** The queen-bearing party that anchors counter-edge. Never moves. */
-const COUNTER_GUARD: PartyId = 'counter-guard' as PartyId;
-const NORTH_PICKET: PartyId = 'north-picket' as PartyId;
-const SOUTH_PICKET: PartyId = 'south-picket' as PartyId;
-const ISLAND_ROVERS: PartyId = 'island-rovers' as PartyId;
-
-/** The objective POST. The `capture-post` victory fires the moment an
- * ant holds this for the 2-turn capture window. */
-const COUNTER_EDGE: PostId = 'counter-edge' as PostId;
 
 /**
  * Chebyshev range from counter-edge within which a picket sorties onto
- * an approaching ant to body-block it, instead of holding the fortress
- * tile. A tight leash keeps both pickets banking the +3 def / +2 heal
- * on counter-edge (an over-strong fortress that overruns the ant
- * march); a loose leash pulls the pickets out to body-block ants the
- * moment they enter the room, trading the fortress's durability for
- * forward pressure and handing the ant a real shot at the objective.
- *
- * In combination with the muster-gated rover (`ROVER_GATE` below) this
- * leash has a wide, flat win-rate plateau: every value from 8 through
- * 14 measures a stable, deterministic ant=67/100 (an isolated tight
- * leash of 6 measures ~46%, 7 jumps the band — the gated rover is what
- * flattens 8–14 into the plateau). 10 is the plateau centre and is the
- * shipped value; the calibration is robust precisely because the
- * operative knob sits on a flat region rather than a knife-edge.
- *
- * The measured L3 ant win rate is 67% — inside the arbitration's ruled
- * [67, 69] band (l3-gameplay-pa-arbitration §5/§7), at the lower
- * shape-preserving edge of the ~68% target. The `planeAffinity`
- * magnitudes are ruled and were NOT touched; the counter-edge
- * defensiveBonus was measured to be inert here (the fortress strength
- * is dominated by the +2 healing + stacking, not the post def bonus)
- * and was left at its ruled debut value of 3; the spider roster was
- * left at its authored composition. The spider AI is the sole lever
- * exercised, as the within-scenario design loop intends.
+ * an approaching ant to body-block it. Wide, flat win-rate plateau
+ * (8–14 all measure ant=67/100); 10 is the plateau centre and shipped
+ * value. See the file header for the full calibration record.
  */
 const INTERCEPT_RADIUS = 10;
 
 /**
  * Chebyshev range from counter-edge inside which the island rover
  * commits to interposing on an ant. Set to the counter-edge →
- * stove-hood distance (the ants' muster POST: Chebyshev(9,0 → 8,7) =
- * 7) on purpose — the rover is the "break the assault as it forms up"
- * party: it ignores ants still walking the far chain and only sallies
- * once the ant mass reaches the muster staging zone, otherwise holding
- * its forward island position (it never collapses back to bank the
- * heal). This muster-gated behavior produces a flat, robust win-rate
- * plateau (insensitive to the exact picket leash across 8–14), which
- * is what makes the L3 calibration stable rather than knife-edge.
+ * stove-hood distance (the ants' muster POST: Chebyshev(9,0 → 8,7) = 7)
+ * on purpose — the rover ignores ants still walking the far chain and
+ * only sallies once the ant mass reaches the muster staging zone,
+ * otherwise holding its forward island position. This muster-gated
+ * behavior produces the flat, robust win-rate plateau that makes the L3
+ * calibration stable rather than knife-edge.
  */
 const ROVER_GATE = 7;
 
-/**
- * The shared sortie decision for every mobile spider party. The party
- * looks at the closest living ant *to the objective* (the objective
- * reference is the pinned counter-guard, which never leaves
- * counter-edge, so its location IS the objective tile — letting this
- * reuse the shared `closestAntParty` rather than re-deriving a
- * tile-distance scan):
- *
- *   - ant within `gate` Chebyshev of the objective → sortie onto that
- *     ant's tile to body-block / bleed it;
- *   - otherwise → the party's `hold` fallback.
- *
- * Pickets pass the objective tile as their `hold` (garrison the
- * fortress, banking the +3 def / +2 heal); the rover passes `null`
- * (hold its forward island ground — never fall back to the heal). One
- * helper, two postures: the only difference between a fortress picket
- * and the forward assault-breaker is the fallback and the gate width.
- */
-const sortieOrders = (
-  state: GameState,
-  party: Party,
-  objectiveRef: Party | null,
-  gate: number,
-  hold: Party['location'] | null,
-): readonly Order[] => {
-  if (objectiveRef !== null) {
-    const ant = closestAntParty(state, objectiveRef);
-    if (ant !== null) {
-      const d = distance(objectiveRef.location, ant.location);
-      if (d !== Number.POSITIVE_INFINITY && d <= gate) {
-        return moveToOrHold(party, ant.location);
-      }
-    }
-  }
-  return hold === null ? [] : moveToOrHold(party, hold);
-};
-
-/**
- * Per-party order resolver. `objectiveRef` is the pinned counter-guard
- * (its location is the counter-edge objective tile); it is `null` only
- * if the counter-guard is already wiped, in which case the scenario is
- * effectively lost and the survivors just converge on the objective
- * post location.
- */
-const ordersFor = (
-  state: GameState,
-  id: PartyId,
-  party: Party,
-  objectiveRef: Party | null,
-  objectivePost: Party['location'] | undefined,
-): readonly Order[] => {
-  // The immovable spine: never leave counter-edge. Its presence pauses
-  // the ant capture tick; its absence aborts any in-progress hold.
-  if (id === COUNTER_GUARD) return [];
-  // Fortress pickets: wide leash, fall back to garrison the +3/+2 tile.
-  if (id === NORTH_PICKET || id === SOUTH_PICKET) {
-    return sortieOrders(state, party, objectiveRef, INTERCEPT_RADIUS, objectivePost ?? null);
-  }
-  // Forward assault-breaker: muster-gated, holds its island ground.
-  if (id === ISLAND_ROVERS) {
-    return sortieOrders(state, party, objectiveRef, ROVER_GATE, null);
-  }
-  // Any future / unexpected spider party: converge on the objective so
-  // it is never idle dead weight.
-  return objectivePost === undefined ? [] : moveToOrHold(party, objectivePost);
-};
-
-export const spiderL3: AIPolicy = {
+const L3_DEFENSE_CONFIG: FortressDefenseConfig = {
   name: 'spider-l3',
-  faction: 'spider',
-  decide(state: GameState): GameState {
-    // The counter-guard is pinned to counter-edge and never moves, so
-    // it is a stable proxy for "the objective tile" — distance-to-
-    // objective is measured from it (see `sortieOrders`).
-    const counterGuard = state.parties.get(COUNTER_GUARD) ?? null;
-    const objectiveRef = counterGuard !== null && partyAlive(counterGuard) ? counterGuard : null;
-    const objectivePost = state.posts.get(COUNTER_EDGE)?.location;
-
-    const updates: [PartyId, Party][] = [];
-    for (const [id, party] of state.parties) {
-      if (party.faction !== 'spider' || !partyAlive(party)) continue;
-      const orders = ordersFor(state, id, party, objectiveRef, objectivePost);
-      if (orders !== party.orders) updates.push([id, { ...party, orders }]);
-    }
-    if (updates.length === 0) return appendPolicyEvents(state, []);
-    const nextParties = new Map(state.parties);
-    for (const [id, p] of updates) nextParties.set(id, p);
-    return appendPolicyEvents({ ...state, parties: nextParties }, []);
-  },
+  objective: 'counter-edge' as PostId,
+  guard: 'counter-guard' as PartyId,
+  pickets: ['north-picket' as PartyId, 'south-picket' as PartyId],
+  rover: 'island-rovers' as PartyId,
+  interceptRadius: INTERCEPT_RADIUS,
+  roverGate: ROVER_GATE,
 };
+
+export const spiderL3: AIPolicy = buildFortressDefensePolicy(L3_DEFENSE_CONFIG);
