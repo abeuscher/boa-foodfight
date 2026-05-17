@@ -44,6 +44,7 @@ import type {
   RosterFile,
   ShopFile,
   UnitsFile,
+  VictoryConditionData,
 } from './schemas/index.ts';
 import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
@@ -295,6 +296,24 @@ export interface BuildInitialStateResult {
   readonly itemSpawnEvents: readonly ItemSpawnEvent[];
 }
 
+/** Brand the validated scenario `victoryCondition` data into the
+ * engine's id types. Exhaustive over the discriminated union so a new
+ * kind is a compile error here until it is mapped. */
+const toVictoryCondition = (vc: VictoryConditionData): VictoryCondition => {
+  switch (vc.kind) {
+    case 'capture-post':
+      return { kind: 'capture-post', postId: vc.postId as PostId };
+    case 'escort':
+      return {
+        kind: 'escort',
+        escortUnitTemplateId: vc.escortUnitTemplateId as UnitTemplateId,
+        exitPostId: vc.exitPostId as PostId,
+      };
+    case 'eradicate':
+      return { kind: 'eradicate' };
+  }
+};
+
 export const buildInitialStateWithEvents = (
   data: ScenarioData,
   seed: number,
@@ -371,15 +390,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   // identical. Brand the data strings into the engine's id types.
   const vcData = randomizedMap.victoryCondition;
   const victoryCondition: VictoryCondition =
-    vcData === undefined
-      ? DEFAULT_VICTORY_CONDITION
-      : vcData.kind === 'capture-post'
-        ? { kind: 'capture-post', postId: vcData.postId as PostId }
-        : {
-            kind: 'escort',
-            escortUnitTemplateId: vcData.escortUnitTemplateId as UnitTemplateId,
-            exitPostId: vcData.exitPostId as PostId,
-          };
+    vcData === undefined ? DEFAULT_VICTORY_CONDITION : toVictoryCondition(vcData);
 
   const state: GameState = {
     turn: 0,

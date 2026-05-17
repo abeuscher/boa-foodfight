@@ -17,6 +17,8 @@ import {
  *    "capture the defended POST" template).
  *  - `escort`: ants win when a living unit of `escortUnitTemplateId`
  *    reaches `exitPostId`'s tile (the L2 Pipe / Aunt Ant objective).
+ *  - `eradicate`: ants win when every spider party is dead (the L6
+ *    Stairs objective). Carries no payload — no POST reference.
  */
 export const victoryConditionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('capture-post'), postId: idSchema }),
@@ -25,6 +27,7 @@ export const victoryConditionSchema = z.discriminatedUnion('kind', [
     escortUnitTemplateId: idSchema,
     exitPostId: idSchema,
   }),
+  z.object({ kind: z.literal('eradicate') }),
 ]);
 
 export type VictoryConditionData = z.infer<typeof victoryConditionSchema>;
@@ -100,7 +103,8 @@ export const mapFileSchema = z
       if (vc === undefined) return true;
       const ids = new Set(file.posts.map((p) => p.id));
       if (vc.kind === 'capture-post') return ids.has(vc.postId);
-      return ids.has(vc.exitPostId);
+      if (vc.kind === 'escort') return ids.has(vc.exitPostId);
+      return true; // eradicate carries no POST reference
     },
     { message: 'victoryCondition must reference an existing post id' },
   );
