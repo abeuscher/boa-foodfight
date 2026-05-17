@@ -7,6 +7,7 @@
 
 import { baselineL3Player } from './baseline-l3.ts';
 import { baselineL4Player } from './baseline-l4.ts';
+import { baselineL5Player } from './baseline-l5.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
@@ -19,6 +20,7 @@ import { spiderL1 } from './spider-l1.ts';
 import { spiderL2 } from './spider-l2.ts';
 import { spiderL3 } from './spider-l3.ts';
 import { spiderL4 } from './spider-l4.ts';
+import { spiderL5 } from './spider-l5.ts';
 import { spiderTutorial } from './spider-tutorial.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
@@ -59,6 +61,7 @@ export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'baseline-tutorial': baselineTutorialPlayer,
   'baseline-l3': baselineL3Player,
   'baseline-l4': baselineL4Player,
+  'baseline-l5': baselineL5Player,
 };
 
 /**
@@ -73,11 +76,13 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-tutorial': spiderTutorial,
   'spider-l3': spiderL3,
   'spider-l4': spiderL4,
+  'spider-l5': spiderL5,
 };
 
 export {
   baselineL3Player,
   baselineL4Player,
+  baselineL5Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -90,6 +95,7 @@ export {
   spiderL2,
   spiderL3,
   spiderL4,
+  spiderL5,
   spiderTutorial,
   turtlePlayer,
 };

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "leather-pad",
+      "name": "Leather Pad",
+      "kind": "persistent",
+      "effect": "armor",
+      "magnitude": 1,
+      "description": "Party-wide +1 armor while equipped."
+    },
+    {
+      "id": "brass-knuckles",
+      "name": "Brass Knuckles",
+      "kind": "persistent",
+      "effect": "attack",
+      "magnitude": 1,
+      "description": "Party-wide +1 attack while equipped."
+    },
+    {
+      "id": "boots",
+      "name": "Boots",
+      "kind": "persistent",
+      "effect": "movement",
+      "magnitude": 1,
+      "description": "Party-wide +1 movement allowance (capped at 4 tiles)."
+    },
+    {
+      "id": "mead",
+      "name": "Mead",
+      "kind": "consumable",
+      "effect": "heal",
+      "magnitude": 0,
+      "description": "Heals every unit in the party to full HP. Single use."
+    },
+    {
+      "id": "scout-lens",
+      "name": "Scout Lens",
+      "kind": "persistent",
+      "effect": "agility",
+      "magnitude": 1,
+      "description": "Party-wide +1 agility (initiative). Reserved for vision once the mechanic exists."
+    },
+    {
+      "id": "royal-jelly-vial",
+      "name": "Royal Jelly Vial",
+      "kind": "consumable",
+      "effect": "jelly",
+      "magnitude": 2,
+      "description": "Adds +2 jelly doses to the picking-up party (capped at jelly capacity)."
+    }
+  ]
+}
