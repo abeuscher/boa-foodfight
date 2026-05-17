@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "faction": "spider",
+  "parties": [
+    {
+      "id": "end-guard",
+      "leaderClass": "spider-queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "spider-queen",
+          "count": 1
+        },
+        {
+          "templateId": "spider-elite",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 0
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "north-picket",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 2
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "south-picket",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 4
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "corridor-rovers",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        },
+        {
+          "templateId": "spider-scout",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 6
+      },
+      "posture": "fight"
+    }
+  ]
+}
