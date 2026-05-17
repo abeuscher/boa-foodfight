@@ -39,6 +39,7 @@ import {
 } from './formation.ts';
 import { goldForKill } from './gold-table.ts';
 import { applyItemOffsetToStats, partyItemOffset } from './item-effects.ts';
+import { computeLightSwitchAttack, lightSwitchAttackFor } from './light-switch.ts';
 import { applyPhaseOffsetToStats, phaseStatOffsetFor } from './phase.ts';
 import {
   computePostOccupationOffsets,
@@ -834,8 +835,25 @@ export const resolveBattle = (
   // spec §28). Compute once per battle from the current POST
   // ownership; apply per-faction at unit-build time.
   const postOccupationOffsets = computePostOccupationOffsets(state);
-  const attackerPostOffset = offsetForFaction(postOccupationOffsets, attacker.faction);
-  const defenderPostOffset = offsetForFaction(postOccupationOffsets, defender.faction);
+  // L4 Light-Switch (§3.8): a flat per-faction attack delta from any
+  // UNLIT `combatModifier` POST, folded into the SAME additive lane
+  // as the POST-occupation bonus (and inherited identically by
+  // promoted reserves below). `postOccupationOffsets` is read raw for
+  // the round-28 summary event, so this merge does not pollute that
+  // telemetry. When no `combatModifier` POST exists the delta is 0
+  // and the original offset object is returned unchanged → combat is
+  // byte-identical.
+  const lightSwitch = computeLightSwitchAttack(state);
+  const withLightSwitch = (o: PostOccupationOffset, delta: number): PostOccupationOffset =>
+    delta === 0 ? o : { attack: o.attack + delta, armor: o.armor };
+  const attackerPostOffset = withLightSwitch(
+    offsetForFaction(postOccupationOffsets, attacker.faction),
+    lightSwitchAttackFor(lightSwitch, attacker.faction),
+  );
+  const defenderPostOffset = withLightSwitch(
+    offsetForFaction(postOccupationOffsets, defender.faction),
+    lightSwitchAttackFor(lightSwitch, defender.faction),
+  );
   const live: LiveUnit[] = [
     ...buildLiveUnits(
       attacker,

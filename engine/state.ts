@@ -197,6 +197,15 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
       ...(p.pairedWith !== undefined ? { pairedWith: p.pairedWith as PostId } : {}),
       ...(p.oneWay ? { oneWay: true } : {}),
       ...(p.concealment ? { concealment: true } : {}),
+      ...(p.combatModifier !== undefined
+        ? {
+            combatModifier: {
+              litOwner: p.combatModifier.litOwner,
+              faction: p.combatModifier.faction,
+              attack: p.combatModifier.attack,
+            },
+          }
+        : {}),
       tags: p.tags,
       // Round 17 — POST hold mechanic. No capture in progress at
       // scenario start for any POST (faction-locked, neutral, or
