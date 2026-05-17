@@ -268,6 +268,17 @@ export interface Post {
   readonly defensiveBonus: number;
   readonly healingRate: number;
   readonly pairedWith?: PostId;
+  /**
+   * L8 (Attic) Skylight one-way plane transit (§3.4). When `true`,
+   * paired-POST transitions may LEAVE this POST through its pair but
+   * may not be used to ENTER it (the partner→this direction is
+   * forbidden). Edge-adjacency and ant-plane-switch are unaffected.
+   * With the Skylight as the floor-side post (`pairedWith` the
+   * ceiling post, mutual for AI/viewer discoverability) this yields
+   * exactly one-way floor→ceiling transit. Absent/false everywhere
+   * today, so all shipped maps are byte-identical.
+   */
+  readonly oneWay?: boolean;
   readonly tags: readonly string[];
   /**
    * Round 17 — POST hold mechanic. When a non-owner faction party walks

@@ -274,6 +274,11 @@ const tryPlaneTransition = (
   const partner = posts.get(here.pairedWith);
   if (!partner) return undefined;
   if (partner.location.plane !== target.plane) return undefined;
+  // L8 Skylight one-way transit (§3.4): a `oneWay` POST may be left
+  // through its pair but never entered via one. Stepping here would
+  // land the party ON `partner`, so a one-way partner is forbidden as
+  // a transition destination (the reverse direction stays blocked).
+  if (partner.oneWay) return undefined;
   if (partner.owner !== party.faction && partner.owner !== 'neutral') return undefined;
   return partner.location;
 };

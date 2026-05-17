@@ -71,6 +71,12 @@ export const postSchema = z.object({
   defensiveBonus: z.number().int().nonnegative(),
   healingRate: z.number().int().nonnegative(),
   pairedWith: idSchema.optional(),
+  /**
+   * L8 (Attic) Skylight one-way plane transit (§3.4). When `true`,
+   * paired-POST transitions may leave this POST through its pair but
+   * may not be used to enter it. Absent/false on every shipped map.
+   */
+  oneWay: z.boolean().optional(),
   tags: z.array(z.string()).default([]),
   /**
    * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed
