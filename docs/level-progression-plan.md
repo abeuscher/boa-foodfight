@@ -409,6 +409,27 @@ flags as non-blocking; rendering buys the same feel at zero engine
 risk. Reopen only if a future level's _mechanics_ (not feel) require
 a non-square play area — nothing in L1–L10 currently does.
 
+## 4c. Tracked cross-level theme — score-resolution / low drama
+
+Observed building the stripped tutorial L1 (76%) and L3 Kitchen (67%):
+a competent `capture-post` defender vs a chain-marching attacker tends
+to **grind to the turn cap and resolve via the round-19 score path**
+rather than a decisive POST capture. The interest critic reads this as
+**low `drama`** (L3 shipped at composite 76 — ship-gate PASS — but
+`drama` 35; carried by arc/live/density). This is a **systemic feel
+signature of the capture-post + competent-defense matchup, not
+per-level balance breakage** — win-rate band and monotone curve are
+unaffected.
+
+**Decision (human, post-L3): track cross-level, do NOT chase per-level.**
+Retuning individual levels for drama risks destabilizing hard-won
+deterministic win-rate plateaus and can reopen frozen mechanic
+rulings. The pattern is logged here as a binding input to the deferred
+**UX / feel pass** (where it is addressed holistically — e.g.
+score-path tuning, attacker/defender doctrine, or presentation), and
+as context for L4–L10 reviews (expect the same signature on
+`capture-post` levels; it is not a new defect each time).
+
 ---
 
 ## 5. Deviations from §4.1
