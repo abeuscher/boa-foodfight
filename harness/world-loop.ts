@@ -30,7 +30,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ENEMY_AIS, neutralPlayer, PLAYER_AIS } from '../ai/index.ts';
+import {
+  type AIPolicy,
+  ENEMY_AIS,
+  neutralPlayer,
+  PLAYER_AIS,
+  SCENARIO_PLAYER_AIS,
+} from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -106,6 +112,10 @@ interface ScenarioRunResult {
 interface ScenarioConfig {
   readonly dataDir: string;
   readonly enemyAi: string;
+  /** Player AI for THIS scenario. S0 (L1, capture) plays `baseline`;
+   * S1 (L2, the Pipe — escort) plays the scenario-specific `escort-l2`
+   * (baseline has no escort logic, so it times out as a spider win). */
+  readonly playerAi: AIPolicy;
   /** Ant party ids placed by THIS scenario's roster that must survive
    * the carried-roster inject verbatim (the L2 Aunt Ant party). */
   readonly preserveScenarioPartyIds: ReadonlySet<PartyId>;
@@ -114,18 +124,24 @@ interface ScenarioConfig {
 const L2_ESCORT_PARTY = 'escort-column' as PartyId;
 
 const scenarioConfig = (args: Args, scenarioIndex: number): ScenarioConfig => {
+  const baseline = PLAYER_AIS.baseline;
+  const escort = SCENARIO_PLAYER_AIS['escort-l2'];
+  if (!baseline || !escort) throw new Error('world-loop: missing baseline/escort player AI');
   if (scenarioIndex === 0) {
     return {
       dataDir: args.dataDir,
       enemyAi: 'spider-l1',
+      playerAi: baseline,
       preserveScenarioPartyIds: new Set(),
     };
   }
   // S1 = real L2 (the Pipe). Resolve data/level-2 relative to the
   // configured L1 data dir so a custom --data root still finds L2.
+  // The escort player walks Aunt Ant through the pinch points.
   return {
     dataDir: path.join(path.dirname(args.dataDir), 'level-2'),
     enemyAi: 'spider-l2',
+    playerAi: escort,
     preserveScenarioPartyIds: new Set([L2_ESCORT_PARTY]),
   };
 };
@@ -160,9 +176,9 @@ const runOneScenario = (
     state = injected.state;
     leveledUnits = injected.report.leveledUnits;
   }
-  const player = PLAYER_AIS.baseline;
+  const player = cfg.playerAi;
   const enemy = ENEMY_AIS[cfg.enemyAi];
-  if (!player || !enemy) throw new Error('world-loop: missing baseline/spider AI');
+  if (!enemy) throw new Error('world-loop: missing spider AI');
 
   const replayDir = path.join(args.outRoot, args.campaignId);
   fs.mkdirSync(replayDir, { recursive: true });

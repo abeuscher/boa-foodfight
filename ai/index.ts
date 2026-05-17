@@ -7,6 +7,7 @@
 
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
+import { escortL2Player } from './escort-l2.ts';
 import { flankPlayer } from './flank.ts';
 import { jellyRushPlayer } from './jelly-rush.ts';
 import { neutralPlayer } from './neutral.ts';
@@ -16,6 +17,12 @@ import { spiderL2 } from './spider-l2.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
 
+/**
+ * Variant player AIs swept by the route-diversity / coevo gate (all
+ * L1-shaped). `escortL2Player` is intentionally NOT here: it is a
+ * scenario-specific player (L2 only), so keeping it out of this map
+ * leaves the L1 gate's diversity sweep byte-identical.
+ */
 export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   baseline: baselinePlayer,
   rush: rushPlayer,
@@ -23,6 +30,15 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   flank: flankPlayer,
   'jelly-rush': jellyRushPlayer,
   dive: divePlayer,
+};
+
+/**
+ * Scenario-specific player AIs the world-loop selects by scenario index
+ * (separate from the L1 diversity sweep so the coevo gate is unaffected).
+ * S1 (L2 / the Pipe) plays `escort-l2`.
+ */
+export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
+  'escort-l2': escortL2Player,
 };
 
 export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
@@ -33,6 +49,7 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
 export {
   baselinePlayer,
   divePlayer,
+  escortL2Player,
   flankPlayer,
   jellyRushPlayer,
   neutralPlayer,
