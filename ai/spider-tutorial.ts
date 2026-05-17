@@ -42,11 +42,10 @@
  * ai/threat-flee, ai/types (the spider-l2 import surface).
  */
 
-import { distance } from '../engine/coord.ts';
-import type { GameState, Order, Party, PartyId } from '../engine/types.ts';
+import type { PartyId } from '../engine/types.ts';
 
-import { moveToOrHold, partyAlive, SPIDER_WEB } from './policy-helpers.ts';
-import { appendPolicyEvents } from './threat-flee.ts';
+import { buildPicketDefensePolicy } from './picket-defense.ts';
+import { SPIDER_WEB } from './policy-helpers.ts';
 import type { AIPolicy } from './types.ts';
 
 /** The queen-bearing party that anchors the web. Never moves. */
@@ -60,59 +59,14 @@ const WEB_GUARD: PartyId = 'web-guard' as PartyId;
  */
 const INTERCEPT_RADIUS = 4;
 
-/** The closest living ant field party to `from` (Manhattan within a
- * plane, infinite across planes), or null. Soldiers use this to decide
- * whether an attacker is inside the leash. */
-const closestAnt = (state: GameState, from: Party): Party | null => {
-  let best: { party: Party; d: number } | null = null;
-  for (const party of state.parties.values()) {
-    if (party.faction !== 'ant') continue;
-    if (!partyAlive(party)) continue;
-    const d = distance(from.location, party.location);
-    if (best === null || d < best.d || (d === best.d && party.id < best.party.id)) {
-      best = { party, d };
-    }
-  }
-  return best?.party ?? null;
-};
-
-/**
- * Orders for a soldier picket. Hold the web-anchor tile until an ant
- * enters the leash, then move onto that ant's tile to body-block the
- * assault. The web-guard (queen) is the immovable block and is handled
- * by the caller (it never reaches here).
- */
-const ordersForPicket = (state: GameState, party: Party): readonly Order[] => {
-  const ant = closestAnt(state, party);
-  if (ant === null) return [];
-  const d = distance(party.location, ant.location);
-  if (d === Number.POSITIVE_INFINITY || d > INTERCEPT_RADIUS) {
-    // Attacker not yet in reach (or on another plane the engine will
-    // route it onto). Hold the anchor — drop any stale chase order.
-    return [];
-  }
-  // Surge to the ant's tile to force the defensive battle at the web.
-  return moveToOrHold(party, ant.location);
-};
-
-export const spiderTutorial: AIPolicy = {
-  name: 'spider-tutorial',
-  faction: 'spider',
-  decide(state: GameState): GameState {
-    // Touch the web post id so a future map rename surfaces here rather
-    // than silently desyncing the defense from the objective.
+export const spiderTutorial: AIPolicy = buildPicketDefensePolicy(
+  'spider-tutorial',
+  WEB_GUARD,
+  INTERCEPT_RADIUS,
+  // Touch the web post id so a future map rename surfaces here rather
+  // than silently desyncing the defense from the objective (behaviour
+  // preserved verbatim from the pre-refactor inline policy).
+  () => {
     void SPIDER_WEB;
-    const nextParties = new Map(state.parties);
-    for (const [id, party] of state.parties) {
-      if (party.faction !== 'spider') continue;
-      if (!partyAlive(party)) continue;
-      // web-guard: the immovable queen block. Never chases; defending
-      // its tile is the whole point of the scenario for the spider.
-      const orders = id === WEB_GUARD ? [] : ordersForPicket(state, party);
-      if (orders === party.orders) continue;
-      nextParties.set(id, { ...party, orders });
-    }
-    const next: GameState = { ...state, parties: nextParties };
-    return appendPolicyEvents(next, []);
   },
-};
+);

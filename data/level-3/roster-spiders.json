@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "faction": "spider",
+  "parties": [
+    {
+      "id": "counter-guard",
+      "leaderClass": "spider-queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "spider-queen",
+          "count": 1
+        },
+        {
+          "templateId": "spider-elite",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 9,
+        "y": 0
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "north-picket",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 1
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "south-picket",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-spinner",
+          "count": 2
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 8,
+        "y": 8
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "island-rovers",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        },
+        {
+          "templateId": "spider-scout",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 7,
+        "y": 5
+      },
+      "posture": "fight"
+    }
+  ]
+}

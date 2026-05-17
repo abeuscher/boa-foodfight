@@ -5,6 +5,7 @@
  * diversity measurement (Phase 4 success criterion).
  */
 
+import { baselineL3Player } from './baseline-l3.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
@@ -15,6 +16,7 @@ import { neutralPlayer } from './neutral.ts';
 import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
 import { spiderL2 } from './spider-l2.ts';
+import { spiderL3 } from './spider-l3.ts';
 import { spiderTutorial } from './spider-tutorial.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
@@ -43,11 +45,15 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
  * so adding a scenario player there would change the gate-29 diversity
  * output. `run-batch.ts` resolves a `--player` from `PLAYER_AIS` first,
  * then falls back to this map, so the stripped L1 is measurable at
- * scale without perturbing the locked L1 reference sweep.
+ * scale without perturbing the locked L1 reference sweep. `baseline-l3`
+ * (the L3 / Kitchen capture-post player) lives here for the same
+ * reason: a scenario-specific player kept OUT of `PLAYER_AIS` so the
+ * gate-29 diversity sweep stays byte-identical.
  */
 export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'escort-l2': escortL2Player,
   'baseline-tutorial': baselineTutorialPlayer,
+  'baseline-l3': baselineL3Player,
 };
 
 /**
@@ -60,9 +66,11 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l1': spiderL1,
   'spider-l2': spiderL2,
   'spider-tutorial': spiderTutorial,
+  'spider-l3': spiderL3,
 };
 
 export {
+  baselineL3Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -73,6 +81,7 @@ export {
   rushPlayer,
   spiderL1,
   spiderL2,
+  spiderL3,
   spiderTutorial,
   turtlePlayer,
 };
