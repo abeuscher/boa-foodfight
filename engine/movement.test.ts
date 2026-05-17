@@ -11,6 +11,8 @@ import type {
   Order,
   Party,
   PartyId,
+  Post,
+  PostId,
   ReplayEvent,
   Terrain,
   Tile,
@@ -382,5 +384,94 @@ describe('resolveMovement: ant-scout-majority bonus (round 7 feature 1)', () => 
     // Spider on wall -> 3/turn. The ant-only bonus didn't compound, so
     // we still see 3 tiles, not 4 or 5.
     expect(after?.location).toEqual({ plane: 'east-wall', x: 3, y: 5 });
+  });
+});
+
+describe('resolveMovement: one-way paired-POST transition (L8 Skylight, §3.4)', () => {
+  // floor (3,3) ↔ ceiling (3,3): an interior tile (no shared cube edge
+  // between floor and ceiling), so the only cross-plane route is the
+  // paired-POST step — `tryPlaneTransition` step 3 — never edge
+  // adjacency. Using a non-mage party rules out the ant-plane-switch
+  // teleport path too, isolating exactly the paired-POST behavior.
+  const SKY: TileCoord = { plane: 'floor', x: 3, y: 3 };
+  const CEIL: TileCoord = { plane: 'ceiling', x: 3, y: 3 };
+
+  const atSkyOrCeil = (c: TileCoord): boolean => sameCoord(c, SKY) || sameCoord(c, CEIL);
+
+  const mkPost = (id: string, location: TileCoord, pairedWith: string, oneWay: boolean): Post => ({
+    id: id as PostId,
+    name: id,
+    location,
+    owner: 'ant',
+    defensiveBonus: 0,
+    healingRate: 0,
+    pairedWith: pairedWith as PostId,
+    ...(oneWay ? { oneWay: true } : {}),
+    tags: [],
+    capturingFaction: null,
+    captureTurnsRemaining: null,
+  });
+
+  const nonMageAntParty = (state: GameState): PartyId => {
+    for (const p of state.parties.values()) {
+      if (p.faction !== 'ant') continue;
+      const hasMage = p.units.some((u) =>
+        (
+          state.unitTemplates.get(u.templateId)?.abilities as readonly string[] | undefined
+        )?.includes('ant-plane-switch'),
+      );
+      if (!hasMage) return p.id;
+    }
+    throw new Error('no non-mage ant party in L1 roster');
+  };
+
+  // Skylight is the floor-side post (oneWay): it may be LEFT through
+  // its pair (floor→ceiling) but never ENTERED via one (ceiling→floor
+  // is forbidden). Pairing is mutual so AI/viewer still see a linked
+  // pair.
+  // `postAt` returns the first post matching a coord; L1 seeds park a
+  // generated POST on these tiles (e.g. soap-dish-1 @ floor 3,3), so
+  // drop any colliding post before injecting the Skylight pair.
+  const withSkylight = (state: GameState, skyOneWay: boolean): GameState => {
+    const posts = new Map<PostId, Post>();
+    for (const [id, p] of state.posts) {
+      if (!atSkyOrCeil(p.location)) posts.set(id, p);
+    }
+    const skyFloor = mkPost('sky-floor', SKY, 'sky-ceil', skyOneWay);
+    const skyCeil = mkPost('sky-ceil', CEIL, 'sky-floor', false);
+    posts.set(skyFloor.id, skyFloor);
+    posts.set(skyCeil.id, skyCeil);
+    return { ...state, posts };
+  };
+
+  it('allows the leave direction: floor→ceiling through the one-way Skylight', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = nonMageAntParty(state);
+    let s = withSkylight(state, true);
+    s = setLocation(s, partyId, SKY);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: CEIL }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    expect(out.state.parties.get(partyId)?.location).toEqual(CEIL);
+  });
+
+  it('blocks the enter direction: ceiling→floor through the one-way Skylight', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = nonMageAntParty(state);
+    let s = withSkylight(state, true);
+    s = setLocation(s, partyId, CEIL);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: SKY }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    // No transition, no floor↔ceiling edge, no teleport → stays put.
+    expect(out.state.parties.get(partyId)?.location).toEqual(CEIL);
+  });
+
+  it('without oneWay the same pair transits BOTH ways (proves the flag is the gate)', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = nonMageAntParty(state);
+    let s = withSkylight(state, false);
+    s = setLocation(s, partyId, CEIL);
+    s = setOrders(s, partyId, [{ kind: 'move-to', target: SKY }]);
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    expect(out.state.parties.get(partyId)?.location).toEqual(SKY);
   });
 });
