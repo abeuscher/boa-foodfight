@@ -30,13 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  type AIPolicy,
-  ENEMY_AIS,
-  neutralPlayer,
-  PLAYER_AIS,
-  SCENARIO_PLAYER_AIS,
-} from '../ai/index.ts';
+import { type AIPolicy, ENEMY_AIS, neutralPlayer, SCENARIO_PLAYER_AIS } from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -124,14 +118,22 @@ interface ScenarioConfig {
 const L2_ESCORT_PARTY = 'escort-column' as PartyId;
 
 const scenarioConfig = (args: Args, scenarioIndex: number): ScenarioConfig => {
-  const baseline = PLAYER_AIS.baseline;
+  const tutorial = SCENARIO_PLAYER_AIS['baseline-tutorial'];
   const escort = SCENARIO_PLAYER_AIS['escort-l2'];
-  if (!baseline || !escort) throw new Error('world-loop: missing baseline/escort player AI');
+  if (!tutorial || !escort) throw new Error('world-loop: missing tutorial/escort player AI');
   if (scenarioIndex === 0) {
+    // The campaign's L1 is the STRIPPED tutorial (roadmap §3.2:
+    // 2-unit-type pedagogical opener, measured ~76% ant), NOT the
+    // fully-loaded `data/level-1` reference. The reference is sacrosanct
+    // and stays the gate-29 / diversity regression guard — those paths
+    // never go through the world loop, so they are unaffected. Resolve
+    // `level-1-tutorial` relative to the configured data root (mirrors
+    // how S1 resolves `level-2`) so a custom `--data` root still finds
+    // the stripped kit, and drive it with the matching stripped AIs.
     return {
-      dataDir: args.dataDir,
-      enemyAi: 'spider-l1',
-      playerAi: baseline,
+      dataDir: path.join(path.dirname(args.dataDir), 'level-1-tutorial'),
+      enemyAi: 'spider-tutorial',
+      playerAi: tutorial,
       preserveScenarioPartyIds: new Set(),
     };
   }
