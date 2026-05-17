@@ -350,6 +350,33 @@ cockroach recruit-race (pure Gameplay, no spatial component); all obstacle
 layouts, plane-set reductions, POST-randomization, and the
 1-D/terraced/island/bisection geometries (pure Level spatial).
 
+## 4a. Boundary-case resolutions — RECORDED (human review, post-Phase-C)
+
+Per §6.3 these went to the human resolver. All 7 resolved; Phase D
+inherits these ownership assignments as binding.
+
+**Blanket split principle (adopted for 6 of 7).** Spatial node/trigger =
+**Level**; combat/economy/AI-profile payload = **Gameplay**. Phase D
+builds each as a Level-owned node that invokes a Gameplay-owned effect.
+
+| #   | case                                     | resolution                                                                                                 |
+| --- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | L4 Light-Switch → global combat modifier | **split** — Level owns the flip-state POST; Gameplay owns the combat-modifier payload                      |
+| 3   | L7 Remote currency POST → gold/turn      | **split** — Level owns the node; Gameplay owns the economy payload (feeds Mechanics §1.3 cards)            |
+| 5   | L9 Sump-Pump → toggleable hazard tiles   | **split** — Level owns the water region + pump-node; Gameplay owns the damage                              |
+| 6   | L9 Boiler → hazard emitter               | **split** — bundled with #5 (shared dynamic-hazard engine surface)                                         |
+| 4   | L8 Skylight → one-way plane transit      | **Level** (pure connectivity); engine-owner must confirm one-way doesn't break movement AI before it ships |
+| 7   | L10 Day/night cycle                      | **Gameplay** — already a shipped Gameplay mechanic (round 5); Level only schedules the L10 debut           |
+
+**L5 Under-Bed concealment → garrison fog-immunity: GAMEPLAY-owned.**
+This OVERRIDES the Level PA's "Level with Gameplay sign-off"
+recommendation. Rationale (human decision): concealment is an
+information-warfare mechanic — it manipulates the spider-AI
+pheromone-trail visibility layer (TBS memo §1.5), not just terrain.
+Level places the POST tile only; Gameplay designs the fog-immunity
+rule AND must prove it does not invalidate the locked spider-AI
+visibility spec. AI-spec integrity is the deciding factor.
+
 ---
 
 ## 5. Deviations from §4.1
