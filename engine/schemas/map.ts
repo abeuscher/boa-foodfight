@@ -19,6 +19,9 @@ import {
  *    reaches `exitPostId`'s tile (the L2 Pipe / Aunt Ant objective).
  *  - `eradicate`: ants win when every spider party is dead (the L6
  *    Stairs objective). Carries no payload — no POST reference.
+ *  - `recruit-count`: ants win when ≥`target` ant parties each hold a
+ *    living `unitTemplateId` unit (the L8 Attic cockroach race). No
+ *    POST reference.
  */
 export const victoryConditionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('capture-post'), postId: idSchema }),
@@ -28,6 +31,11 @@ export const victoryConditionSchema = z.discriminatedUnion('kind', [
     exitPostId: idSchema,
   }),
   z.object({ kind: z.literal('eradicate') }),
+  z.object({
+    kind: z.literal('recruit-count'),
+    target: z.number().int().positive(),
+    unitTemplateId: idSchema,
+  }),
 ]);
 
 export type VictoryConditionData = z.infer<typeof victoryConditionSchema>;

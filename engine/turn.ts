@@ -477,18 +477,19 @@ export const runScenario = (
   // with the score breakdown attached so the harness / viewer / critics
   // can attribute the win to the score path.
   //
-  // L2 (escort) and L6 (eradicate): the score path is a
-  // capture-objective construct (POST ownership + web-hold progress)
+  // L2 (escort), L6 (eradicate), L8 (recruit-count): the score path is
+  // a capture-objective construct (POST ownership + web-hold progress)
   // and does not model "did the escortee get through" / "are all
-  // spiders dead". Reaching the turn cap on either is an unambiguous
-  // ant loss (spider win) with no score tiebreak — escort per roadmap
-  // §4.3.1, eradicate per §4.3.2 (the spiders were not hunted down in
-  // time). The decision keys off the scenario `victoryCondition.kind`;
-  // a state without the field defaults to capture-post, so the L1
-  // path is byte-identical.
+  // spiders dead" / "were enough cockroaches recruited". Reaching the
+  // turn cap on any of these is an unambiguous ant loss (spider win)
+  // with no score tiebreak — escort per roadmap §4.3.1, eradicate per
+  // §4.3.2, recruit-count per §4.3.3 (too few recruited in time). The
+  // decision keys off the scenario `victoryCondition.kind`; a state
+  // without the field defaults to capture-post, so the L1 path is
+  // byte-identical.
   if (working.winner === null) {
     const vc = working.victoryCondition ?? DEFAULT_VICTORY_CONDITION;
-    if (vc.kind === 'escort' || vc.kind === 'eradicate') {
+    if (vc.kind === 'escort' || vc.kind === 'eradicate' || vc.kind === 'recruit-count') {
       working = { ...working, winner: 'spider' };
       events.push({
         kind: 'scenario-end',

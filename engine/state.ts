@@ -311,6 +311,12 @@ const toVictoryCondition = (vc: VictoryConditionData): VictoryCondition => {
       };
     case 'eradicate':
       return { kind: 'eradicate' };
+    case 'recruit-count':
+      return {
+        kind: 'recruit-count',
+        target: vc.target,
+        unitTemplateId: vc.unitTemplateId as UnitTemplateId,
+      };
   }
 };
 
