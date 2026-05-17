@@ -358,6 +358,21 @@ const escortUnitLost = (state: GameState, escortUnitTemplateId: UnitTemplateId):
   return true;
 };
 
+/** True iff at least one spider party existed and every spider party
+ * now has zero living units. The eradicate objective (L6 Stairs) is an
+ * ant win the moment the last living spider falls. */
+const allSpiderPartiesEliminated = (state: GameState): boolean => {
+  let sawAnySpiderParty = false;
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'spider') continue;
+    sawAnySpiderParty = true;
+    for (const u of party.units) {
+      if (u.currentHp > 0) return false;
+    }
+  }
+  return sawAnySpiderParty;
+};
+
 /**
  * Determine winner. Loss is checked before victory. Returns null if
  * neither. Dispatches on the scenario's `victoryCondition`; a state
@@ -385,6 +400,15 @@ const checkWinner = (state: GameState): Faction | null => {
       if (!antQueenAlive(state)) return 'spider';
       if (escortUnitLost(state, vc.escortUnitTemplateId)) return 'spider';
       if (escortReachedExit(state, vc.escortUnitTemplateId, vc.exitPostId)) return 'ant';
+      return null;
+    }
+    case 'eradicate': {
+      // L6 (Stairs) — total spider eradication. Same ant-loss
+      // structure as capture-post (queen-dead, then field-force-wiped),
+      // then the win: every spider party has zero living units.
+      if (!antQueenAlive(state)) return 'spider';
+      if (antFieldForceWiped(state)) return 'spider';
+      if (allSpiderPartiesEliminated(state)) return 'ant';
       return null;
     }
   }

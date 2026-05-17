@@ -11,6 +11,9 @@
  *   - escort: win when the living escortee reaches the exit POST tile;
  *     loss when the escortee dies; loss when the ant queen dies; the
  *     turn-cap timeout is an ant loss (verified via `runScenario`).
+ *   - eradicate: win when every spider party is dead; loss-before-win
+ *     when the ant queen dies or the field force is wiped; the
+ *     turn-cap timeout is an ant loss (verified via `runScenario`).
  */
 
 import path from 'node:path';
@@ -216,6 +219,102 @@ describe('victoryCondition — escort', () => {
       escortUnitTemplateId: ESCORTEE,
       exitPostId: 'spider-web' as PostId,
     });
+    const outcome = runScenario(s, data, createRng(1), makeTickClock(), {
+      maxTurns: 3,
+      policies: [],
+    });
+    expect(outcome.finalState.winner).toBe('spider');
+    const end = [...outcome.events].reverse().find((e) => e.kind === 'scenario-end');
+    expect(end?.kind).toBe('scenario-end');
+    if (end?.kind === 'scenario-end') {
+      expect(end.winner).toBe('spider');
+      expect(end.scoreBreakdown).toBeUndefined();
+    }
+  });
+});
+
+const isAntQueenParty = (state: GameState, p: Party): boolean =>
+  p.units.some((u) => {
+    const t = state.unitTemplates.get(u.templateId);
+    return t?.faction === 'ant' && t.tags.includes('queen');
+  });
+
+const setZeroHp = (p: Party): Party => ({
+  ...p,
+  units: p.units.map((u) => ({ ...u, currentHp: 0 })),
+});
+
+const killAllSpiders = (state: GameState): GameState => {
+  const parties = new Map(state.parties);
+  for (const [id, p] of parties) {
+    if (p.faction === 'spider') parties.set(id, setZeroHp(p));
+  }
+  return { ...state, parties };
+};
+
+const wipeAntFieldForce = (state: GameState): GameState => {
+  const parties = new Map(state.parties);
+  for (const [id, p] of parties) {
+    if (p.faction !== 'ant' || isAntQueenParty(state, p)) continue;
+    parties.set(id, setZeroHp(p));
+  }
+  return { ...state, parties };
+};
+
+const killAntQueen = (state: GameState): GameState => {
+  const parties = new Map(state.parties);
+  for (const [id, p] of parties) {
+    if (isAntQueenParty(state, p)) {
+      parties.set(id, {
+        ...p,
+        units: p.units.map((u) => {
+          const t = state.unitTemplates.get(u.templateId);
+          return t?.tags.includes('queen') ? { ...u, currentHp: 0 } : u;
+        }),
+      });
+    }
+  }
+  return { ...state, parties };
+};
+
+describe('victoryCondition — eradicate', () => {
+  const ERADICATE: VictoryCondition = { kind: 'eradicate' };
+
+  it('ants win the moment every spider party is dead', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(killAllSpiders(state), ERADICATE);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('ant');
+  });
+
+  it('no win while at least one spider unit is alive', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(state, ERADICATE);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBeNull();
+  });
+
+  it('loss-before-win: ant queen dead is a spider win even with all spiders dead', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(killAntQueen(killAllSpiders(state)), ERADICATE);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('spider');
+  });
+
+  it('loss-before-win: ant field force wiped is a spider win even with all spiders dead', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(wipeAntFieldForce(killAllSpiders(state)), ERADICATE);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('spider');
+  });
+
+  it('eradicate timeout (turn cap reached) is an ant loss — no score tiebreak', () => {
+    // Spiders still alive at the cap with no policies: the run hits
+    // maxTurns and the round-19 path must resolve eradicate → spider
+    // WITHOUT a score breakdown (the score path does not model "are
+    // all spiders dead").
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(state, ERADICATE);
     const outcome = runScenario(s, data, createRng(1), makeTickClock(), {
       maxTurns: 3,
       policies: [],

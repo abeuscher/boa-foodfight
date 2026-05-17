@@ -47,6 +47,10 @@ export type Faction = 'ant' | 'spider' | 'neutral';
  *    The ants lose if every `escortUnitTemplateId` unit is dead OR the
  *    ant queen is dead. Timeout (turn cap) is an ant loss — the escort
  *    failed to make it through.
+ *  - `eradicate`: the L6 (Stairs) objective. The ants win when every
+ *    spider party has zero living units. Loss checks mirror
+ *    `capture-post` (queen dead / field force wiped). Timeout (turn
+ *    cap) is an ant loss — the spiders were not hunted down in time.
  */
 export type VictoryCondition =
   | { readonly kind: 'capture-post'; readonly postId: PostId }
@@ -54,7 +58,8 @@ export type VictoryCondition =
       readonly kind: 'escort';
       readonly escortUnitTemplateId: UnitTemplateId;
       readonly exitPostId: PostId;
-    };
+    }
+  | { readonly kind: 'eradicate' };
 
 /**
  * The L1-equivalent default applied when scenario data omits
