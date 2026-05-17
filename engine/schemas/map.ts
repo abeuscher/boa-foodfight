@@ -72,6 +72,25 @@ export const postSchema = z.object({
   healingRate: z.number().int().nonnegative(),
   pairedWith: idSchema.optional(),
   tags: z.array(z.string()).default([]),
+  /**
+   * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed
+   * row jitter: the column (`location.x`) and `plane` are fixed; the
+   * row is re-chosen each seed uniformly in `[minRow, maxRow]`.
+   * Resolved by the loader for `static` maps only — non-static maps
+   * already get a fully seed-randomized POST layout from map-gen, so
+   * `jitter` is ignored there. The authored `location.y` is the
+   * no-jitter fallback. The loader clamps the resolved row to the
+   * post's plane height as a safety net against a mis-authored band.
+   */
+  jitter: z
+    .object({
+      minRow: z.number().int().nonnegative(),
+      maxRow: z.number().int().nonnegative(),
+    })
+    .refine((j) => j.minRow <= j.maxRow, {
+      message: 'jitter.minRow must be ≤ jitter.maxRow',
+    })
+    .optional(),
 });
 
 export const mapFileSchema = z

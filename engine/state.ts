@@ -206,6 +206,37 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
   return posts;
 };
 
+/**
+ * L4 (Hallway) POST-randomization (§3.3). For a `static` map,
+ * re-resolve each post that declares a `jitter` band: its column
+ * (`location.x`) and `plane` stay fixed; the row is chosen uniformly
+ * in `[minRow, maxRow]` via a dedicated seeded RNG fork (reproducible
+ * and independent of the neutral / item / card / blitz streams),
+ * then clamped to the post's plane height as a safety net against a
+ * mis-authored band.
+ *
+ * Posts without `jitter` are returned untouched, and if *no* post
+ * declares jitter the input is returned by reference with no RNG
+ * consumed — so the jitter-free static maps (L2 / tutorial) stay
+ * byte-identical. Non-static maps never reach here (their POST layout
+ * is already fully seed-randomized by map-gen), so L1 is byte-
+ * identical too.
+ */
+export const applyPostJitter = (mapFile: MapFile, seed: number): MapFile => {
+  if (!mapFile.posts.some((p) => p.jitter !== undefined)) return mapFile;
+  const rng = createRng(seed).fork('post-jitter');
+  const planeHeight = new Map(mapFile.planes.map((pl) => [pl.plane, pl.height]));
+  const posts = mapFile.posts.map((p) => {
+    if (p.jitter === undefined) return p;
+    const { minRow, maxRow } = p.jitter;
+    const drawn = minRow + Math.floor(rng.next() * (maxRow - minRow + 1));
+    const height = planeHeight.get(p.location.plane) ?? drawn + 1;
+    const y = Math.min(Math.max(drawn, 0), height - 1);
+    return { ...p, location: { ...p.location, y } };
+  });
+  return { ...mapFile, posts };
+};
+
 const buildParties = (
   rosters: readonly RosterFile[],
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
@@ -342,7 +373,9 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   // whose obstacle walls and bespoke POSTs must survive intact) skips
   // the random pass entirely and is used verbatim. L1's map.json has
   // no `static` flag so its random-map path is byte-identical.
-  const randomizedMap = data.map.static ? data.map : generateRandomMap({ seed, base: data.map });
+  const randomizedMap = data.map.static
+    ? applyPostJitter(data.map, seed)
+    : generateRandomMap({ seed, base: data.map });
   const tiles = buildTiles(randomizedMap);
   const posts = buildPosts(randomizedMap);
   const baseParties = buildParties(data.rosters, unitTemplates, data.abilities);
