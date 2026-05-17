@@ -379,6 +379,38 @@ visibility spec. AI-spec integrity is the deciding factor.
 
 ---
 
+## 4b. Phase-D engine-dependency build — RECORDED (human-steered)
+
+The §3 dependencies were built incrementally, one PR per chunk, each
+fully additive and gate-29 byte-identical (baseline 58.0%; stripped
+tutorial L1 76%). Status, binding:
+
+| §3 dep | mechanic                                   | status                  |
+| ------ | ------------------------------------------ | ----------------------- |
+| 1      | `eradicate` victory kind (L6)              | **done** (PR #10)       |
+| 2      | `recruit-count` victory kind (L8)          | **done** (PR #11)       |
+| 3      | per-seed POST jitter on `static` (L4)      | **done** (PR #12)       |
+| 4      | one-way plane transition (L8 Skylight)     | **done** (PR #14)       |
+| 6      | dynamic hazard field (L9 Sump-Pump/Boiler) | **done** (PR #17)       |
+| 7      | concealment / fog-immunity POST (L5)       | **done** (PR #15)       |
+| 8      | Light-Switch flip-state combat mod (L4)    | **done** (PR #16)       |
+| 5      | larger / non-10×10 maps                    | **DEFERRED** (decision) |
+
+**Dependency 5 — DEFERRED (binding human decision).** The cube-edge
+geometry core (`engine/edges.ts`, fixed 10×10×10) is left unchanged.
+L3–L10 ship on 10×10 obstacle-approximation — the roadmap default; no
+level's _gameplay_ needs >100 tiles per §1–§2 of this plan. The
+"rooms feel big / elongated" payoff is reclassified as a **viewer /
+UX concern** (proportional rendering of a 10×10 board) to be picked
+up in the future UX phase, NOT an engine refactor. Rationale: the
+engine refactor (variable-dimension cuboid) is the single highest
+L1-byte-identity risk for a fidelity-only payoff the roadmap itself
+flags as non-blocking; rendering buys the same feel at zero engine
+risk. Reopen only if a future level's _mechanics_ (not feel) require
+a non-square play area — nothing in L1–L10 currently does.
+
+---
+
 ## 5. Deviations from §4.1
 
 1. **No sequence reorder or room replacement.** L1–L10 rooms and order are kept
