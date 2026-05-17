@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "abilities": [
+    {
+      "id": "queen-ultimate",
+      "name": "Wrath of the Queen",
+      "category": "special-attack",
+      "target": "area",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "radius": 5,
+        "damage": 50
+      },
+      "description": "The Queen unleashes the full fury of the colony. Everything in range is forcibly reminded who runs this bathroom."
+    },
+    {
+      "id": "brace",
+      "name": "Brace",
+      "category": "buff",
+      "target": "self",
+      "uses": null,
+      "cooldown": 1,
+      "tier": 1,
+      "params": {
+        "armorBonus": 3,
+        "durationTurns": 1
+      },
+      "description": "Defenders lock shields and dig in. Nothing's getting through — not on their watch."
+    },
+    {
+      "id": "scout-ping",
+      "name": "Scout Ping",
+      "category": "information",
+      "target": "party",
+      "uses": null,
+      "cooldown": 2,
+      "tier": 1,
+      "params": {
+        "radius": 1
+      },
+      "phaseRestriction": "day",
+      "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap. (Suppressed at night.)"
+    }
+  ]
+}

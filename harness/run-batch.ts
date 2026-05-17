@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { ENEMY_AIS, neutralPlayer, PLAYER_AIS } from '../ai/index.ts';
+import { ENEMY_AIS, neutralPlayer, PLAYER_AIS, SCENARIO_PLAYER_AIS } from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -94,11 +94,20 @@ const POST_IDS: readonly PostId[] = [
 
 const main = (): void => {
   const args = parseArgs(process.argv.slice(2));
-  const player = PLAYER_AIS[args.playerName];
+  // Resolve `--player` from the L1 diversity map first, then the
+  // scenario-specific map (escort-l2, baseline-tutorial). This lets the
+  // stripped tutorial L1 be measured at scale (`--player
+  // baseline-tutorial --data data/level-1-tutorial`) without adding it
+  // to `PLAYER_AIS` (which `harness/diversity.ts` sweeps — keeping the
+  // gate-29 reference run byte-identical).
+  const player = PLAYER_AIS[args.playerName] ?? SCENARIO_PLAYER_AIS[args.playerName];
   const enemy = ENEMY_AIS[args.enemyName];
   if (!player) {
     console.error(
-      `unknown --player '${args.playerName}'. Available: ${Object.keys(PLAYER_AIS).join(', ')}`,
+      `unknown --player '${args.playerName}'. Available: ${[
+        ...Object.keys(PLAYER_AIS),
+        ...Object.keys(SCENARIO_PLAYER_AIS),
+      ].join(', ')}`,
     );
     process.exit(1);
   }

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "faction": "spider",
+  "parties": [
+    {
+      "id": "web-guard",
+      "leaderClass": "spider-queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "spider-queen",
+          "count": 1
+        },
+        {
+          "templateId": "spider-soldier",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 9,
+        "y": 9
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "web-picket",
+      "leaderClass": "war-chief",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "spider-soldier",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "ceiling",
+        "x": 9,
+        "y": 8
+      },
+      "posture": "defend"
+    }
+  ]
+}
