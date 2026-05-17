@@ -206,6 +206,17 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
             },
           }
         : {}),
+      ...(p.hazardField !== undefined
+        ? {
+            hazardField: {
+              tiles: p.hazardField.tiles.map((t) => ({ plane: t.plane, x: t.x, y: t.y })),
+              damage: p.hazardField.damage,
+              ...(p.hazardField.suppressedWhenOwnedBy !== undefined
+                ? { suppressedWhenOwnedBy: p.hazardField.suppressedWhenOwnedBy }
+                : {}),
+            },
+          }
+        : {}),
       tags: p.tags,
       // Round 17 — POST hold mechanic. No capture in progress at
       // scenario start for any POST (faction-locked, neutral, or

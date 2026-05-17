@@ -306,6 +306,24 @@ export interface Post {
     readonly faction: Faction;
     readonly attack: number;
   };
+  /**
+   * L9 (Basement) dynamic-hazard surface (§3.6 / §4a boundaries #5
+   * Sump-Pump + #6 Boiler — bundled: one shared engine surface). This
+   * POST governs `tiles` as a dynamic hazard: at end-of-turn every
+   * living unit standing on a governed tile takes `damage`. The field
+   * is ACTIVE unless `suppressedWhenOwnedBy` is set AND this POST is
+   * owned by that faction (the Sump-Pump "drain" toggle). A Boiler
+   * (always-radiating) just omits `suppressedWhenOwnedBy`. Level owns
+   * the tile region + pump/boiler node; Gameplay owns `damage`.
+   * Distinct from (and does NOT activate) the latent static
+   * `hazardDamage` terrain field — absent on every shipped map, so
+   * the end-of-turn hazard tick is a no-op there (byte-identical).
+   */
+  readonly hazardField?: {
+    readonly tiles: readonly TileCoord[];
+    readonly damage: number;
+    readonly suppressedWhenOwnedBy?: Faction;
+  };
   readonly tags: readonly string[];
   /**
    * Round 17 — POST hold mechanic. When a non-owner faction party walks
@@ -1025,6 +1043,15 @@ export type ReplayEvent =
   | (ReplayEventCommon & {
       readonly kind: 'damage-zone-expired';
       readonly center: TileCoord;
+    })
+  | (ReplayEventCommon & {
+      /** L9 dynamic-hazard tick: an active `hazardField` POST dealt
+       * `damage` to each unit in `affectedUnits` standing on one of
+       * its governed tiles this end-of-turn. */
+      readonly kind: 'hazard-field-tick';
+      readonly postId: PostId;
+      readonly damage: number;
+      readonly affectedUnits: readonly UnitId[];
     })
   | (ReplayEventCommon & {
       /**
