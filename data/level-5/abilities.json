@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "abilities": [
+    {
+      "id": "pheroblast",
+      "name": "PheroBlast",
+      "category": "information",
+      "target": "area",
+      "uses": 2,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "radius": 3
+      },
+      "description": "Scout ants release a concentrated phero-burst, blowing the fog off everything within smelling distance."
+    },
+    {
+      "id": "ant-plane-switch",
+      "name": "Ant Plane-Switch",
+      "category": "movement",
+      "target": "self",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": 3,
+      "params": {},
+      "description": "An ant-mage hauls the column up onto another plane via short-range pheromone-thread teleport. Once per scenario, consumes the party's order for that turn."
+    },
+    {
+      "id": "spider-corner-cross",
+      "name": "Spider Corner-Cross",
+      "category": "passive",
+      "target": "self",
+      "uses": null,
+      "cooldown": 0,
+      "tier": null,
+      "params": {},
+      "description": "Spiders are at home crawling around corners. When a spider party's move would land on a plane edge, the engine automatically follows the corner adjacency in the same step. Faction-wide passive; no order required."
+    },
+    {
+      "id": "boat-form",
+      "name": "Boat-Form",
+      "category": "movement",
+      "target": "party",
+      "uses": null,
+      "cooldown": 0,
+      "tier": 1,
+      "params": {
+        "minWorkers": 3
+      },
+      "description": "Worker ants link mandibles and legs into a buoyant raft. Stay low, stay dry, stay alive."
+    },
+    {
+      "id": "jelly-apply",
+      "name": "Apply Royal Jelly",
+      "category": "buff",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 2,
+      "tier": 1,
+      "params": {
+        "doses": 1,
+        "attackBonus": 1,
+        "armorBonus": 1,
+        "durationTurns": 2
+      },
+      "description": "A dose of the good stuff -- Her Majesty's blessing in jar form. Stiffens the carapace and sharpens the bite, briefly."
+    },
+    {
+      "id": "queen-ultimate",
+      "name": "Wrath of the Queen",
+      "category": "special-attack",
+      "target": "area",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "radius": 5,
+        "damage": 50
+      },
+      "description": "The Queen unleashes the full fury of the colony. Everything in range is forcibly reminded who runs this bathroom."
+    },
+    {
+      "id": "volley",
+      "name": "Volley",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 1,
+      "tier": 2,
+      "params": {
+        "damage": 12,
+        "queenBonusDamage": 4
+      },
+      "description": "Archer ants loose a coordinated salvo of seed-tipped arrows. Pre-battle softening, the textbook way -- and a heavy chassis target like the Spider Queen catches the worst of it."
+    },
+    {
+      "id": "brace",
+      "name": "Brace",
+      "category": "buff",
+      "target": "self",
+      "uses": null,
+      "cooldown": 1,
+      "tier": 1,
+      "params": {
+        "armorBonus": 3,
+        "durationTurns": 1
+      },
+      "description": "Defenders lock shields and dig in. Nothing's getting through — not on their watch."
+    },
+    {
+      "id": "mend",
+      "name": "Mend",
+      "category": "buff",
+      "target": "party",
+      "uses": 3,
+      "cooldown": 1,
+      "tier": 2,
+      "params": {
+        "heal": 6
+      },
+      "description": "The medic patches up the squad with sap-salve and stern words. Walk it off, soldier."
+    },
+    {
+      "id": "scout-ping",
+      "name": "Scout Ping",
+      "category": "information",
+      "target": "party",
+      "uses": null,
+      "cooldown": 2,
+      "tier": 1,
+      "params": {
+        "radius": 1
+      },
+      "phaseRestriction": "day",
+      "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap. (Suppressed at night.)"
+    },
+    {
+      "id": "web-tangle",
+      "name": "Web Tangle",
+      "category": "debuff",
+      "target": "party",
+      "uses": 2,
+      "cooldown": 1,
+      "tier": 2,
+      "params": {
+        "movementPenalty": 2,
+        "attackPenalty": 1,
+        "durationTurns": 2
+      },
+      "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast — and swings half-mast while the silk drags on their joints."
+    },
+    {
+      "id": "web-mend",
+      "name": "Web-Mend",
+      "category": "passive",
+      "target": "self",
+      "uses": null,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "heal": 1,
+        "hpThreshold": 0.5
+      },
+      "description": "The Spider Queen weaves silk into her wounds between exchanges. Slow bleeders close while she still has thread to spare."
+    },
+    {
+      "id": "web-snare",
+      "name": "Web-Snare",
+      "category": "debuff",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "hpThreshold": 0.33,
+        "immobilizeCount": 1,
+        "durationTurns": 1
+      },
+      "description": "When the silk runs thin and her wounds won't close, the Spider Queen flings the last strand as a snare. One attacker is bound for a single beat — long enough, if the timing is right."
+    },
+    {
+      "id": "spin-web",
+      "name": "Spin Web",
+      "category": "debuff",
+      "target": "tile",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "delayTurns": 1
+      },
+      "description": "The spinner spends a turn weaving silk across the current tile. Any ant party that steps on it must pause for a turn while it tears free; the web breaks afterward."
+    },
+    {
+      "id": "recruit",
+      "name": "Recruit",
+      "category": "special-attack",
+      "target": "party",
+      "uses": null,
+      "cooldown": 2,
+      "tier": 2,
+      "params": {
+        "successRate": 0.25
+      },
+      "description": "An ant mage attempts pheromone-mediated diplomacy on a single isolated foe. 25% of the time the target switches sides; otherwise nothing happens (mage doesn't attack this turn)."
+    },
+    {
+      "id": "spawn-spiderlings",
+      "name": "Spawn Spiderlings",
+      "category": "special-attack",
+      "target": "self",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": 3,
+      "params": {
+        "count": 5
+      },
+      "description": "Spider-queen disgorges a brood — 5 tiny spiderlings scatter from her tile as independent parties. Once per scenario; they're fragile but a real distraction."
+    },
+    {
+      "id": "magic-arrow",
+      "name": "Magic Arrow",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 1,
+      "tier": 3,
+      "params": {
+        "damage": 22,
+        "minMages": 1,
+        "minArchers": 1
+      },
+      "description": "A mage charges an arrow with phero-magic and an archer fires it. Single target, ranged, hits hard. Requires at least 1 mage and 1 archer in the party."
+    },
+    {
+      "id": "hypnotize",
+      "name": "Hypnotize",
+      "category": "special-attack",
+      "target": "party",
+      "uses": null,
+      "cooldown": 0,
+      "tier": 3,
+      "params": {
+        "successRate": 0.8,
+        "minControlTurns": 2,
+        "maxControlTurns": 3,
+        "reboundImmunityTurns": 10
+      },
+      "description": "Any spider unit may attempt to hypnotize a neutral party at the same tile. Costs the caster half its current HP (rounded down). 80% chance to seize control of the neutral party for 5-10 turns; on failure a stinkbug target leaves a damage zone."
+    },
+    {
+      "id": "phalanx-charge",
+      "name": "Phalanx Charge",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 1,
+      "tier": 3,
+      "params": {
+        "damage": 6,
+        "aoe": 1,
+        "minFootmen": 2
+      },
+      "description": "Two or more footmen lock shields and barrel forward as one. Hits every enemy in the target party for moderate damage."
+    },
+    {
+      "id": "venom-blast",
+      "name": "Venom Blast",
+      "category": "special-attack",
+      "target": "party",
+      "uses": 2,
+      "cooldown": 1,
+      "tier": 2,
+      "params": {
+        "damagePerUnit": 2,
+        "minSpinnersOrQueen": 1
+      },
+      "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for heavy damage. Reserved for combos in later turns."
+    },
+    {
+      "id": "royal-onslaught",
+      "name": "Royal Onslaught",
+      "category": "special-attack-combo",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "damage": 18,
+        "componentAbilities": ["magic-arrow", "jelly-apply"],
+        "mpCostBySource": { "magic-arrow": 3, "jelly-apply": 1 }
+      },
+      "description": "Mage and worker channel the Queen's blessing into a single thunderous strike. All enemy units in the target party take heavy damage."
+    },
+    {
+      "id": "venom-storm",
+      "name": "Venom Storm",
+      "category": "special-attack-combo",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": null,
+      "params": {
+        "damage": 3,
+        "movementPenalty": 2,
+        "attackPenalty": 1,
+        "durationTurns": 2,
+        "componentAbilities": ["venom-blast", "web-tangle"],
+        "mpCostBySource": { "venom-blast": 2, "web-tangle": 2 }
+      },
+      "description": "Spinner and queen weave venom and silk into a saturating cloud — every unit in the target party is poisoned and bound at once."
+    }
+  ]
+}
