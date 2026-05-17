@@ -459,6 +459,36 @@ Gameplay PA:
 3. Not a defect to re-fix each level — like §4c, expect it; the curve
    continues to be carried by the levers that work.
 
+## 4e. Tracked engine-reality theme — occupation-`healingRate` is not a capture-post curve lever
+
+Discovered building L7 (Living Room): a POST `healingRate` "occupation
+economy" **cannot express a bounded attritional win-rate lever in a
+`capture-post` scenario**, under the frozen engine. Proven, not a
+tuning miss — L7's Remote was falsified **twice** (build:
+`owner:ant`+`def2`+`heal4` → uncontested-permanent 99%; re-arb:
+`owner:neutral`+`def0`+`heal3` relocated on-path → contest live (94
+flips) but **`healingRate` 2 vs 3 vs 4 = 0.0pp**, win rate stuck at
+55%). Root cause: the engine's post-capture **co-located-pause** rule
+(`post-capture.ts`) makes a contested POST a **winner-take-all race**,
+not the oscillating co-occupation the economy math assumes; whoever
+wins the Manhattan race to the node holds it decisively, so the
+per-turn heal tick never accrues as a curve-shaping differential and
+the HP-retreat tuning knobs never fire (decisive battles, not gradual
+loss).
+
+Why L6 worked and L7 did not: L6 (`eradicate`) + the binding
+sortie doctrine **forces sustained contested co-occupation**, so the
+`healingRate` mass registers. `capture-post` open-arena race
+conditions do not. **Binding guidance:** the Gameplay PA must NOT
+spend a `capture-post` scenario's curve budget on a POST
+`healingRate`/`defensiveBonus` "occupation economy" — it is
+engine-inert there. Use levers the AIs + victory structure
+demonstrably exercise (commander-cards, assembled-combos,
+geometry/objective placement, concealment, victory kind). Occupation
+economy is viable only under `eradicate`/forced-co-occupation (L6).
+Sibling to §4c/§4d: a structural property of the frozen engine, not a
+per-level defect.
+
 ---
 
 ## 5. Deviations from §4.1
