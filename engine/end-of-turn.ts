@@ -587,6 +587,82 @@ const applyDamageZoneTicks = (
   };
 };
 
+const tileKey = (c: TileCoord): string => `${c.plane}:${String(c.x)},${String(c.y)}`;
+
+/**
+ * L9 (Basement) dynamic-hazard tick (§3.6 / §4a #5+#6). For every
+ * POST whose `hazardField` is ACTIVE (no suppress owner, or the POST
+ * is not owned by `suppressedWhenOwnedBy` — the Sump-Pump drain
+ * toggle / Boiler always-on emission), deal `damage` to each living
+ * unit standing on a governed tile. Overlapping fields stack
+ * additively, mirroring the stinkbug damage-zone tick. Pure: no RNG.
+ *
+ * Early-returns unchanged when no POST carries a `hazardField`, so
+ * every shipped map (none declare one) is byte-identical and the
+ * latent static `hazardDamage` terrain remains inert.
+ */
+const applyHazardFieldTicks = (
+  state: GameState,
+  turn: number,
+  tick: () => number,
+): ZoneTickOutcome => {
+  const events: ReplayEvent[] = [];
+  const active: { postId: PostId; damage: number; keys: Set<string> }[] = [];
+  for (const [postId, post] of state.posts) {
+    const hf = post.hazardField;
+    if (hf === undefined) continue;
+    if (hf.suppressedWhenOwnedBy !== undefined && post.owner === hf.suppressedWhenOwnedBy) {
+      continue; // drained — field off
+    }
+    active.push({ postId, damage: hf.damage, keys: new Set(hf.tiles.map(tileKey)) });
+  }
+  if (active.length === 0) return { state, events };
+
+  const damagePerTile = new Map<string, number>();
+  for (const f of active) {
+    for (const k of f.keys) damagePerTile.set(k, (damagePerTile.get(k) ?? 0) + f.damage);
+  }
+
+  const newParties = new Map<PartyId, Party>();
+  for (const [id, party] of state.parties) {
+    const dmg = damagePerTile.get(tileKey(party.location)) ?? 0;
+    if (dmg <= 0) {
+      newParties.set(id, party);
+      continue;
+    }
+    const newUnits: Unit[] = party.units.map((u) =>
+      u.currentHp <= 0 ? u : { ...u, currentHp: Math.max(0, u.currentHp - dmg) },
+    );
+    newParties.set(id, {
+      ...party,
+      units: newUnits,
+      leaderless: party.leaderless || newUnits.every((u) => u.currentHp <= 0),
+    });
+  }
+
+  // Affected = units alive (pre-tick) on each field's tiles — same
+  // convention as the damage-zone tick event.
+  for (const f of active) {
+    const affected: UnitId[] = [];
+    for (const party of state.parties.values()) {
+      if (!f.keys.has(tileKey(party.location))) continue;
+      for (const u of party.units) {
+        if (u.currentHp > 0) affected.push(u.id);
+      }
+    }
+    events.push({
+      kind: 'hazard-field-tick',
+      turn,
+      tick: tick(),
+      postId: f.postId,
+      damage: f.damage,
+      affectedUnits: affected,
+    });
+  }
+
+  return { state: { ...state, parties: newParties }, events };
+};
+
 /**
  * Round 11 — true iff the target party is a valid pursue target: it
  * exists in `state.parties`, is not leaderless, and has at least one
@@ -822,6 +898,14 @@ export const endOfTurn = (
   const zoneTickResult = applyDamageZoneTicks(working, currentTurn, tick);
   working = zoneTickResult.state;
   events.push(...zoneTickResult.events);
+
+  // 5d-bis. L9 dynamic-hazard tick. Active `hazardField` POSTs
+  //     (Sump-Pump / Boiler) damage units on their governed tiles.
+  //     No-op (early return) when no POST declares one, so every
+  //     shipped map stays byte-identical.
+  const hazardTickResult = applyHazardFieldTicks(working, currentTurn, tick);
+  working = hazardTickResult.state;
+  events.push(...hazardTickResult.events);
 
   // 5e. Round 14 — item discovery. Eligible (ant/spider, non-queen-
   //     guard, leadered, alive) parties roll 25% per adjacent

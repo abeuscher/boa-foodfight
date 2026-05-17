@@ -97,6 +97,19 @@ export const postSchema = z.object({
       attack: z.number().int(),
     })
     .optional(),
+  /**
+   * L9 (Basement) dynamic-hazard surface (§3.6 / §4a #5+#6). This
+   * POST governs `tiles`: while ACTIVE (not suppressed by ownership)
+   * each end-of-turn deals `damage` to units standing on them.
+   * Absent on every shipped map.
+   */
+  hazardField: z
+    .object({
+      tiles: z.array(tileCoordSchema).min(1),
+      damage: z.number().int().positive(),
+      suppressedWhenOwnedBy: factionSchema.optional(),
+    })
+    .optional(),
   tags: z.array(z.string()).default([]),
   /**
    * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed
