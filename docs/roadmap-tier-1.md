@@ -772,6 +772,16 @@ Where this roadmap defers to other docs:
   tiered MP; §1.2 combo abilities; §1.3 commander cards; §1.4 charisma
   promotion (supersedes TBS §2.3); §1.5 formation slots; §1.6
   score-tiebreaker.
+- **`docs/design-memo-ui-cube-view.md`** (RECORDED, post-Phase-D L4):
+  the player-facing cube-view interaction model — active face + splayed
+  peripherals, per-face local coords (already the engine's model),
+  two-click no-path-preview command model, performative combat panel,
+  three-column layout. Locks the interaction model only; the brief's
+  gameplay assumptions (pre-game placement, world-loop scope,
+  path-aware hints) are quarantined as UI-context speculation, not
+  gameplay rulings (its §0/§D). "One playback layer" = shared
+  event/timing layer + a NEW spatial renderer (its §B). Parallel UX
+  track; does not block Phase-D.
 - **`docs/design-memo-pacing-and-turn-cap.md`** (RECORDED, post-Phase-D
   L4): real-time-with-pause pacing; stalemate as a real third outcome
   (NOT score-resolved); L1 exempt on the tutorial/anchor ground (also
