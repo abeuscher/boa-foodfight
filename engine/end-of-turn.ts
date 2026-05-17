@@ -21,6 +21,7 @@ import { PHASE_LENGTH } from './phase.ts';
 import type { ItemsFile, JellyFile, QueenFile } from './schemas/index.ts';
 import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
+  AbilityId,
   DamageZone,
   DayNightPhase,
   Faction,
@@ -43,6 +44,11 @@ import type {
 
 const HYPNOTIZE_REBOUND_IMMUNITY = 10;
 const STINKBUG_TEMPLATE_ID = 'stinkbug' as UnitTemplateId;
+/** The ant-mage recruit ability. A living ant unit whose template
+ * grants this is a "recruiter"; when none remain the recruit-count
+ * objective is unreachable (the §4.3.3 "all ant-mage parties dead"
+ * loss, encoded as the precise capability check). */
+const RECRUIT_ABILITY = 'recruit' as AbilityId;
 
 /**
  * Maximum age (in turns) a pheromone trail entry survives before being
@@ -373,6 +379,39 @@ const allSpiderPartiesEliminated = (state: GameState): boolean => {
   return sawAnySpiderParty;
 };
 
+/** Count distinct ant-faction parties that hold ≥1 *living* unit of
+ * `templateId`. The recruit handler flips a converted neutral party to
+ * `faction: 'ant'` while its units keep their original (e.g.
+ * `cockroach`) templateId, so a recruited party is exactly an ant
+ * party carrying that template. Requiring a living unit means a
+ * recruited party annihilated by the spiders stops counting — the
+ * "recruit-or-die" tension (§4.3.3). */
+const recruitedPartyCount = (state: GameState, templateId: UnitTemplateId): number => {
+  let count = 0;
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'ant') continue;
+    if (party.units.some((u) => u.templateId === templateId && u.currentHp > 0)) count += 1;
+  }
+  return count;
+};
+
+/** True iff at least one living ant unit still grants the `recruit`
+ * ability. When false the recruit-count objective can no longer be
+ * progressed — the §4.3.3 "all ant-mage parties dead" loss, encoded
+ * as the precise unreachability condition rather than a template name
+ * (recruit is mage-only, so the two are equivalent for L8). */
+const antRecruiterRemains = (state: GameState): boolean => {
+  for (const party of state.parties.values()) {
+    if (party.faction !== 'ant') continue;
+    for (const u of party.units) {
+      if (u.currentHp <= 0) continue;
+      const tmpl = state.unitTemplates.get(u.templateId);
+      if (tmpl?.abilities.includes(RECRUIT_ABILITY)) return true;
+    }
+  }
+  return false;
+};
+
 /**
  * Determine winner. Loss is checked before victory. Returns null if
  * neither. Dispatches on the scenario's `victoryCondition`; a state
@@ -409,6 +448,17 @@ const checkWinner = (state: GameState): Faction | null => {
       if (!antQueenAlive(state)) return 'spider';
       if (antFieldForceWiped(state)) return 'spider';
       if (allSpiderPartiesEliminated(state)) return 'ant';
+      return null;
+    }
+    case 'recruit-count': {
+      // L8 (Attic) — cockroach recruit-or-die (§4.3.3). Hard loss:
+      // queen dead. Then the WIN is checked *before* the recruiter
+      // loss so a target already met still wins even if the last mage
+      // dies the same turn. Finally, with the target unmet and no
+      // recruiter left the objective is unreachable → spider.
+      if (!antQueenAlive(state)) return 'spider';
+      if (recruitedPartyCount(state, vc.unitTemplateId) >= vc.target) return 'ant';
+      if (!antRecruiterRemains(state)) return 'spider';
       return null;
     }
   }

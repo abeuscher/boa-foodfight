@@ -328,3 +328,132 @@ describe('victoryCondition — eradicate', () => {
     }
   });
 });
+
+// 'cockroach' is a real L1 template (neutral) that never appears in an
+// ant roster party, so injecting one into N distinct ant parties is a
+// collision-free way to simulate N recruited cockroach parties.
+const RECRUITED: UnitTemplateId = 'cockroach' as UnitTemplateId;
+
+const antFieldPartyIds = (state: GameState): PartyId[] => {
+  const ids: PartyId[] = [];
+  for (const p of state.parties.values()) {
+    if (p.faction === 'ant' && !isAntQueenParty(state, p)) ids.push(p.id);
+  }
+  return ids;
+};
+
+const injectUnit = (
+  state: GameState,
+  partyId: PartyId,
+  templateId: UnitTemplateId,
+  hp: number,
+): GameState => {
+  const parties = new Map(state.parties);
+  const party = parties.get(partyId);
+  if (!party) throw new Error(`no party ${String(partyId)}`);
+  const unit: Unit = {
+    id: `u-inject-${String(partyId)}-${String(templateId)}` as Unit['id'],
+    templateId,
+    currentHp: hp,
+    level: 1,
+    xp: 0,
+  };
+  parties.set(partyId, { ...party, units: [...party.units, unit] });
+  return { ...state, parties };
+};
+
+/** Simulate `n` recruited cockroach parties by injecting a living
+ * cockroach into `n` distinct ant field parties. */
+const recruit = (state: GameState, n: number, hp = 30): GameState => {
+  const ids = antFieldPartyIds(state).slice(0, n);
+  if (ids.length < n) throw new Error(`need ${String(n)} ant parties, have ${String(ids.length)}`);
+  return ids.reduce((s, id) => injectUnit(s, id, RECRUITED, hp), state);
+};
+
+/** Kill every living ant unit whose template grants `recruit` (all
+ * ant-mages) — the §4.3.3 "no more recruits possible" loss trigger. */
+const killAntRecruiters = (state: GameState): GameState => {
+  const parties = new Map(state.parties);
+  for (const [id, p] of parties) {
+    if (p.faction !== 'ant') continue;
+    parties.set(id, {
+      ...p,
+      units: p.units.map((u) => {
+        const t = state.unitTemplates.get(u.templateId);
+        const hasRecruit = (t?.abilities as readonly string[] | undefined)?.includes('recruit');
+        return hasRecruit ? { ...u, currentHp: 0 } : u;
+      }),
+    });
+  }
+  return { ...state, parties };
+};
+
+describe('victoryCondition — recruit-count', () => {
+  const rc = (target: number): VictoryCondition => ({
+    kind: 'recruit-count',
+    target,
+    unitTemplateId: RECRUITED,
+  });
+
+  it('ants win once ≥target ant parties hold a living recruited unit', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(recruit(state, 2), rc(2));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('ant');
+  });
+
+  it('no win while fewer than target are recruited', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(recruit(state, 1), rc(3));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBeNull();
+  });
+
+  it('a recruited party with all recruited units dead does not count', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // One recruited party but its cockroach is dead → count 0 < 1.
+    // Queen alive and ant-mages still alive (L1 roster) → not a loss,
+    // simply no win yet.
+    const s = setVictory(recruit(state, 1, 0), rc(1));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBeNull();
+  });
+
+  it('loss-before-win: ant queen dead is a spider win even with the target met', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(killAntQueen(recruit(state, 2)), rc(2));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('spider');
+  });
+
+  it('no recruiter left with the target unmet is a spider win (unreachable)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(killAntRecruiters(recruit(state, 1)), rc(3));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('spider');
+  });
+
+  it('target met still wins even if every recruiter died the same turn', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // Win is checked before the recruiter-gone loss.
+    const s = setVictory(killAntRecruiters(recruit(state, 2)), rc(2));
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    expect(out.state.winner).toBe('ant');
+  });
+
+  it('recruit-count timeout (turn cap reached) is an ant loss — no score tiebreak', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const s = setVictory(state, rc(4));
+    const outcome = runScenario(s, data, createRng(1), makeTickClock(), {
+      maxTurns: 3,
+      policies: [],
+    });
+    expect(outcome.finalState.winner).toBe('spider');
+    const end = [...outcome.events].reverse().find((e) => e.kind === 'scenario-end');
+    expect(end?.kind).toBe('scenario-end');
+    if (end?.kind === 'scenario-end') {
+      expect(end.winner).toBe('spider');
+      expect(end.scoreBreakdown).toBeUndefined();
+    }
+  });
+});

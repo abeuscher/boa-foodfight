@@ -51,6 +51,12 @@ export type Faction = 'ant' | 'spider' | 'neutral';
  *    spider party has zero living units. Loss checks mirror
  *    `capture-post` (queen dead / field force wiped). Timeout (turn
  *    cap) is an ant loss — the spiders were not hunted down in time.
+ *  - `recruit-count`: the L8 (Attic) objective. The ants win when at
+ *    least `target` distinct ant-faction parties each hold ≥1 living
+ *    unit of `unitTemplateId` (recruited cockroaches). Dual loss
+ *    (§4.3.3): the ant queen dying, OR no living ant unit retaining
+ *    the `recruit` ability (all recruiters dead → unreachable).
+ *    Timeout (turn cap) is an ant loss — too few were recruited.
  */
 export type VictoryCondition =
   | { readonly kind: 'capture-post'; readonly postId: PostId }
@@ -59,7 +65,12 @@ export type VictoryCondition =
       readonly escortUnitTemplateId: UnitTemplateId;
       readonly exitPostId: PostId;
     }
-  | { readonly kind: 'eradicate' };
+  | { readonly kind: 'eradicate' }
+  | {
+      readonly kind: 'recruit-count';
+      readonly target: number;
+      readonly unitTemplateId: UnitTemplateId;
+    };
 
 /**
  * The L1-equivalent default applied when scenario data omits
