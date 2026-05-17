@@ -290,6 +290,22 @@ export interface Post {
    * Absent everywhere today, so all shipped maps are byte-identical.
    */
   readonly concealment?: boolean;
+  /**
+   * L4 (Hallway) Light-Switch flip-state POST → global combat
+   * modifier (§3.8 / §4a boundary #1: Level owns the flip-state POST
+   * node, Gameplay owns this combat payload — kept to a single
+   * low-cognitive flat attack delta per the Gameplay ruling). The
+   * switch is "lit" iff this POST is owned by `litOwner`; while
+   * UNLIT (any other owner) every unit of `faction` gets `+attack`
+   * effective attack engine-wide, folded into the same additive lane
+   * as the POST-occupation bonus. Absent on every shipped map, so the
+   * offset is identically zero and combat is byte-identical.
+   */
+  readonly combatModifier?: {
+    readonly litOwner: Faction;
+    readonly faction: Faction;
+    readonly attack: number;
+  };
   readonly tags: readonly string[];
   /**
    * Round 17 — POST hold mechanic. When a non-owner faction party walks

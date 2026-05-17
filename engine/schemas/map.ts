@@ -84,6 +84,19 @@ export const postSchema = z.object({
    * shipped map.
    */
   concealment: z.boolean().optional(),
+  /**
+   * L4 (Hallway) Light-Switch flip-state POST → global combat
+   * modifier (§3.8 / §4a #1). While this POST is NOT owned by
+   * `litOwner`, every unit of `faction` gets `+attack` effective
+   * attack engine-wide. Absent on every shipped map.
+   */
+  combatModifier: z
+    .object({
+      litOwner: factionSchema,
+      faction: factionSchema,
+      attack: z.number().int(),
+    })
+    .optional(),
   tags: z.array(z.string()).default([]),
   /**
    * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed
