@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "faction": "ant",
+  "parties": [
+    {
+      "id": "queen-guard",
+      "leaderClass": "queen",
+      "leaderIndex": 0,
+      "slotCapacity": 12,
+      "units": [
+        {
+          "templateId": "ant-queen",
+          "count": 1
+        },
+        {
+          "templateId": "ant-footman",
+          "count": 4
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 2
+        },
+        {
+          "templateId": "ant-worker",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 0,
+        "y": 4
+      },
+      "posture": "defend"
+    },
+    {
+      "id": "vanguard-alpha",
+      "leaderClass": "sergeant",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "ant-footman",
+          "count": 4
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 2
+        },
+        {
+          "templateId": "ant-scout",
+          "count": 1
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 0,
+        "y": 5
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "vanguard-bravo",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "ant-mage",
+          "count": 1
+        },
+        {
+          "templateId": "ant-footman",
+          "count": 3
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 1
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 0,
+        "y": 3
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "vanguard-charlie",
+      "leaderClass": "sergeant",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "ant-footman",
+          "count": 4
+        },
+        {
+          "templateId": "ant-potato-bug",
+          "count": 2
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 6
+      },
+      "posture": "fight"
+    },
+    {
+      "id": "pathfinders",
+      "leaderClass": "scout-captain",
+      "leaderIndex": 0,
+      "slotCapacity": 8,
+      "units": [
+        {
+          "templateId": "ant-mage",
+          "count": 1
+        },
+        {
+          "templateId": "ant-scout",
+          "count": 2
+        },
+        {
+          "templateId": "ant-archer",
+          "count": 3
+        }
+      ],
+      "startingLocation": {
+        "plane": "floor",
+        "x": 1,
+        "y": 4
+      },
+      "posture": "fight"
+    }
+  ]
+}

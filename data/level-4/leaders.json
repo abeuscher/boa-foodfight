@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "classes": [
+    {
+      "id": "queen",
+      "name": "Ant Queen",
+      "description": "The colony's monarch — her presence galvanizes every soldier within earshot.",
+      "modifiers": [
+        { "stat": "attack", "delta": 5, "appliesTo": "leader-and-party" },
+        { "stat": "armor", "delta": 3, "appliesTo": "leader-and-party" },
+        { "stat": "morale", "delta": 4, "appliesTo": "party" }
+      ]
+    },
+    {
+      "id": "spider-queen",
+      "name": "Spider Queen",
+      "description": "Eight-legged matriarch whose web-borne wrath terrifies trespassers.",
+      "modifiers": [
+        { "stat": "attack", "delta": 5, "appliesTo": "leader-and-party" },
+        { "stat": "agility", "delta": 3, "appliesTo": "leader-and-party" },
+        { "stat": "armor", "delta": 2, "appliesTo": "leader" }
+      ]
+    },
+    {
+      "id": "sergeant",
+      "name": "Sergeant",
+      "description": "Veteran field commander who keeps the line steady and the orders loud.",
+      "modifiers": [
+        { "stat": "attack", "delta": 1, "appliesTo": "party" },
+        { "stat": "morale", "delta": 2, "appliesTo": "party" }
+      ]
+    },
+    {
+      "id": "scout-captain",
+      "name": "Scout Captain",
+      "description": "Forward-deployed pathfinder who reads the battlefield before it reads her.",
+      "modifiers": [
+        { "stat": "agility", "delta": 2, "appliesTo": "party" },
+        { "stat": "movement", "delta": 1, "appliesTo": "party" },
+        { "stat": "armor", "delta": -1, "appliesTo": "party" }
+      ],
+      "grantsAbility": "pheroblast"
+    },
+    {
+      "id": "war-chief",
+      "name": "War Chief",
+      "description": "All-out aggressor who trades caution for crushing offense.",
+      "modifiers": [
+        { "stat": "attack", "delta": 2, "appliesTo": "party" },
+        { "stat": "attack", "delta": 1, "appliesTo": "leader" },
+        { "stat": "armor", "delta": -1, "appliesTo": "party" }
+      ]
+    },
+    {
+      "id": "quartermaster",
+      "name": "Quartermaster",
+      "description": "Logistics specialist who keeps the party fed, jellied, and patched up.",
+      "modifiers": [
+        { "stat": "armor", "delta": 1, "appliesTo": "party" },
+        { "stat": "healing", "delta": 2, "appliesTo": "party" },
+        { "stat": "attack", "delta": -1, "appliesTo": "party" }
+      ]
+    }
+  ]
+}
