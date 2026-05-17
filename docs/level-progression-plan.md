@@ -430,6 +430,35 @@ score-path tuning, attacker/defender doctrine, or presentation), and
 as context for L4–L10 reviews (expect the same signature on
 `capture-post` levels; it is not a new defect each time).
 
+## 4d. Tracked cross-level theme — plane-affinity inert under the current AI doctrine
+
+Observed across L3 (weak), L4, and L5 (~0pp net): the Gameplay PA's
+ruled **plane-affinity `wall` deltas are empirically near-inert**.
+Root cause is structural and the same each time — the chain-march
+(ant) vs fortress-defense (spider) AI doctrine fights on the **floor
+and ceiling**, almost never on **wall** planes, so a `wall`
+attack/armor gradient rarely enters combat resolution. L5's ruled
+`wall.armor 0→1` ramp + hypnotize-light cap measured **0pp** (66%
+with and without). The win-curve is in fact carried by **geometry,
+concealment, objective/POST placement, and victory structure** — not
+by the ruled `wall` combat deltas.
+
+**Decision (human, post-L5): track cross-level, do NOT chase
+per-level** (consistent with §4c). Binding guidance for the Phase-D
+Gameplay PA:
+
+1. Prefer mechanic-delta levers the current AIs **actually exercise**
+   (geometry, concealment, POST/economy bonuses, abilities that fire
+   in the matchup, victory structure) over `wall` plane-affinity.
+2. `wall` plane-affinity (incl. the L5-completed full-corner coverage)
+   is a **latent identity layer, not a curve lever**, under the
+   current AI doctrine. L6–L10 rulings that lean on plane-affinity
+   corner-coverage must not budget it as a win-rate mover; it becomes
+   a real lever only if/when AI doctrine routes via wall planes (a
+   deferred AI-doctrine question, not a per-level fix).
+3. Not a defect to re-fix each level — like §4c, expect it; the curve
+   continues to be carried by the levers that work.
+
 ---
 
 ## 5. Deviations from §4.1
