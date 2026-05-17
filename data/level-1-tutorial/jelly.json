@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "productionPerTurn": 1,
+  "capacityPerParty": 3,
+  "dosesPerApplication": 1,
+  "durationTurns": 2,
+  "attackMultiplier": 1.1,
+  "resilienceMultiplier": 1.05
+}
