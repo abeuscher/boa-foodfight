@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "proximity": {
+    "radius": 2,
+    "attackMultiplier": 1.2,
+    "resilienceMultiplier": 1.15
+  },
+  "ultimate": {
+    "chargeMax": 100,
+    "chargePerTurn": 5,
+    "chargeOnHomeAttack": 15,
+    "radius": 5,
+    "damage": 60,
+    "usesPerScenario": 1
+  },
+  "production": {
+    "turnsPerUnit": 4,
+    "producedTemplateId": "ant-footman"
+  }
+}

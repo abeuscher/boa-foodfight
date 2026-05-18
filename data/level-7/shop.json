@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "shopId": "shoebox",
+  "shopName": "The Forgotten Shoebox",
+  "proprietor": "Mr. Gristle, Itinerant Grasshopper",
+  "inventory": [
+    {
+      "id": "mouse-merc",
+      "name": "Whiskers the Mouse Mercenary",
+      "kind": "mercenary",
+      "price": 500,
+      "stock": 1,
+      "effect": {
+        "templateId": "mouse-merc",
+        "contractTurns": 0
+      },
+      "description": "A grumpy, scarred house-mouse for hire. Confirmed F.N.G. (Friendly New Giant). Restricted to the floor plane and demands payment up front. One-time hire only — Mr. Gristle insists he 'knows a guy.'"
+    },
+    {
+      "id": "sugar-poultice-small",
+      "name": "Sugar Poultice (Field Pack)",
+      "kind": "healing",
+      "price": 25,
+      "stock": 6,
+      "effect": {
+        "healAmount": 6,
+        "target": "unit"
+      },
+      "description": "A crumb of damp sugar wrapped in spider-silk gauze. Restores minor HP to a single unit. Standard issue M.R.E. (Medical Restorative Edible)."
+    },
+    {
+      "id": "sugar-poultice-big",
+      "name": "Sugar Poultice (Care Package)",
+      "kind": "healing",
+      "price": 60,
+      "stock": 3,
+      "effect": {
+        "healAmount": 18,
+        "target": "unit"
+      },
+      "description": "A whole sugar grain. Heavily restores HP to a single unit. Grasshopper guarantees 'pre-licked, ant-grade, hospital-clean.'"
+    },
+    {
+      "id": "honeydew-tincture",
+      "name": "Honeydew Tincture",
+      "kind": "healing",
+      "price": 120,
+      "stock": 2,
+      "effect": {
+        "healAmount": 8,
+        "target": "party"
+      },
+      "description": "A field-applied party-wide pick-me-up brewed from aphid honeydew. Restores HP across the whole party. Smells faintly of regret."
+    },
+    {
+      "id": "caffeine-crystal",
+      "name": "Caffeine Crystal",
+      "kind": "stat-boost",
+      "price": 50,
+      "stock": 4,
+      "effect": {
+        "stat": "agility",
+        "delta": 2,
+        "durationTurns": 3
+      },
+      "description": "Scraped from beneath the coffee mug ring. Temporarily boosts a unit's Agility. Side effects include the jitters and bad decisions."
+    },
+    {
+      "id": "capsaicin-dram",
+      "name": "Capsaicin Dram",
+      "kind": "stat-boost",
+      "price": 70,
+      "stock": 2,
+      "effect": {
+        "stat": "attack",
+        "delta": 3,
+        "durationTurns": 2
+      },
+      "description": "A drop of hot-sauce off the kitchen tile. Temporarily boosts a unit's Attack. Mr. Gristle warns: 'Do not, repeat, DO NOT touch your antennae after handling.'"
+    },
+    {
+      "id": "thimble-helmet",
+      "name": "Thimble Helmet",
+      "kind": "equipment",
+      "price": 160,
+      "stock": 1,
+      "effect": {
+        "stat": "armor",
+        "delta": 2,
+        "slot": "head"
+      },
+      "description": "A genuine sewing-room thimble, refitted for ant-skull anatomy. Permanently raises Armor on the equipped unit. Mr. Gristle calls it 'P.P.E. — Personal Protective Exoskeleton.'"
+    }
+  ]
+}

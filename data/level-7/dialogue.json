@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "lines": [
+    {
+      "id": "antonio-briefing",
+      "speaker": "Sgt. Antonio",
+      "trigger": "scenario-start",
+      "text": "Listen up, soldiers — eyes front, mandibles shut. Theater of operations: one (1) bathroom, three (3) planes, five (5) P.O.S.T.s — that's Position Of Strategic interesT, and yes, we will be saying it like that. The Queen holds at the Storm Drain; lose her, lose the war, end of S.O.P. Tangoes — that's our spiders — are dug in at the Web on the ceiling and they will not, repeat WILL NOT, leave it without a reason. Expect scout elements probing toward the S.O.A.P. — Salient Objective: Anchor Point — that's the soap dish, people, keep up. Hostile response packages will rally on plane transitions, so the Towel Rack and Wall Crack are the choke we own or the choke we die on. Move with purpose, capture with prejudice, and remember: in this army we don't retreat, we conduct R.A.A.E. — Rapid Antward Adjustment of Engagement. HOO-RAH."
+    },
+    {
+      "id": "antonio-victory",
+      "speaker": "Sgt. Antonio",
+      "trigger": "scenario-end-victory",
+      "text": "Web is down, Queen — I say again, web is DOWN. Spider Queen has bent the knee and is, as we speak, signing a non-aggression-stroke-fealty pact in eight-legged cursive. We took the bathroom, ma'am. We TOOK the bathroom. Mark this date on the colony calendar: Day One of Operation Whole Damn House. Stand down, drink your honeydew, and write your larvae. HOO-RAH."
+    },
+    {
+      "id": "antonio-defeat",
+      "speaker": "Sgt. Antonio",
+      "trigger": "scenario-end-defeat",
+      "text": "...Queen is down. Queen is down. Storm Drain has fallen. All units, sound off where you can — the rest, lay your antennae and rest easy. We were ants. We were ARMY. The bathroom remembers. Antonio, out."
+    },
+    {
+      "id": "first-contact",
+      "speaker": "Cpl. Bicep",
+      "trigger": "first-battle",
+      "text": "First contact, first contact! Tangoes on the tile, formation up — for the Queen, for the colony, for the GODDAMN crumb!"
+    },
+    {
+      "id": "first-capture",
+      "speaker": "Sgt. Antonio",
+      "trigger": "first-post-captured",
+      "text": "P.O.S.T. secured! That's one for the colony, zero for the eight-leggers. Plant the pheromone, garrison up, and start the H.A.R. — Healing And Recovery — clock. Outstanding work, soldier. Outstanding."
+    },
+    {
+      "id": "ultimate-ready",
+      "speaker": "Sgt. Antonio",
+      "trigger": "queen-ultimate-ready",
+      "text": "Queen's ultimate is GREEN, repeat, GREEN. C.A.N. — Charge At Nominal — full bar, ma'am. Permission to suggest, with all due respect, that you absolutely positively melt somebody with it. At your discretion, my Queen."
+    },
+    {
+      "id": "ultimate-fired",
+      "speaker": "Sgt. Antonio",
+      "trigger": "queen-ultimate-fired",
+      "text": "MOTHER OF MANDIBLES — you SEEING this?! Battlefield is CLEAR, ma'am, the tangoes are jelly, the JELLY is jelly. That is what we in the corps call a Queen-Level Event, and I am writing a song about it tonight."
+    },
+    {
+      "id": "leader-down",
+      "speaker": "Sgt. Antonio",
+      "trigger": "leader-died",
+      "text": "Leader down, leader DOWN — party is L.O.B., Leaderless On Battlefield. They're falling back to base on autopilot, rate-of-march reduced, and they will NOT take new orders until command is restored at the Storm Drain. We do not abandon ours. Get them home."
+    },
+    {
+      "id": "jelly-low",
+      "speaker": "Sgt. Antonio",
+      "trigger": "low-jelly",
+      "text": "Logistics check, my Queen — R.J.S. is in the red. That's Royal Jelly Supply, and forward elements are running on fumes and patriotism. Recommend we run a J.U.G. — Jelly Update Gallop — back to the Drain before our buff bar goes flatline."
+    },
+    {
+      "id": "idle-bicep",
+      "speaker": "Cpl. Bicep",
+      "trigger": "idle",
+      "text": "When I get home, I'm gonna eat a whole sugar grain. Whole. Grain. By myself. That's a promise to me from me.",
+      "weight": 1
+    },
+    {
+      "id": "idle-snitz",
+      "speaker": "Pvt. Snitz",
+      "trigger": "idle",
+      "text": "Sarge says the floor is called the A.O. — Area of Operations. I asked what the ceiling's called. He said 'the ceiling.' I do not understand this army.",
+      "weight": 1
+    },
+    {
+      "id": "idle-grub",
+      "speaker": "Pvt. Grub",
+      "trigger": "idle",
+      "text": "I joined up for the dental. Turns out we don't have teeth. Turns out we don't have dental. Outstanding.",
+      "weight": 1
+    },
+    {
+      "id": "idle-antonio",
+      "speaker": "Sgt. Antonio",
+      "trigger": "idle",
+      "text": "Steady on the line, ladies. We hold what we hold, we take what we take, and we do NOT, repeat NOT, stare at the soap dish too long — it's slippery and it's a metaphor.",
+      "weight": 1
+    }
+  ]
+}
