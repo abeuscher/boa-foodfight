@@ -187,6 +187,91 @@ const applyHealing = (state: GameState): GameState => {
   return { ...state, parties: next };
 };
 
+interface GoldSweepOutcome {
+  readonly state: GameState;
+  readonly events: readonly ReplayEvent[];
+}
+
+/**
+ * Engine dependency #9 — opt-in per-POST in-sim gold income (roadmap
+ * §4a #3; closes the docs §4e "shop is not in-sim" economy gap).
+ *
+ * For every POST whose `owner` is a REAL faction (`ant`/`spider`, not
+ * `neutral`) AND whose `goldPerTurn` is set `> 0`, credit that
+ * faction's `state.playerGold` by `goldPerTurn` this turn and emit the
+ * existing `gold-earned` event (`source: 'post'`, `sourceId` = the
+ * POST id) so the card market — which already reads `state.playerGold`
+ * in `buyCard` — naturally has an in-sim source to spend. The credit
+ * is OWNERSHIP-based, NOT co-location-based: controlling the node
+ * yields income, you don't have to stand on it. This is intentional
+ * (the §4a #3 split always assumed this field) and deliberately
+ * sidesteps the §4e co-located-pause race that made every prior
+ * economy workaround structurally inert.
+ *
+ * Determinism: pure arithmetic over the existing deterministic
+ * `state.posts` iteration order (a Map preserving insertion order); no
+ * RNG, no new nondeterminism. `tick` is advanced once per emitted
+ * event, matching the engine-wide event-tick convention.
+ *
+ * Early-returns the input state UNCHANGED when no POST carries a
+ * qualifying `goldPerTurn` — every shipped map declares none, so this
+ * sweep contributes exactly 0 there and `data/level-1` (and the
+ * gate-29 locked baseline) stays byte-identical.
+ */
+const applyPostGoldIncome = (
+  state: GameState,
+  turn: number,
+  tick: () => number,
+): GoldSweepOutcome => {
+  // Accumulate per-faction income first so a faction that owns several
+  // income POSTs gets a single coherent running total in each event.
+  let antGain = 0;
+  let spiderGain = 0;
+  const credits: { faction: 'ant' | 'spider'; amount: number; postId: PostId }[] = [];
+  for (const [postId, post] of state.posts) {
+    const gpt = post.goldPerTurn;
+    if (gpt === undefined || gpt <= 0) continue;
+    if (post.owner !== 'ant' && post.owner !== 'spider') continue;
+    if (post.owner === 'ant') antGain += gpt;
+    else spiderGain += gpt;
+    credits.push({ faction: post.owner, amount: gpt, postId });
+  }
+  if (credits.length === 0) return { state, events: [] };
+
+  const nextPlayerGold = {
+    ant: state.playerGold.ant + antGain,
+    spider: state.playerGold.spider + spiderGain,
+  };
+  // Emit one gold-earned per income POST (same convention as the
+  // POST-capture / battle-kill credits), with `newTotal` reflecting
+  // the faction's running gold after each successive credit so a
+  // viewer can render the stream without re-summing.
+  const events: ReplayEvent[] = [];
+  let antRunning = state.playerGold.ant;
+  let spiderRunning = state.playerGold.spider;
+  for (const c of credits) {
+    let newTotal: number;
+    if (c.faction === 'ant') {
+      antRunning += c.amount;
+      newTotal = antRunning;
+    } else {
+      spiderRunning += c.amount;
+      newTotal = spiderRunning;
+    }
+    events.push({
+      kind: 'gold-earned',
+      turn,
+      tick: tick(),
+      faction: c.faction,
+      source: 'post',
+      sourceId: c.postId,
+      amount: c.amount,
+      newTotal,
+    });
+  }
+  return { state: { ...state, playerGold: nextPlayerGold }, events };
+};
+
 const applyUltimateCharge = (
   state: GameState,
   queen: QueenFile,
@@ -726,6 +811,19 @@ export const endOfTurn = (
 
   // 1. Healing.
   let working = applyHealing(state);
+
+  // 1a. Engine dependency #9 — opt-in per-POST in-sim gold income
+  //     (roadmap §4a #3; closes the docs §4e "shop is not in-sim"
+  //     economy gap). Ownership-based sweep: a real-faction-owned POST
+  //     with `goldPerTurn > 0` credits the owning faction's
+  //     `state.playerGold` (the pool `engine/cards.ts` `buyCard`
+  //     spends) — controlling the node, not standing on it. Pure
+  //     arithmetic over the deterministic POST iteration order; no
+  //     RNG. Early-returns unchanged when no POST declares the field,
+  //     so every shipped map (none do) is byte-identical.
+  const goldIncome = applyPostGoldIncome(working, currentTurn, tick);
+  working = goldIncome.state;
+  events.push(...goldIncome.events);
 
   // 1b. Round 24 — venom-storm tangle decay (mechanics memo §1.2).
   //     Per-unit `tangleTurnsRemaining` decrements by 1 each end-of-

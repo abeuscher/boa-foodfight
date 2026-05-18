@@ -112,6 +112,22 @@ export const postSchema = z.object({
     .optional(),
   tags: z.array(z.string()).default([]),
   /**
+   * Engine dependency #9 — opt-in per-POST in-sim gold income
+   * (roadmap §4a #3 / closes the docs §4e "shop is not in-sim"
+   * economy gap). When set `> 0` and this POST is owned by a real
+   * faction (`ant`/`spider`, not `neutral`), the owning faction's
+   * `state.playerGold` is credited `goldPerTurn` at end-of-turn —
+   * income for *controlling* the node, NOT for standing on it
+   * (deliberately ownership-based to sidestep the §4e co-located
+   * pause race). This is the gold source the shipped card market
+   * (`engine/cards.ts` `buyCard`) was always meant to spend in-sim.
+   * Optional with no emitted default: absent ⇒ behaves as 0 and is a
+   * literal no-op. Absent on every shipped map (`data/level-1..7`
+   * declare no `goldPerTurn`), so all shipped scenarios — and the
+   * gate-29 locked baseline — are byte-identical.
+   */
+  goldPerTurn: z.number().int().nonnegative().optional(),
+  /**
    * L4 (Hallway) POST-randomization debut (§3.3). Optional per-seed
    * row jitter: the column (`location.x`) and `plane` are fixed; the
    * row is re-chosen each seed uniformly in `[minRow, maxRow]`.

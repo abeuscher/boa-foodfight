@@ -324,6 +324,21 @@ export interface Post {
     readonly damage: number;
     readonly suppressedWhenOwnedBy?: Faction;
   };
+  /**
+   * Engine dependency #9 — opt-in per-POST in-sim gold income
+   * (roadmap §4a #3; closes the docs §4e "shop is not in-sim"
+   * economy gap). When set `> 0` and `owner` is a real faction
+   * (`ant`/`spider`, not `neutral`), the end-of-turn pipeline credits
+   * the owning faction's `playerGold` by `goldPerTurn` each turn —
+   * income for *controlling* the node, not for standing on it
+   * (ownership-based by design, sidestepping the §4e co-located pause
+   * race). This is the missing in-sim source the shipped card market
+   * (`engine/cards.ts` `buyCard`) was always meant to spend. Absent
+   * on every shipped map, so the sweep contributes exactly 0 there
+   * and every shipped scenario (incl. the gate-29 locked baseline) is
+   * byte-identical.
+   */
+  readonly goldPerTurn?: number;
   readonly tags: readonly string[];
   /**
    * Round 17 — POST hold mechanic. When a non-owner faction party walks
