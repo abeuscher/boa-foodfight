@@ -820,6 +820,26 @@ Where this roadmap defers to other docs:
   engine-surfaced only; "stalemate" reserved per the battle-mode
   vocabulary note; L1 permanently score-resolved (§A.3). Completes
   the four-spec per-view set. Forward/dormant.
+- **`docs/ui-hill-hub-spec.md`** (RECORDED, forward spec): the first
+  world-loop UI spec — the between-scenario Hill hub (three-band
+  hub-and-spoke; Deploy/Organize/Recruit/Shop/System verb rail;
+  persistent-hub model; Antonio present-but-mute; flat-for-v1
+  scene). Carries two **gameplay-review dependencies** (cube memo §0
+  — UI specs don't make gameplay rulings): persistent-hub vs roadmap
+  §6.4–6.5 "no shop" schedule, and Recruit-vs-Shop as distinct vs
+  unified systems. Resolves the end-of-scenario "Continue
+  destination" forward dep (Continue → Hill; reciprocal recorded in
+  that spec). Forward/dormant — does not block Phase-D.
+- **`docs/ui-briefing-spec.md`** (RECORDED, forward spec): the
+  second world-loop UI spec — the Deploy→scenario surface (Antonio
+  briefing panel + the orientation moment). §A.3-clean: the
+  orientation indicator is direction-only, never a path/route
+  preview; per-victory-kind variants (capture-post default, escort,
+  eradicate with a deliberate one-shot fog exception, recruit-count
+  with no directional indicator per level-progression-plan §4g —
+  single random-plane neutral, no recruit POST). First half of the
+  shared Briefing/Tutorial surface; partially unblocks playability
+  rubric criterion 7. Forward/dormant — does not block Phase-D.
 - **`docs/playability-critic-rubric.md`** (RECORDED, forward spec):
   authoritative Playability Critic rubric — two player-agent loops
   (competent/naive), determinism fence, per-criterion activation
