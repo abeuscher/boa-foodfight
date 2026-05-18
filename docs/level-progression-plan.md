@@ -620,6 +620,46 @@ the §5 late curve to measured-achievable bands / accept the parked
   Not re-decided per level; L9's grandfather is the pragmatic per-level
   ship, not the systemic resolution.
 
+## 4i. Day/night payload is engine-hardcoded — RESOLVED-BY-IMPOSSIBILITY
+
+Discovered building L10 (independently, by both the Level PA and the
+Gameplay PA). The day/night combat payload — the roadmap's named L10
+finale "continuity lever" (a global combat-profile flip the Gameplay PA
+was assigned to tune) — is resolved entirely from **hardcoded module
+constants in `engine/phase.ts`**: `PHASE_LENGTH = 4` (fixed 4-turn
+cadence, day t1–4 / night t5–8 / …); night ⇒ spiders **+1 attack /
++1 agility**, `ant-archer` **−1 attack**; day ⇒ zero. `engine/battle.ts`
+(`:203/999`) reads `phaseStatOffsetFor(template, state.phase)`
+**directly off template + phase**; `engine/schemas/map.ts` has **no**
+phase/cadence/payload field. No data path, no opt-in flag.
+
+This is **structurally identical to the §4g hypnotize/recruit
+hardcoded-constants hole — but UNRESOLVED**: §4g was fixed by merged
+engine dep #10 (the opt-in `abilityParamsAuthoritative` flag); the phase
+payload has **no equivalent and the engine is FROZEN**, so one cannot be
+added. The day/night flip _does_ produce a real per-window combat swing
+(it is implicitly in every measured post-turn-4 number across the
+campaign), but it is a **fixed environmental rhythm, identical in every
+scenario, NOT a modulable curve lever**. L10's day/night "debut" is
+narrative/UX, not a new engine capability.
+
+**RULING (recorded binding):** zero pp of tunable curve weight is
+budgeted to day/night for L10 or any scenario — budgeting any would be
+the precise §4g/§4h inert-lever mis-attribution. The §4 boundary case
+**#8 ("POST-bound / cadence global combat modifier — L4 light-switch,
+L10 day/night")** is **RESOLVED for the day/night half by impossibility**:
+nothing to schedule (no schema field), nothing to tune (no data path),
+no human payload decision exists to make. (The L4 light-switch half was
+resolved earlier via the split + the relevant engine dep; this closes
+#8 entirely.) Sibling to §4c–§4g; like §4g it is a premise-level hole in
+the data-driven-tuning assumption, unlike §4g it is **resolved by
+impossibility, not by an engine fix**. Recorded on the trunk so no
+future work mis-budgets a day/night lever, and as a headline Tier-1
+retrospective input alongside §4h (a _fourth_ late-tier inert/blocked
+lever discovery: §4g abilities, §4d plane-affinity, §4e heal-occupation,
+§4i day/night — the recurring §4h "ruled-lever leverage mis-estimated
+vs what the frozen engine + locked AI actually exercise" meta-pattern).
+
 ---
 
 ## 5. Deviations from §4.1
