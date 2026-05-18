@@ -298,7 +298,18 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   // Read accessors:
   partySlotUsage(roster, partyId, templates) → { used, cap, free }
   unitEffectiveStats(unit, templates) → Stats | undefined   // base + campaign level bonus
+  barracksUnits(roster) → readonly WorldUnit[]   // units in no party (derived view)
   ```
+
+  **Barracks** (roadmap §7.8) is _not_ a separate collection — it is
+  the derived set `roster.units` minus everything referenced by an
+  assignment. `disbandParty` sends members there; `createParty` /
+  `moveUnit` draw from it; `barracksUnits` renders it. Cross-scenario
+  persistence of _undeployed_ barracks units requires the extract /
+  runner carry-forward merge (§7.8 tracked follow-on — sequenced before
+  multi-item shop): `extractWorldRoster` rebuilds from combat survivors
+  only, so an un-fielded unit currently does not survive the
+  extract→inject cycle without it.
 
   Invariants: slot cap is the single source of truth from
   `world-inject` (roadmap §7.5: 9 standard, 12 queen-guard);

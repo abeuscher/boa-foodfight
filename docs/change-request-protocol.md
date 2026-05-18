@@ -256,6 +256,53 @@ balance blast radius across all queen-guard scenarios (both factions)
 _before_ any Template A sim change. Recorded in `roadmap-tier-1.md`
 §7.7.
 
+### Exchange #4 — Barracks (unassigned-units pool)
+
+**Request (UX):** introduce a barracks data shape for units outside any
+party; Disband Squad pushes into it, Form/add-to Squad pulls from it;
+rendered as a bucket beside the 3×3 grid. Hard-blocking on Organize
+Army canonicalization.
+
+**Reply (Dev) — Disposition: Accepted (decomposed) + cost correction.**
+
+- **Decision.** The barracks data shape **already exists** — it is the
+  derived view `roster.units` minus everything in an assignment. No new
+  collection, no schema change, no serialization change. Spec
+  unblocked now via one read accessor; cross-scenario persistence is a
+  real but separable follow-on.
+- **Cost correction (the guess was wrong in 3 of 4 places).**
+  - New barracks shape → **don't create; exists** (`WorldRoster.units`
+    is the master pool; assignments are the grouping).
+  - Per-party operators as source/sink → **already shipped**:
+    `disbandParty` → idle, `createParty` / `moveUnit` ← idle.
+  - Save/load serialization → **already works**: `schemas/world.ts`
+    validates `units` / `partyAssignments` independently, no
+    "must-be-assigned" constraint; idle units round-trip today.
+  - **Real gap (missed by the guess):** `extractWorldRoster` rebuilds
+    the next roster from **combat survivors only** (input is just
+    `{finalState, winner}`), so an _undeployed_ barracks unit is
+    silently dropped at the scenario boundary. Cross-scenario barracks
+    persistence needs an extract/runner **carry-forward merge** (prior
+    undeployed ∪ fresh survivors) — world-loop layer, **ungated**
+    (§7.6), behaviorally testable.
+- **Open questions, from the code.** Persistence across scenarios:
+  intended-correct but blocked by the merge gap (not free). Cap:
+  confirmed **none** (slot caps are per-party only). Wiped-in-combat:
+  confirmed **die-not-return** (decision (d) + `pruneDeadWorldUnits`);
+  benched units also correctly earn no scenario XP.
+- **Invariant impact.** None — all world-loop layer, ungated. Combat /
+  schema / gate-29 untouched.
+- **Decision record:** roadmap §7.8. Shipped this window:
+  `barracksUnits` accessor + tests. Follow-on (sequenced **before**
+  multi-item shop): the extract/runner carry-forward merge.
+
+**Outcome:** Resolved. Organize Army hard-block cleared — spec
+canonicalizes against barracks-as-derived-view + `barracksUnits`
+(stable contract, independent of the runner internals).
+`engine/world-organize.ts` `barracksUnits` shipped (704/704). The
+extract carry-forward merge is the next backend item, before
+multi-item shop. Recorded `roadmap-tier-1.md` §7.8.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are

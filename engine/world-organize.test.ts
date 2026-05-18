@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ItemId, PartyId, UnitId, UnitTemplate, UnitTemplateId } from './types.ts';
 import {
+  barracksUnits,
   createParty,
   disbandParty,
   equipItem,
@@ -108,6 +109,31 @@ describe('read accessors', () => {
 
   it('unitEffectiveStats is undefined for an unknown template', () => {
     expect(unitEffectiveStats(mkUnit('x', 'mystery'), TEMPLATES)).toBeUndefined();
+  });
+});
+
+describe('barracksUnits', () => {
+  it('returns roster units that are in no party, in roster order', () => {
+    expect(barracksUnits(mkRoster()).map((u2) => u2.id)).toEqual([u('i1'), u('i2')]);
+  });
+
+  it('a disbanded squad’s members fall into the barracks', () => {
+    const r = disbandParty(mkRoster(), p('bravo'));
+    expect(barracksUnits(r.roster).map((u2) => u2.id)).toEqual([u('b1'), u('i1'), u('i2')]);
+  });
+
+  it('moving an idle unit into a squad removes it from the barracks', () => {
+    const r = moveUnit(mkRoster(), u('i1'), p('alpha'), TEMPLATES);
+    expect(barracksUnits(r.roster).map((u2) => u2.id)).toEqual([u('i2')]);
+  });
+
+  it('is empty when every unit is assigned', () => {
+    const roster: WorldRoster = {
+      faction: 'ant',
+      units: [mkUnit('a1', 'footman'), mkUnit('a2', 'scout')],
+      partyAssignments: [{ partyId: p('alpha'), unitIds: [u('a1'), u('a2')], leaderId: u('a2') }],
+    };
+    expect(barracksUnits(roster)).toEqual([]);
   });
 });
 

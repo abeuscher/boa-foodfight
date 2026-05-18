@@ -737,6 +737,29 @@ ship a UI that contradicts the engine. queen-loss-as-scenario-loss and
 non-queen front/back semantics unchanged. Spike scoped standalone
 (`docs/spike-queen-rear-zone.md`).
 
+### 7.8 Barracks (unassigned-units pool)
+
+Cross-track change request (UX→Gameplay, exchange #4; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted
+(decomposed) + cost correction**. Decisive fact: the barracks data
+shape **already exists** — it is the derived view `WorldRoster.units`
+minus everything referenced by a `partyAssignment`; the shipped
+operators already use it as source/sink (`disbandParty` → idle,
+`createParty` / `moveUnit` ← idle) and `schemas/world.ts` already
+persists idle units (no "must-be-assigned" constraint). Resolution:
+(1) "barracks" is canonically the derived unassigned set, **not** a new
+collection/schema; (2) shipped this window — the `barracksUnits` read
+accessor (`engine/world-organize.ts`, 704/704) — which clears the
+Organize Army hard-block (spec binds to the accessor + operators, a
+stable contract); (3) the **one real gap**, missed by the cost guess,
+is that `extractWorldRoster` rebuilds the next roster from combat
+survivors only, so an _undeployed_ barracks unit is dropped at the
+scenario boundary — cross-scenario barracks persistence needs an
+extract/runner **carry-forward merge** (world-loop layer, **ungated**
+per §7.6), which is the **next backend item, sequenced before
+multi-item shop**. Confirmed: no barracks cap (slot caps are per-party
+only); wiped-in-combat units die and do not return (decision (d)).
+
 ---
 
 ## 8. Open questions

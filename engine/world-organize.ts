@@ -121,6 +121,26 @@ export const unitEffectiveStats = (
   return effectiveStats(tmpl.baseStats, unit);
 };
 
+/**
+ * The barracks: roster units that are in no party — Disband Squad's
+ * destination, Form New Squad's source. A *derived view* over the
+ * existing model (`units` minus everything referenced by an
+ * assignment); there is no separate barracks collection. Roster order
+ * is preserved so the UI bucket renders stably.
+ *
+ * Note: this reflects barracks *within a single WorldState*. Carrying
+ * an undeployed unit across a scenario boundary additionally requires
+ * the extract/runner carry-forward merge (roadmap §7.8 follow-on) —
+ * `extractWorldRoster` rebuilds from combat survivors only.
+ */
+export const barracksUnits = (roster: WorldRoster): readonly WorldUnit[] => {
+  const assigned = new Set<UnitId>();
+  for (const a of roster.partyAssignments) {
+    for (const id of a.unitIds) assigned.add(id);
+  }
+  return roster.units.filter((u) => !assigned.has(u.id));
+};
+
 // --- Mutating operators ---------------------------------------------------
 
 /**
