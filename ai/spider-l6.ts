@@ -80,13 +80,16 @@
  * no RNG is consulted — fully replayable.
  */
 
-import { distance, sameCoord } from '../engine/coord.ts';
-import { livingHpFraction } from '../engine/parties.ts';
 import type { GameState, Order, Party, PartyId, PostId, TileCoord } from '../engine/types.ts';
 
-import { closestLivingPartyOfFaction } from './closest-party.ts';
-import { moveToOrHold, partyAlive } from './policy-helpers.ts';
-import { appendPolicyEvents } from './threat-flee.ts';
+import {
+  buildMissionSpiderPolicy,
+  closestLivingPartyOfFaction,
+  distance,
+  livingHpFraction,
+  moveToOrHold,
+  sameCoord,
+} from './mission-spider-policy.ts';
 import type { AIPolicy } from './types.ts';
 
 /**
@@ -288,22 +291,12 @@ const ordersFor = (state: GameState, id: PartyId, party: Party): readonly Order[
   return moveToOrHold(party, muster);
 };
 
-export const spiderL6: AIPolicy = {
-  name: 'spider-l6',
-  faction: 'spider',
-  decide(state: GameState): GameState {
-    const nextParties = new Map(state.parties);
-    let changed = false;
-    for (const [id, party] of state.parties) {
-      if (party.faction !== 'spider') continue;
-      if (!partyAlive(party)) continue;
-      const orders = ordersFor(state, id, party);
-      if (orders !== party.orders) {
-        nextParties.set(id, { ...party, orders });
-        changed = true;
-      }
-    }
-    if (!changed) return appendPolicyEvents(state, []);
-    return appendPolicyEvents({ ...state, parties: nextParties }, []);
-  },
-};
+/**
+ * The standalone L6 survivalist policy. The generic decide() loop
+ * (snapshot parties → recompute `ordersFor` per living spider party →
+ * write back only the changed → `appendPolicyEvents`) is the shared
+ * `buildMissionSpiderPolicy` (additive consolidation, jscpd-0; the
+ * same loop L8's `spider-l8` uses). Behaviour is byte-for-byte the
+ * previous inline loop — the L6 = 56 measurement is unchanged.
+ */
+export const spiderL6: AIPolicy = buildMissionSpiderPolicy('spider-l6', ordersFor);

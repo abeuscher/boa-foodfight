@@ -9,6 +9,7 @@ import { baselineL3Player } from './baseline-l3.ts';
 import { baselineL4Player } from './baseline-l4.ts';
 import { baselineL5Player } from './baseline-l5.ts';
 import { baselineL6Player } from './baseline-l6.ts';
+import { baselineL8Player } from './baseline-l8.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
@@ -23,6 +24,7 @@ import { spiderL3 } from './spider-l3.ts';
 import { spiderL4 } from './spider-l4.ts';
 import { spiderL5 } from './spider-l5.ts';
 import { spiderL6 } from './spider-l6.ts';
+import { spiderL8 } from './spider-l8.ts';
 import { spiderTutorial } from './spider-tutorial.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
@@ -56,8 +58,10 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
  * reason: a scenario-specific player kept OUT of `PLAYER_AIS` so the
  * gate-29 diversity sweep stays byte-identical. `baseline-l4` (the L4 /
  * Hallway capture-post player), `baseline-l5` (the L5 / Bedroom
- * capture-post player) and `baseline-l6` (the L6 / Stairs ERADICATE
+ * capture-post player), `baseline-l6` (the L6 / Stairs ERADICATE
  * hunter — a standalone hunt doctrine, NOT a capture-post chain-marcher)
+ * and `baseline-l8` (the L8 / Attic RECRUIT-COUNT recruiter/racer — a
+ * standalone recruit doctrine, also NOT a capture-post chain-marcher)
  * are registered here for the identical reason.
  */
 export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
@@ -67,6 +71,7 @@ export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'baseline-l4': baselineL4Player,
   'baseline-l5': baselineL5Player,
   'baseline-l6': baselineL6Player,
+  'baseline-l8': baselineL8Player,
 };
 
 /**
@@ -83,6 +88,7 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l4': spiderL4,
   'spider-l5': spiderL5,
   'spider-l6': spiderL6,
+  'spider-l8': spiderL8,
 };
 
 export {
@@ -90,6 +96,7 @@ export {
   baselineL4Player,
   baselineL5Player,
   baselineL6Player,
+  baselineL8Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -104,6 +111,7 @@ export {
   spiderL4,
   spiderL5,
   spiderL6,
+  spiderL8,
   spiderTutorial,
   turtlePlayer,
 };

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "formations": [
+    {
+      "id": "phalanx",
+      "name": "Phalanx",
+      "minUnits": 3,
+      "attackMultiplier": 1.0,
+      "defenseMultiplier": 1.25,
+      "description": "Three or more ants lock mandibles and shields into a tight wedge. No extra punch, but a hell of a wall — fragile ants survive longer when shoulder to shoulder."
+    },
+    {
+      "id": "swarm",
+      "name": "Swarm",
+      "minUnits": 4,
+      "attackMultiplier": 1.2,
+      "defenseMultiplier": 1.0,
+      "description": "Four or more ants pile onto a single target in a coordinated rush. Maximum bite, minimum caution — the textbook ant glass-cannon play."
+    },
+    {
+      "id": "lift",
+      "name": "Lift",
+      "minUnits": 5,
+      "requiresTag": "worker",
+      "attackMultiplier": 1.0,
+      "defenseMultiplier": 1.1,
+      "description": "Five or more workers hoist something heavy together — a crumb, a pebble, a wounded comrade. Slight defensive boost while the load is shared, and a hook for future cargo and rescue mechanics."
+    },
+    {
+      "id": "skirmish-line",
+      "name": "Skirmish Line",
+      "minUnits": 3,
+      "requiresTag": "ranged",
+      "attackMultiplier": 1.15,
+      "defenseMultiplier": 1.0,
+      "description": "Three or more archers space out and stagger their volleys. Sustained ranged pressure rewards parties that lean into Volley spam."
+    }
+  ]
+}
