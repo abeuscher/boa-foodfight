@@ -48,6 +48,12 @@ on its own merits. This memo locks the **interaction model only**.
    right rail = hover detail + pending-order confirm/clear + turn
    controls. No minimap, no path preview, no compass at v1 (all
    listed as later affordances if playtest demands).
+   **SUPERSEDED (in one respect) by `docs/ui-main-screen-spec.md`:**
+   the right-rail pending-order **Confirm/Clear** panel is removed —
+   the destination-click is the confirm, Cancel reverts; mid-march
+   orders use Re-issue / Clear-order in the party-selected action
+   list. The rest of §A.4 stands. See the main-screen spec's "Right
+   rail" + "Order lifecycle".
 5. **Pacing controls = the UI surface of the recorded pacing memo.**
    Play/pause (spacebar + button), 0.5/1/2/4x, auto-pause-cause
    surfaced non-intrusively. Default paused on scenario start.
