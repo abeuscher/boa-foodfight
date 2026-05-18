@@ -592,26 +592,40 @@ _environment_-progression patterns — the existing memos cover unit and
 faction mechanics well but weren't framed around environment progression.
 That memo feeds the Level PA.
 
-### 6.5 World-loop shop schedule (resolved)
+### 6.5 World-loop shop schedule (SUPERSEDED — persistent hub)
 
-Between-scenario rest points (the **grasshopper shop** from
-`game-outline.md`'s "Shops" section) appear after the following
-scenarios only:
+> **SUPERSEDED by user decision at the consolidated end-of-Phase-D
+> review.** The per-scenario "shop available only after L2/L3/L4/L6/L8/L9"
+> schedule below is **RETIRED**. The recorded world-loop UX
+> (`docs/ui-hill-hub-spec.md`) establishes a **persistent between-scenario
+> Hill hub** — the same place every time, regardless of which scenario
+> was just completed or is coming next — which is incompatible with a
+> gated per-scenario shop schedule. The user ruled "Retire §6.5 schedule
+> now": the **Grasshopper shop (and the Anthill recruit surface — ruled
+> two distinct systems, same review) are available every time the player
+> is at the Hill**, not on a fixed L1/L5/L7/L10-excluded cadence.
+> Inventory-refresh cadence (when the Grasshopper restocks) is a separate
+> content/balance decision left to Tier-2 world-loop implementation. The
+> table below is retained struck-through for provenance only and is **not
+> authoritative**.
 
-| After scenario | Shop available                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| L1             | No — deliberate. The first reward landing is post-L2 so the player feels concrete progression after their first real test. |
-| L2             | Yes — first shop introduction.                                                                                             |
-| L3             | Yes                                                                                                                        |
-| L4             | Yes                                                                                                                        |
-| L5             | No                                                                                                                         |
-| L6             | Yes                                                                                                                        |
-| L7             | No                                                                                                                         |
-| L8             | Yes                                                                                                                        |
-| L9             | Yes                                                                                                                        |
-| L10            | No (tier finale)                                                                                                           |
+~~Between-scenario rest points (the **grasshopper shop**) appear after
+the following scenarios only:~~
 
-Each shop offers three kinds of action:
+| ~~After scenario~~ | ~~Shop available~~                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| ~~L1~~             | ~~No — deliberate. The first reward landing is post-L2 so the player feels concrete progression after their first real test.~~ |
+| ~~L2~~             | ~~Yes — first shop introduction.~~                                                                                             |
+| ~~L3~~             | ~~Yes~~                                                                                                                        |
+| ~~L4~~             | ~~Yes~~                                                                                                                        |
+| ~~L5~~             | ~~No~~                                                                                                                         |
+| ~~L6~~             | ~~Yes~~                                                                                                                        |
+| ~~L7~~             | ~~No~~                                                                                                                         |
+| ~~L8~~             | ~~Yes~~                                                                                                                        |
+| ~~L9~~             | ~~Yes~~                                                                                                                        |
+| ~~L10~~            | ~~No (tier finale)~~                                                                                                           |
+
+The Hill (persistent) offers three kinds of action:
 
 1. **Items** — sells the items roster (R14 mechanic). Future expansion
    adds the Risk-2210-style commander cards (Mechanics memo §1.3).
