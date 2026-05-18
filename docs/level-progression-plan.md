@@ -532,6 +532,45 @@ Sibling to §4c/§4d/§4e: a structural property of the locked AI
 paths + frozen engine, recorded on the trunk so it survives the L7
 park.
 
+## 4g. Abilities params were hardcoded — RESOLVED by engine dep #10 (opt-in)
+
+Discovered building L8: `engine/abilities.ts` resolved hypnotize &
+recruit from **hardcoded module constants**
+(`HYPNOTIZE_SUCCESS_RATE=0.8`, `_MIN/MAX_TURNS=5/10`,
+`RECRUIT_SUCCESS_RATE=0.25` "locked by spec"); `handleHypnotize`/
+`handleRecruit` **never read `abilities.json`**. So any scenario
+delta routed through those params was inert — a premise-level hole
+in the data-driven-tuning assumption the Gameplay PA process rests
+on (it falsified L8: win rate hard-gated by the 25% constant at a
+~38% ceiling).
+
+**Correction to recorded rationale (no shipped level is broken):**
+the L5 hypnotize-light "cap" (`minControlTurns 2/maxControlTurns 3`)
+**never bound** — the engine ran 5/10 the entire campaign. L5's
+measured **66% stands** (gate-verified at ship); its arbitration
+merely over-credited the cap (and, per §4d, the plane-affinity
+ramp) — L5's real 66% was carried by concealment + geometry. **All
+shipped measured win rates (L3 67 / L4 60 / L5 66 / L6 56) and
+gate-29 remain valid; only the recorded _attribution_ over-stated
+inert levers.** Relevant to the Tier-1 retrospective, and a caution
+not to repeat the mis-attribution at L9/L10.
+
+**Resolution — engine dep #10 (merged, `f39c7bd`):** an opt-in
+per-scenario `abilityParamsAuthoritative` flag. Flag absent ⇒
+hardcoded constants via a provably-identical RNG-free code path ⇒
+**L1–L7 + gate-29 byte-identical by construction** (no shipped
+scenario opts in; their measured outcomes + the L5 hardcoded
+behavior are preserved exactly). Flag `true` ⇒ the engine reads
+`abilities.json` hypnotize/recruit (+ rebound-immunity) params.
+
+**Binding guidance L8–L10:** a scenario's `abilities.json`
+hypnotize/recruit param deltas are **inert unless that scenario
+sets `abilityParamsAuthoritative: true`**. L8 opts in (its redo
+relies on it). L9/L10 must explicitly opt in if they intend to tune
+those params, and must NOT budget an un-opted ability-param delta as
+a curve lever. Sibling to §4c–§4f; unlike them this one is
+**resolved** (the lever is now live, opt-in), not merely tracked.
+
 ---
 
 ## 5. Deviations from §4.1
