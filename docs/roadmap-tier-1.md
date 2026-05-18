@@ -798,6 +798,47 @@ formation is **locked** (set in hub, frozen at scenario start);
 `party-detail-spec.md` drops its mid-scenario "change formation" verb
 (amendment recorded) but still reflects engine-driven `promoteReserve`.
 
+### 7.10 Anthill recruit (operator + catalog)
+
+Cross-track change request (UX→Gameplay, exchange #6; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted +
+human design ruling**. Recruit is its own system (distinct from the
+Grasshopper shop — Anthill nursery vs. trader; separate module
+`engine/world-recruit.ts`). World-loop layer, **ungated** per §7.6
+(between-scenario, off the static/gate-29 path; the catalog is
+deliberately NOT loaded by `loadScenario`). Shipped:
+
+1. **`recruitUnit(state, templateId, catalog, templates) → { state,
+ok, error?, recruitedUnitId? }`** — deducts the catalog cost from
+   `WorldState.gold`, appends a fresh `WorldUnit` to the roster (→
+   barracks), deterministic id (`rngSeed` + roster size, per
+   `applyShopPurchase`). Failure: not in catalog / unknown template /
+   insufficient gold. **Contract refinement over the Q-list answer:
+   the parsed catalog is a 4th param** so the recruitable set + cost
+   are authoritative from data, not UI-passed.
+2. **Recruit catalog** `data/level-N/recruits.json`
+   (`engine/schemas/recruits.ts`: `{ version: 1, recruits:
+[{ templateId, cost }] }`, unique ids). Authoritative source of
+   recruitable-set + cost + per-scenario availability. A level-1 stub
+   shipped (footman/scout/cockroach); full per-level content is the
+   deferred design pass. Authoring rule: catalogs must not list queen
+   templates (the catalog is the recruit gate).
+3. **Recruit arrival level — human design ruling:** the **lower
+   median level across the full roster** (deployed + barracks, no
+   filter) **− 1, clamped to ≥ 1**. `levelUpBonus` computed via
+   `world-levelup.cumulativeLevelBonus` (omitted at level 1 —
+   byte-stable). The whole-roster median creates an **intentional
+   soft-cap**: mass-recruiting drags the median down so later recruits
+   arrive weaker (confirmed-intended, pushes deploy/dismiss before
+   hoarding). Charisma seeded only on promotable templates
+   (`isPromotableTemplate`, same rule as `loadScenario`).
+
+Engineering committed flat-level-1 as the trivial default; the
+median-minus-one scaling is the **human's** balance ruling, recorded
+here (not a dev contract). 729/729, gate-29 intact. Next backend
+items unchanged: world-inject formation honoring → §7.8 extract-merge
+→ multi-item shop.
+
 ---
 
 ## 8. Open questions

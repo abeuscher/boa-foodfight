@@ -327,6 +327,21 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   Contract refinement vs. the Q10 answer: `removeUnit` /
   `dismissUnit` take `templates` (needed for the queen tag check).
 
+  **Recruit (Anthill, roadmap §7.10) — SHIPPED, separate module**
+  `engine/world-recruit.ts` (Recruit ≠ Shop):
+  `recruitUnit(state, templateId, catalog, templates) → { state, ok,
+error?, recruitedUnitId? }`. Deducts the catalog cost from
+  `WorldState.gold`, appends a fresh `WorldUnit` → barracks,
+  deterministic id. Catalog = `data/level-N/recruits.json`
+  (`engine/schemas/recruits.ts`: `{ version: 1, recruits:
+[{ templateId, cost }] }`) — authoritative recruitable-set + cost +
+  per-scenario availability; level-1 stub shipped, full per-level
+  content deferred (design pass). Arrival level (human ruling):
+  lower-median of the full roster − 1, clamped ≥ 1 (`recruitArrivalLevel`,
+  exported for the UI preview); `levelUpBonus` via
+  `cumulativeLevelBonus` (omitted at level 1); intentional
+  mass-recruit soft-cap. Charisma via `isPromotableTemplate`.
+
   Invariants: slot cap is the single source of truth from
   `world-inject` (roadmap §7.5: 9 standard, 12 queen-guard);
   `templates` is `readonly UnitTemplate[]` (needed for slotCost +

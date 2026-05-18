@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "recruits": [
+    { "templateId": "ant-footman", "cost": 30 },
+    { "templateId": "ant-scout", "cost": 30 },
+    { "templateId": "cockroach", "cost": 40 }
+  ]
+}

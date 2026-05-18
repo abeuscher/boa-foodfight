@@ -350,6 +350,45 @@ mid-scenario formation locked; `party-detail-spec.md` mid-scenario
 spike. world-inject honoring is next, before the §7.8 extract-merge
 and multi-item shop. Recorded `roadmap-tier-1.md` §7.9.
 
+### Exchange #6 — Anthill recruit (operator + catalog)
+
+**Request (UX):** Recruit (Anthill) view needs the `recruitUnit`
+operator + a per-scenario recruit catalog, both flagged by dev's
+earlier Q-list as committed-contract-not-yet-built; plus a human
+ruling on recruit level (flat-1 vs scaled).
+
+**Reply (Dev) — Disposition: Accepted + human design ruling.**
+
+- **Decision.** Recruit is its own system (≠ Shop), shipped as
+  `engine/world-recruit.ts` + `data/level-N/recruits.json` schema +
+  a level-1 stub. World-loop layer, ungated (catalog not on the
+  static path → gate-29 untouched).
+- **Contract refinement.** Operator is 4-arg —
+  `recruitUnit(state, templateId, catalog, templates)` — so cost +
+  recruitable-set are authoritative from the catalog data, not
+  UI-passed (parallels the Q10→removeUnit `templates` refinement).
+- **Misattribution corrected (the review's blocking item).** The
+  spec had presented level-scaling as "dev's committed contract";
+  dev committed _flat level-1_. Scaling is a **human balance
+  ruling**, made here: lower-median-of-full-roster − 1, clamped ≥ 1;
+  `levelUpBonus` via `cumulativeLevelBonus`. The whole-roster median
+  soft-cap (mass-recruiting self-nerfs) was raised in review and
+  **confirmed intended** by the human.
+- **Flat-state contract (dev's, unchanged):** xp 0, item null,
+  charisma via `isPromotableTemplate` (same rule as `loadScenario`),
+  currentHp = full effective.
+- **Confirms (returned, closed):** soft-cap intentional ✓; scaling
+  owned as human ruling not dev contract ✓; recordable post §4.2
+  fix + stale §6 bullet cleanup (spec-side) ✓.
+- **Decision record:** roadmap §7.10; contract in `troop-reference.md`
+  §10.
+
+**Outcome:** Resolved. `recruitUnit` + recruit-catalog schema +
+level-1 stub shipped (ungated; 729/729, gate-29 intact). Median-minus-
+one arrival level is the recorded human design ruling. Per-level
+catalog content is the deferred design pass. Recorded
+`roadmap-tier-1.md` §7.10.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are
