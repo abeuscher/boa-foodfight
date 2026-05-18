@@ -792,6 +792,16 @@ Where this roadmap defers to other docs:
   quarantined per §0). **Supersedes UI memo §A.4** re the right-rail
   Confirm/Clear (reciprocal note in §A.4). Companion to the cube-view
   memo; forward/dormant — does not block Phase-D.
+- **`docs/ui-battle-mode-spec.md`** (RECORDED, forward spec): the
+  second per-view UI spec — the combat panel (two-party stage,
+  front/back ranks, persistent HP, action feedback, off-stage combo
+  attribution banner, matchup-context modifier stack, skip/queue,
+  auto-pause/return-paused). Engine-grounded on the `battle.ts`
+  event stream the cube memo §A.6 already names; "stalemate" reserved
+  for the pacing-§D scenario terminal (combat uses decisive/disengage,
+  the latter a build-time `battle.ts` verify). Couples to the
+  not-yet-written party-detail spec (unit drill-down). Forward/dormant
+  — does not block Phase-D.
 - **`docs/playability-critic-rubric.md`** (RECORDED, forward spec):
   authoritative Playability Critic rubric — two player-agent loops
   (competent/naive), determinism fence, per-criterion activation
