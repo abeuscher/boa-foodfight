@@ -288,3 +288,50 @@ review — not to re-decide the systemic question per level.
 This completes the L10 ruled arbitration. Next: record §4i on the
 trunk, then implement §1–§4 in the within-scenario loop and produce the
 measured disposition.
+
+---
+
+## §GRANDFATHERED — measured outcome + user decision (BINDING, final)
+
+**Measured (within-scenario loop, seeds 1..100; orchestrator
+trust-but-verified independently).** The §5 prediction was **confirmed,
+not falsified**. L10 is the **third structurally-bistable late-tier
+scenario**. gate-29 byte-identical (re-run independently: baseline 58.0
+/ rush 55.0 / turtle 52.0 / flank 68.0 / jelly-rush 55.0 / dive 75.0);
+L1–L9 no-regression incl. L9 = 37.0; change scope purely additive (no
+shipped/shared/engine file touched — L1–L9 cannot regress by
+construction); level9 (12) + level10 (14) suites pass.
+
+The §4-named orchestrator residual **realized and controlling**: the
+locked `buildChainMarchPolicy` muster gate is a temporal
+re-synchronizer. With the BINDING `musterPost=tool-rack` +
+`detachGate:'muster'`, the body blitzes engine-block in ~6–7 turns
+before the plane detach fires → one basin, doctrine inert, L9-redux;
+pre-muster forking to keep the split → fragmented assault annihilated
+piecemeal (ant 0/100). **No within-loop config keeps the 4-route split
+alive AND the assault viable.** Routes `vanguard-alpha` (0/100) and
+`vanguard-bravo` full-ceiling (~48/100) are NOT seed-robust at any
+config; the near-band points (ant 48–51) all have the doctrine inert
+and were correctly REFUSED (the L8 §7 / L9 hardening: a band hit with
+inert doctrine is an explicit FAILURE, not a pass). No binding
+invariant relaxed; no forbidden/inert corrective applied
+(§4f/§4e/§4d/§4g/§4i). Measured regimes: upper plateau ant ~74–79,
+lower lobe ~8–21, wide dead-zone, no in-band seed-robust config.
+
+Most-defensible lower-regime ship measured: **ant 44.0%**, decisive
+100/100, avg 96 turns, interest 76 (≥75), [≈48,52] band withdrawn.
+
+**USER DECISION (consolidated end-of-Phase-D review — BINDING, final):
+GRANDFATHER L10 at ~44%.** Selected: "Park L7, grandfather L10 @44"
+under the "Accept & re-baseline" late-curve policy. L10 ships as the
+Tier-1 finale at the _achievable_ band: ~44% > the L9 ~37 trough so the
+finale reads as a climb-out; [≈48,52] band formally **withdrawn**; the
+**partially-inert multi-route doctrine is honestly recorded, not
+papered over** (the cosmetic in-band relabel option was explicitly
+rejected — the no-band-fudge discipline holds through the finale). No
+engine un-freeze authorized; the multi-route anti-bistability thesis is
+recorded as _correctly designed and built but structurally defeated by
+the locked AI muster gate under the frozen engine_ — a headline §4h
+retrospective input (`level-progression-plan.md` §4h RESOLVED +
+`roadmap-tier-1.md` §5.1). This `§GRANDFATHERED` record is final; the
+systemic question is closed and not reopened per level.

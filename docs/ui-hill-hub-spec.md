@@ -157,8 +157,8 @@ Antonio is the game's recurring narrator/companion-character.
 ### Existing forward deps this spec touches:
 
 - **End-of-scenario "Continue" destination** — was an open forward dep in `docs/ui-end-of-scenario-spec.md`. **Now resolved:** Continue leads to the Hill hub. Update the end-of-scenario spec accordingly at next revision (a reciprocal cross-ref is added there when this records).
-- **Roadmap §6.4–6.5 shop schedule** — **gameplay-review dependency.** The persistent-hub UX is incompatible with the §6.5 L1/L5/L7/L10 "no shop" schedule. Not retired by this spec; flagged for the gameplay process to resolve.
-- **Recruit-vs-Shop as distinct systems** — **gameplay-review dependency.** The verb-rail split (entry §"Verb rail" above) proposes them as separate; the gameplay team owns whether the underlying systems are separate or unified. UX collapses cleanly to a unified Marketplace if needed.
+- **Roadmap §6.4–6.5 shop schedule** — **gameplay-review dependency — STILL OPEN.** The persistent-hub UX is incompatible with the §6.5 L1/L5/L7/L10 "no shop" schedule. Surfaced at the consolidated end-of-Phase-D review; the user's ruling addressed the Recruit-vs-Shop dependency below but did **not** resolve this schedule contradiction. Carried as the single remaining open Tier-1→Tier-2 UX/gameplay seam (pending a focused follow-up). Not retired by this spec.
+- **Recruit-vs-Shop as distinct systems** — **gameplay-review dependency — RESOLVED.** At the consolidated end-of-Phase-D review the gameplay process ruled **Recruit and Shop are two distinct systems** (the Anthill/Grasshopper diegetic split is ratified, not collapsed to a unified Marketplace). The verb-rail split (entry §"Verb rail" above) stands; the verb rail keeps both entries; the `n3.png` unified-Marketplace fallback is **not** taken. This dependency is closed.
 - **Pacing memo §D #3 (campaign/world-loop stalemate semantics)** — still OPEN engine-side. The Hill hub does not yet differentiate behavior between returning from a win, a loss, or a stalemate. This is a known gap; resolution is gameplay-side and feeds back into this spec when decided.
 
 ### Engine-team confirmations needed:

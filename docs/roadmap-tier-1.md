@@ -394,6 +394,46 @@ forcing it back to spec.
 The Level-1 spec window (`[65%, 80%]`) acts as a **hard ceiling and floor**
 for L1 only. L2–L10 are governed by the Tier-1 curve, not the L1 spec.
 
+### 5.1 Realized curve — Phase-D, user-ratified re-baseline (AUTHORITATIVE)
+
+The table above is the **original illustrative intent**, retained for
+provenance. Phase-D measured the achievable curve under the frozen
+engine + locked AI doctrine. Per the systemic finding
+(`docs/level-progression-plan.md` §4h / §4i: the late-tier
+contested-fortress family is structurally bistable, and the finale's
+named continuity lever (day/night) is engine-hardcoded and inert), the
+illustrative ~75→~50 glide is **not reachable** for the late scenarios
+as designed. At the consolidated end-of-Phase-D review the user ruled
+**"Accept & re-baseline"**: the measured-achievable curve below is now
+the **official Tier-1 shipped reality**; this §5.1 table supersedes the
+§5 illustrative targets for L2–L10.
+
+| Scenario | Realized (shipped) | Disposition                                                                                                                                                                 |
+| -------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1       | ~75%               | Shipped — frozen tutorial anchor (gate-29 byte-identity)                                                                                                                    |
+| L2       | 76%                | Shipped — clean                                                                                                                                                             |
+| L3       | 67%                | Shipped — clean                                                                                                                                                             |
+| L4       | 60%                | Shipped — clean                                                                                                                                                             |
+| L5       | 66%                | Shipped — clean                                                                                                                                                             |
+| L6       | 56%                | Shipped — clean                                                                                                                                                             |
+| **L7**   | **— (no value)**   | **PARKED — final.** 4 falsifications; card-host structural dead-end (§4f). Not a shipped playable scenario.                                                                 |
+| L8       | 51%                | Shipped — clean                                                                                                                                                             |
+| **L9**   | **~37%**           | Shipped — **GRANDFATHERED** (bistable; doctrine seed-robust; band withdrawn; §4h)                                                                                           |
+| **L10**  | **~44%**           | Shipped — **GRANDFATHERED — final.** Bistable; multi-route doctrine partially inert (acknowledged); band withdrawn; >L9 trough so the finale reads as a climb-out (§4h/§4i) |
+
+**Ruled consequences of the re-baseline (user decision, binding):**
+(1) L7 is **permanently parked** — Tier-1 ships with **9 playable
+scenarios** (L1–L6, L8–L10); L7 remains a documented structural
+dead-end (park WIP on `claude/l7-parked-wip`, DO NOT MERGE). (2) L10
+ships **grandfathered at ~44%** with the [≈48,52] band formally
+withdrawn and its partially-inert multi-route doctrine honestly
+recorded — it is the finale at the _achievable_ band, not the
+illustrative one. (3) No L10 cosmetic "in-band" relabel (the user
+explicitly rejected the band-fudge option — the discipline of never
+fudging a ruled value to hit a band holds through the finale).
+(4) The systemic late-tier-curve question is **closed** by this
+re-baseline; it is not reopened per level.
+
 ---
 
 ## 6. Agent architecture

@@ -594,10 +594,10 @@ L1–L8 no-regression.
 **Curve, amended (L7 parked, L9 inverted):**
 L1 ~75(spec) · L2 76 · L3 67 · L4 60 · L5 66 · L6 56 ·
 **L7 PARKED** (no shippable value; §4f) · **L8 51** ·
-**L9 ~37 (grandfathered trough, below the L10 climax)** ·
-L10 ~50 (climax, pending). The monotone-descent intent of §5 holds
-through L6; the late tier is shaped by structural reality, not the
-original illustrative numbers.
+**L9 ~37 (grandfathered trough)** ·
+**L10 ~44 (grandfathered finale, >L9 trough = climb-out)**. The
+monotone-descent intent of §5 holds through L6; the late tier is
+shaped by structural reality, not the original illustrative numbers.
 
 **Systemic finding (RECORDED; holistic decision DEFERRED to the
 consolidated review).** Three late-tier scenarios, three different
@@ -619,6 +619,27 @@ the §5 late curve to measured-achievable bands / accept the parked
   review with the complete 10-level achievable-vs-target picture.
   Not re-decided per level; L9's grandfather is the pragmatic per-level
   ship, not the systemic resolution.
+
+**RESOLVED — user decision at the consolidated end-of-Phase-D review
+(BINDING, closes the systemic finding).** The user ruled **"Accept &
+re-baseline"**: the measured-achievable curve (L1 ~75 · L2 76 · L3 67 ·
+L4 60 · L5 66 · L6 56 · L7 PARKED · L8 51 · L9 ~37 · L10 ~44) is the
+**official Tier-1 shipped reality**; `roadmap-tier-1.md` §5.1 supersedes
+the §5 illustrative targets for L2–L10. Per-scenario dispositions ruled
+**final**: **L7 — permanently PARKED** (Tier-1 ships 9 playable
+scenarios L1–L6/L8–L10; L7 stays a documented dead-end, WIP on
+`claude/l7-parked-wip`, DO NOT MERGE); **L10 — GRANDFATHERED at ~44%**,
+[≈48,52] band withdrawn, partially-inert multi-route doctrine honestly
+recorded, >L9 so the finale reads as a climb-out (the cosmetic
+"in-band relabel" option was explicitly rejected — the no-band-fudge
+discipline holds through the finale). No targeted engine un-freeze
+authorized; the engine stays frozen. The systemic late-tier-curve
+question is **closed**, not reopened per level. This is the canonical
+Tier-1 retrospective record of §4c–§4i: a recurring meta-pattern where
+a ruled mechanic's leverage is mis-estimated versus what the frozen
+engine + locked AI doctrine actually exercises — self-correcting per
+level but costly; the headline input for any future tier's process
+design.
 
 ## 4i. Day/night payload is engine-hardcoded — RESOLVED-BY-IMPOSSIBILITY
 
