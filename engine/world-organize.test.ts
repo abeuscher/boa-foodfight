@@ -5,9 +5,12 @@ import {
   barracksUnits,
   createParty,
   disbandParty,
+  dismissUnit,
   equipItem,
   moveUnit,
   partySlotUsage,
+  removeUnit,
+  setUnitRank,
   swapLeader,
   unitEffectiveStats,
 } from './world-organize.ts';
@@ -41,7 +44,15 @@ const TEMPLATES: UnitTemplate[] = [
   mkTemplate('footman', 'small', 1, ['melee']),
   mkTemplate('scout', 'small', 1, ['scout', 'leader-eligible']),
   mkTemplate('tank', 'large', 3, ['melee', 'heavy']),
+  mkTemplate('queen', 'huge', 4, ['queen', 'leader-eligible']),
 ];
+
+/** queen-guard = {q queen(leader), g1 footman}; plus idle scout s1. */
+const mkQueenRoster = (): WorldRoster => ({
+  faction: 'ant',
+  units: [mkUnit('q', 'queen'), mkUnit('g1', 'footman'), mkUnit('s1', 'scout')],
+  partyAssignments: [{ partyId: p('queen-guard'), unitIds: [u('q'), u('g1')], leaderId: u('q') }],
+});
 
 const mkUnit = (id: string, templateId: string): WorldUnit => ({
   id: id as UnitId,
@@ -329,6 +340,129 @@ describe('equipItem', () => {
   });
 });
 
+describe('setUnitRank', () => {
+  it('records a sparse front placement on the unit’s squad', () => {
+    const r = setUnitRank(mkRoster(), u('a2'), 'back', TEMPLATES);
+    expect(r.ok).toBe(true);
+    const alpha = r.roster.partyAssignments.find((a) => a.partyId === p('alpha'));
+    expect(alpha?.formation).toEqual({ front: [], back: [u('a2')], reserve: [] });
+  });
+
+  it('re-ranking moves the unit between zones (no duplication)', () => {
+    const r1 = setUnitRank(mkRoster(), u('a1'), 'front', TEMPLATES);
+    const r2 = setUnitRank(r1.roster, u('a1'), 'reserve', TEMPLATES);
+    const alpha = r2.roster.partyAssignments.find((a) => a.partyId === p('alpha'));
+    expect(alpha?.formation).toEqual({ front: [], back: [], reserve: [u('a1')] });
+  });
+
+  it('rejects an unknown unit and an idle unit', () => {
+    expect(setUnitRank(mkRoster(), u('nope'), 'front', TEMPLATES).ok).toBe(false);
+    const idle = setUnitRank(mkRoster(), u('i1'), 'front', TEMPLATES);
+    expect(idle.ok).toBe(false);
+    expect(idle.error).toContain('not in a squad');
+  });
+
+  it('enforces the front (≤3) and back (≤2) caps', () => {
+    let roster = mkRoster();
+    roster = {
+      ...roster,
+      units: [...roster.units, ...['f1', 'f2', 'f3'].map((id) => mkUnit(id, 'footman'))],
+      partyAssignments: roster.partyAssignments.map((a) =>
+        a.partyId === p('alpha')
+          ? { ...a, unitIds: [u('a1'), u('a2'), u('f1'), u('f2'), u('f3')] }
+          : a,
+      ),
+    };
+    let res = setUnitRank(roster, u('a1'), 'front', TEMPLATES);
+    res = setUnitRank(res.roster, u('a2'), 'front', TEMPLATES);
+    res = setUnitRank(res.roster, u('f1'), 'front', TEMPLATES);
+    const full = setUnitRank(res.roster, u('f2'), 'front', TEMPLATES);
+    expect(full.ok).toBe(false);
+    expect(full.error).toContain('front rank is full');
+  });
+
+  it('queen-pin: queen may go front, never back/reserve', () => {
+    expect(setUnitRank(mkQueenRoster(), u('q'), 'front', TEMPLATES).ok).toBe(true);
+    const off = setUnitRank(mkQueenRoster(), u('q'), 'back', TEMPLATES);
+    expect(off.ok).toBe(false);
+    expect(off.error).toContain('pinned to the front');
+  });
+});
+
+describe('removeUnit', () => {
+  it('sends a squad member to the barracks', () => {
+    const r = removeUnit(mkRoster(), u('a2'), TEMPLATES);
+    expect(r.ok).toBe(true);
+    expect(barracksUnits(r.roster).map((x) => x.id)).toContain(u('a2'));
+  });
+
+  it('auto-reassigns leader and drops an emptied squad', () => {
+    const r1 = removeUnit(mkRoster(), u('a1'), TEMPLATES); // a1 was alpha leader
+    expect(r1.roster.partyAssignments.find((a) => a.partyId === p('alpha'))?.leaderId).toBe(
+      u('a2'),
+    );
+    const r2 = removeUnit(r1.roster, u('b1'), TEMPLATES); // bravo had only b1
+    expect(r2.roster.partyAssignments.some((a) => a.partyId === p('bravo'))).toBe(false);
+  });
+
+  it('prunes the removed unit from a formation override', () => {
+    const ranked = setUnitRank(mkRoster(), u('a2'), 'back', TEMPLATES);
+    const removed = removeUnit(ranked.roster, u('a2'), TEMPLATES);
+    const alpha = removed.roster.partyAssignments.find((a) => a.partyId === p('alpha'));
+    expect(alpha?.formation?.back ?? []).not.toContain(u('a2'));
+  });
+
+  it('queen-pin: the queen cannot be removed; unknown rejected', () => {
+    const q = removeUnit(mkQueenRoster(), u('q'), TEMPLATES);
+    expect(q.ok).toBe(false);
+    expect(q.error).toContain('queen');
+    expect(removeUnit(mkRoster(), u('nope'), TEMPLATES).ok).toBe(false);
+  });
+});
+
+describe('dismissUnit', () => {
+  it('removes a unit from the roster entirely (from a squad)', () => {
+    const r = dismissUnit(mkRoster(), u('a2'), TEMPLATES);
+    expect(r.ok).toBe(true);
+    expect(r.roster.units.some((x) => x.id === u('a2'))).toBe(false);
+    expect(barracksUnits(r.roster).some((x) => x.id === u('a2'))).toBe(false);
+  });
+
+  it('works on a barracks-resident unit too', () => {
+    const r = dismissUnit(mkRoster(), u('i1'), TEMPLATES);
+    expect(r.ok).toBe(true);
+    expect(r.roster.units.some((x) => x.id === u('i1'))).toBe(false);
+  });
+
+  it('queen-pin: the queen cannot be dismissed', () => {
+    const q = dismissUnit(mkQueenRoster(), u('q'), TEMPLATES);
+    expect(q.ok).toBe(false);
+    expect(q.error).toContain('queen');
+  });
+});
+
+describe('queen-pin on move/create', () => {
+  it('moveUnit refuses to move the queen out of queen-guard', () => {
+    let roster = mkQueenRoster();
+    roster = {
+      ...roster,
+      partyAssignments: [
+        ...roster.partyAssignments,
+        { partyId: p('alpha'), unitIds: [u('s1')], leaderId: u('s1') },
+      ],
+    };
+    const r = moveUnit(roster, u('q'), p('alpha'), TEMPLATES);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('queen');
+  });
+
+  it('createParty refuses to include the queen', () => {
+    const r = createParty(mkQueenRoster(), p('rogue'), [u('q')], u('q'), TEMPLATES);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('queen');
+  });
+});
+
 describe('purity', () => {
   it('never mutates the input roster', () => {
     const roster = mkRoster();
@@ -338,6 +472,9 @@ describe('purity', () => {
     disbandParty(roster, p('bravo'));
     swapLeader(roster, p('alpha'), u('a2'), TEMPLATES);
     equipItem(roster, u('a1'), 'sword' as ItemId);
+    setUnitRank(roster, u('a1'), 'back', TEMPLATES);
+    removeUnit(roster, u('a2'), TEMPLATES);
+    dismissUnit(roster, u('i2'), TEMPLATES);
     expect(JSON.stringify(roster)).toBe(snapshot);
   });
 });

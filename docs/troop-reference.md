@@ -289,10 +289,13 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   // On failure the input roster is returned unchanged and `error`
   // is a UI-surfaceable reason.
 
-  moveUnit(roster, unitId, toPartyId, templates)        // idle or cross-party; cap-checked; idempotent
-  createParty(roster, partyId, unitIds, leaderId, tpl)  // pulls members out of old parties; cap + leader-eligible checked
+  moveUnit(roster, unitId, toPartyId, templates)        // idle or cross-party; cap-checked; idempotent; queen-pinned
+  createParty(roster, partyId, unitIds, leaderId, tpl)  // pulls members out of old parties; cap + leader-eligible; queen-pinned
   disbandParty(roster, partyId)                         // units → idle pool; queen-guard cannot be disbanded
   swapLeader(roster, partyId, newLeaderId, templates)   // member + leader-eligible enforced
+  removeUnit(roster, unitId, templates)                 // → barracks; detach (leader auto-reassign); queen-pinned
+  dismissUnit(roster, unitId, templates)                // → removed from roster; in-squad or barracks; queen-pinned
+  setUnitRank(roster, unitId, rank, templates)          // §7.9 sparse front/back/reserve override; front≤3/back≤2; queen→front
   equipItem(roster, unitId, itemId | null)              // set/clear the unit's persistent item
 
   // Read accessors:
@@ -311,13 +314,29 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   only, so an un-fielded unit currently does not survive the
   extract→inject cycle without it.
 
+  **Formation** (roadmap §7.9) is a _sparse_ player override —
+  optional `WorldFormation { front, back, reserve }` on
+  `WorldPartyAssignment`, omitted-when-absent (byte-stable; absent ⇒
+  engine auto-assigns). `setUnitRank` records only units the player
+  explicitly placed; it guards explicit front ≤ 3 / back ≤ 2 (reserve
+  unbounded) and pins the queen to front. `Rank` deliberately omits
+  `'middle'` (held on the §7.7 queen-rear spike). **Queen-pin** (§7.7):
+  a `queen`-tagged unit cannot leave the queen-guard
+  (`moveUnit`/`createParty`), be removed/dismissed, or be ranked off
+  front — coverage = move / create / remove / dismiss / setUnitRank.
+  Contract refinement vs. the Q10 answer: `removeUnit` /
+  `dismissUnit` take `templates` (needed for the queen tag check).
+
   Invariants: slot cap is the single source of truth from
   `world-inject` (roadmap §7.5: 9 standard, 12 queen-guard);
   `templates` is `readonly UnitTemplate[]` (needed for slotCost +
-  `leader-eligible`); operators never mutate inputs and consume no RNG
-  / I/O. **Not yet built (separate follow-up):** multi-item shop
-  purchase — `engine/world-shop.ts` still only does the single
-  `mouse-merc` recruit smoke-test.
+  `leader-eligible` + `queen` tag); operators never mutate inputs and
+  consume no RNG / I/O. **Tracked follow-ons, in order:** (1)
+  `world-inject` honoring the persisted formation (§7.9 — falls back
+  to `assignFormation` when absent; gate-29-safe by construction);
+  (2) the §7.8 extract carry-forward merge; (3) multi-item shop
+  purchase (`engine/world-shop.ts` is still the single `mouse-merc`
+  smoke-test).
 
 ---
 

@@ -3,8 +3,11 @@
  *
  * Pure `WorldRoster → WorldRoster` transforms the Organize Army UI
  * binds to: move a unit between parties, swap a leader, create /
- * disband a party, equip / unequip an item, plus read accessors
- * (party slot usage, effective unit stats).
+ * disband a party, remove a unit to barracks, dismiss a unit from the
+ * roster, set a unit's formation rank (§7.9), equip / unequip an
+ * item, plus read accessors (party slot usage, effective unit stats,
+ * barracks). The queen is pinned: she cannot leave the queen-guard,
+ * be dismissed, or be ranked off front (queen-pin, §7.7).
  *
  * Engine-freeze boundary (roadmap §7.6): this is the between-scenario
  * world-loop layer. It never executes inside `runScenario`, touches no
@@ -22,7 +25,16 @@
 import type { ItemId, PartyId, Stats, UnitId, UnitTemplate, UnitTemplateId } from './types.ts';
 import { slotCapForParty, QUEEN_GUARD_PARTY_ID } from './world-inject.ts';
 import { effectiveStats } from './world-levelup.ts';
-import type { WorldPartyAssignment, WorldRoster, WorldUnit } from './world-state.ts';
+import type {
+  WorldFormation,
+  WorldPartyAssignment,
+  WorldRoster,
+  WorldUnit,
+} from './world-state.ts';
+
+/** Formation rank a unit can be explicitly placed in (§7.9).
+ * `'middle'` is intentionally absent — held on the queen-rear spike. */
+export type Rank = 'front' | 'back' | 'reserve';
 
 export interface OrganizeResult {
   readonly roster: WorldRoster;
@@ -61,10 +73,47 @@ const unitById = (roster: WorldRoster, id: UnitId): WorldUnit | undefined =>
 const isLeaderEligible = (unit: WorldUnit, tmap: Map<UnitTemplateId, UnitTemplate>): boolean =>
   tmap.get(unit.templateId)?.tags.includes('leader-eligible') ?? true;
 
+/** Queen-pin (§7.7): a unit whose template carries the `queen` tag is
+ * structurally bound to the queen-guard and to the front rank. */
+const isQueen = (unit: WorldUnit, tmap: Map<UnitTemplateId, UnitTemplate>): boolean =>
+  tmap.get(unit.templateId)?.tags.includes('queen') ?? false;
+
+/** Resolve a unit for a mutating op and apply the queen-pin. Returns
+ * the unit, or a short-circuit `OrganizeResult` (unknown unit, or
+ * queen-pinned with the caller's message). Callers discriminate with
+ * `'ok' in r`. */
+const resolveMutable = (
+  roster: WorldRoster,
+  unitId: UnitId,
+  templates: readonly UnitTemplate[],
+  queenError: string,
+): WorldUnit | OrganizeResult => {
+  const unit = unitById(roster, unitId);
+  if (!unit) return fail(roster, `unknown unit '${String(unitId)}'`);
+  if (isQueen(unit, templateMap(templates))) return fail(roster, queenError);
+  return unit;
+};
+
+/** Drop a unit id from a sparse formation override (all three zones).
+ * Returns `undefined` if the input was absent (stays absent). */
+const pruneFormation = (
+  formation: WorldFormation | undefined,
+  unitId: UnitId,
+): WorldFormation | undefined => {
+  if (!formation) return undefined;
+  return {
+    front: formation.front.filter((id) => id !== unitId),
+    back: formation.back.filter((id) => id !== unitId),
+    reserve: formation.reserve.filter((id) => id !== unitId),
+  };
+};
+
 /** Remove a unit id from every assignment. Empty assignments are
  * dropped; an assignment that loses its leader but keeps members has
  * its leader reassigned to the first remaining member (deterministic,
- * roster order). Returns the rebuilt assignment list. */
+ * roster order). The unit is also pruned from any formation override
+ * so a moved/removed unit can't linger in a stale rank list. Returns
+ * the rebuilt assignment list. */
 const detachUnit = (
   assignments: readonly WorldPartyAssignment[],
   unitId: UnitId,
@@ -79,7 +128,13 @@ const detachUnit = (
     const first = unitIds[0];
     if (first === undefined) continue;
     const leaderId = a.leaderId === unitId ? first : a.leaderId;
-    next.push({ partyId: a.partyId, unitIds, leaderId });
+    const formation = pruneFormation(a.formation, unitId);
+    next.push({
+      partyId: a.partyId,
+      unitIds,
+      leaderId,
+      ...(formation !== undefined ? { formation } : {}),
+    });
   }
   return next;
 };
@@ -158,13 +213,16 @@ export const moveUnit = (
 ): OrganizeResult => {
   const unit = unitById(roster, unitId);
   if (!unit) return fail(roster, `unknown unit '${String(unitId)}'`);
+  const tmap = templateMap(templates);
+  if (isQueen(unit, tmap)) {
+    return fail(roster, 'the queen cannot be moved from the queen-guard');
+  }
   const target = roster.partyAssignments.find((a) => a.partyId === toPartyId);
   if (!target) {
     return fail(roster, `party '${String(toPartyId)}' does not exist (use createParty)`);
   }
   if (target.unitIds.includes(unitId)) return done(roster);
 
-  const tmap = templateMap(templates);
   if (usedSlots(target, roster, tmap) + slotCostOf(unit, tmap) > slotCapForParty(toPartyId)) {
     return fail(roster, `party '${String(toPartyId)}' is at slot capacity`);
   }
@@ -205,6 +263,9 @@ export const createParty = (
     return fail(roster, 'leader must be a member of the party');
   }
   const tmap = templateMap(templates);
+  if ((units as WorldUnit[]).some((u) => isQueen(u, tmap))) {
+    return fail(roster, 'the queen cannot be placed in a new squad');
+  }
   const leader = unitById(roster, leaderId);
   if (leader && !isLeaderEligible(leader, tmap)) {
     return fail(roster, `unit '${String(leaderId)}' is not leader-eligible`);
@@ -280,5 +341,91 @@ export const equipItem = (
   return done({
     ...roster,
     units: roster.units.map((u) => (u.id === unitId ? { ...u, item: itemId } : u)),
+  });
+};
+
+/**
+ * Set a unit's explicit formation rank (§7.9). Records a *sparse*
+ * override on the unit's party assignment — members the player never
+ * places are auto-assigned by the engine at scenario staging
+ * (`world-inject` honoring, the §7.9 follow-on). Rejected if: unknown
+ * unit, the unit is in no squad, the queen is set off front
+ * (queen-pin), or the explicit front (>3) / back (>2) cap is exceeded
+ * (reserve is unbounded; the engine re-enforces hard caps at staging).
+ */
+export const setUnitRank = (
+  roster: WorldRoster,
+  unitId: UnitId,
+  rank: Rank,
+  templates: readonly UnitTemplate[],
+): OrganizeResult => {
+  const unit = unitById(roster, unitId);
+  if (!unit) return fail(roster, `unknown unit '${String(unitId)}'`);
+  const assignment = roster.partyAssignments.find((a) => a.unitIds.includes(unitId));
+  if (!assignment) return fail(roster, `unit '${String(unitId)}' is not in a squad`);
+  if (isQueen(unit, templateMap(templates)) && rank !== 'front') {
+    return fail(roster, 'the queen is pinned to the front rank');
+  }
+  const current: WorldFormation = assignment.formation ?? { front: [], back: [], reserve: [] };
+  const without = {
+    front: current.front.filter((id) => id !== unitId),
+    back: current.back.filter((id) => id !== unitId),
+    reserve: current.reserve.filter((id) => id !== unitId),
+  };
+  const placed: WorldFormation = {
+    front: rank === 'front' ? [...without.front, unitId] : without.front,
+    back: rank === 'back' ? [...without.back, unitId] : without.back,
+    reserve: rank === 'reserve' ? [...without.reserve, unitId] : without.reserve,
+  };
+  if (placed.front.length > 3) return fail(roster, 'front rank is full (max 3)');
+  if (placed.back.length > 2) return fail(roster, 'back rank is full (max 2)');
+  return done({
+    ...roster,
+    partyAssignments: roster.partyAssignments.map((a) =>
+      a.partyId === assignment.partyId ? { ...a, formation: placed } : a,
+    ),
+  });
+};
+
+/**
+ * Send a unit to the barracks (detach from its squad; it stays in
+ * `roster.units`, in no assignment). Leader auto-reassigns to the
+ * first remaining member; an emptied squad's assignment is dropped
+ * (shipped `detachUnit` semantics — no leader-change precondition).
+ * Idle units are a no-op success. Queen-pinned: rejected for the
+ * queen.
+ */
+export const removeUnit = (
+  roster: WorldRoster,
+  unitId: UnitId,
+  templates: readonly UnitTemplate[],
+): OrganizeResult => {
+  const r = resolveMutable(
+    roster,
+    unitId,
+    templates,
+    'the queen cannot be removed from the queen-guard',
+  );
+  if ('ok' in r) return r;
+  return done({ ...roster, partyAssignments: detachUnit(roster.partyAssignments, unitId) });
+};
+
+/**
+ * Permanently remove a unit from the roster. Callable whether the
+ * unit is in a squad (auto-detached, same leader/empty-party handling
+ * as `removeUnit`) or already in the barracks. Queen-pinned: rejected
+ * for the queen (loss-condition unit).
+ */
+export const dismissUnit = (
+  roster: WorldRoster,
+  unitId: UnitId,
+  templates: readonly UnitTemplate[],
+): OrganizeResult => {
+  const r = resolveMutable(roster, unitId, templates, 'the queen cannot be dismissed');
+  if ('ok' in r) return r;
+  return done({
+    ...roster,
+    units: roster.units.filter((unit) => unit.id !== unitId),
+    partyAssignments: detachUnit(roster.partyAssignments, unitId),
   });
 };

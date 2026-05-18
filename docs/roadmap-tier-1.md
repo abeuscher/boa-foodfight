@@ -760,6 +760,44 @@ per §7.6), which is the **next backend item, sequenced before
 multi-item shop**. Confirmed: no barracks cap (slot caps are per-party
 only); wiped-in-combat units die and do not return (decision (d)).
 
+### 7.9 Player-mutable formation + B4 operators
+
+Cross-track change request (UX→Gameplay, exchange #5; full prose in
+`docs/change-request-protocol.md` §5), disposition **decomposed-yes +
+counter, with cost correction**. Verified architecture: `assignFormation`
+is called at exactly two chokepoints — `engine/state.ts` (static /
+gate-29 path, no `WorldRoster`) and `engine/world-inject.ts` (campaign
+path); the balance curve is measured AI-vs-AI on the static path, which
+never carries a player formation. Therefore **player-mutable front/back
+formation is ungated world-loop work, not a Phase-D rebalance** — the
+CR's coupling rationale does not survive the architecture. Resolution:
+
+1. **Persistent formation** — optional sparse override
+   `WorldFormation { front, back, reserve }` on `WorldPartyAssignment`,
+   omitted-when-absent (byte-identical saves / replays, same discipline
+   as `WorldUnit.levelUpBonus`). **Shipped.**
+2. **Operators (shipped)** — `setUnitRank` (sparse; front ≤ 3 / back ≤
+   2 explicit caps; queen pinned front), `removeUnit` (→ barracks,
+   detach semantics), `dismissUnit` (→ removed from roster); plus the
+   **queen-pin correctness hardening** on `moveUnit` / `createParty`
+   (queen cannot leave queen-guard or join a new squad). Queen-pin
+   coverage = move / create / remove / dismiss / setUnitRank
+   (signatures: `removeUnit`/`dismissUnit` take `templates` for the
+   tag check — a contract refinement over the Q10 answer, recorded in
+   `troop-reference.md` §10). 718/718, gate-29 intact.
+3. **world-inject honoring** the persisted formation (else fall back to
+   `assignFormation`, unchanged static path) — the **next tracked
+   backend item**, sequenced before the §7.8 extract-merge and
+   multi-item shop. Gate-29-safe by construction (static path never
+   carries a formation override).
+
+**Middle rank** stays folded into the §7.7 queen-rear spike (one
+formation/`battle.ts` re-baseline, not three); `setUnitRank`'s `Rank`
+deliberately omits `'middle'` until the spike rules. Mid-scenario
+formation is **locked** (set in hub, frozen at scenario start);
+`party-detail-spec.md` drops its mid-scenario "change formation" verb
+(amendment recorded) but still reflects engine-driven `promoteReserve`.
+
 ---
 
 ## 8. Open questions

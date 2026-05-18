@@ -303,6 +303,53 @@ canonicalizes against barracks-as-derived-view + `barracksUnits`
 extract carry-forward merge is the next backend item, before
 multi-item shop. Recorded `roadmap-tier-1.md` §7.8.
 
+### Exchange #5 — Player-mutable formation + three-rank restructure
+
+**Request (UX):** make formation a player verb (persistent, player-set)
+and extend front/back → front/middle/back; deliberately coupled, one
+balance re-check argued. Hard-blocking on Organize Army.
+
+**Reply (Dev) — Disposition: Decomposed-yes + counter, cost
+correction.**
+
+- **Decisive architecture.** `assignFormation` is called at two
+  chokepoints: `engine/state.ts` (static / gate-29 / coevo — no
+  `WorldRoster`) and `engine/world-inject.ts` (campaign). The balance
+  curve is AI-vs-AI on the static path, which never carries a player
+  formation. So the CR's coupling premise (both halves need one shared
+  balance re-check) is **false**: the front/back player-mutable half is
+  ungated world-loop work that does not move the AI curve at all.
+- **Cost correction.** Persistent data shape → ungated (additive,
+  byte-stable). `setUnitRank` + `removeUnit` + `dismissUnit` +
+  queen-pin → ungated world-loop ops. world-inject honoring → a
+  `world-inject`-only change (formation.ts / state.ts / battle.ts
+  untouched), provably byte-identical on the static path. Middle rank
+  → the _only_ genuinely gated piece (changes `Formation` consumed by
+  frozen `battle.ts`).
+- **Counter (= the CR's offered fallback, but it's strictly better,
+  not a compromise).** Ship 1+2+3 (front/back) now, ungated; fold
+  middle-rank into the §7.7 queen-rear spike so all three
+  formation/`battle.ts` sim changes share **one** re-baseline, not
+  three. Decoupling loses nothing because the front/back half was
+  never gated.
+- **Shipped this window.** Persistent `WorldFormation` (sparse,
+  omit-when-absent); `setUnitRank`/`removeUnit`/`dismissUnit`;
+  queen-pin hardening on `moveUnit`/`createParty`. 718/718, gate-29
+  intact. **Deferred (next backend item):** world-inject honoring.
+- **Confirms (returned, closed):** decomposition accepted ✓;
+  middle-rank folded into queen-rear spike ✓; ship 1+2+3 + queen-pin
+  before §7.8 extract-merge + shop ✓.
+- **Decision record:** roadmap §7.9; contract in `troop-reference.md`
+  §10 (incl. the `removeUnit`/`dismissUnit` `templates` refinement
+  over Q10, required by the queen-pin).
+
+**Outcome:** Resolved. Player-mutable front/back formation +
+remove/dismiss + queen-pin shipped (ungated, world-loop layer);
+mid-scenario formation locked; `party-detail-spec.md` mid-scenario
+"change formation" dropped (amendment). Middle rank held on the §7.7
+spike. world-inject honoring is next, before the §7.8 extract-merge
+and multi-item shop. Recorded `roadmap-tier-1.md` §7.9.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are
