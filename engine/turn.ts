@@ -227,7 +227,16 @@ export const runTurn = (
   //    discovery tick inside endOfTurn.
   const eotOutcome = endOfTurn(
     working,
-    { queen: scenario.queen, jelly: scenario.jelly, items: scenario.items },
+    {
+      queen: scenario.queen,
+      jelly: scenario.jelly,
+      items: scenario.items,
+      // Engine dep #10 — only read for the hypnotize
+      // `reboundImmunityTurns` param, and only when the scenario sets
+      // `abilityParamsAuthoritative` (docs §4g). Unused / inert on
+      // every shipped scenario, so gate-29 stays byte-identical.
+      abilities: scenario.abilities,
+    },
     tick,
     rng.fork('end-of-turn'),
   );

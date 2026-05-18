@@ -168,6 +168,31 @@ export const mapFileSchema = z
      * it is read by the engine as the L1 default (capture spider-web).
      */
     victoryCondition: victoryConditionSchema.optional(),
+    /**
+     * Engine dependency #10 — opt-in switch making `abilities.json`
+     * the authoritative source for the hypnotize + recruit tuning
+     * params (closes the docs §4g finding: `engine/abilities.ts`
+     * resolved those two abilities from hardcoded module constants and
+     * never read the loaded data, so data-driven tuning of them was
+     * inert — which falsified L8 / never bound the L5 hypnotize cap).
+     *
+     * Absent / `false` (every shipped map `data/level-1..8` declares
+     * no flag) ⇒ the engine uses the historical hardcoded constants
+     * EXACTLY (`HYPNOTIZE_SUCCESS_RATE`/`MIN`/`MAX`/`REBOUND`,
+     * `RECRUIT_SUCCESS_RATE`) on the identical code path, so L1–L7 and
+     * the gate-29 locked baseline are byte-identical.
+     *
+     * `true` ⇒ ONLY `handleHypnotize` / `handleRecruit` (and the
+     * single rebound-immunity application point in `end-of-turn.ts`)
+     * read `successRate` / `minControlTurns` / `maxControlTurns` /
+     * `reboundImmunityTurns` (hypnotize) and `successRate` (recruit)
+     * from the loaded ability def's `params`, falling back to the
+     * hardcoded constant per-param if the data omits one (defensive +
+     * deterministic). No other ability's resolution is touched and the
+     * RNG call sequence is unchanged — only the numeric inputs vary.
+     * Opt-in by scenario; never set on a shipped map.
+     */
+    abilityParamsAuthoritative: z.boolean().optional(),
   })
   .refine((file) => new Set(file.posts.map((p) => p.id)).size === file.posts.length, {
     message: 'post ids must be unique',
