@@ -716,6 +716,27 @@ spike. Consequence: §7.5's parked middle-rank-as-mechanic is
 **un-parked** — now a fileable gated sim-path request, naturally
 sequenced after the Organize Army spec.
 
+### 7.7 Queen rear-zone (legibility now; mechanic spike-gated)
+
+Cross-track change request (UX→Gameplay, exchange #3; full prose in
+`docs/change-request-protocol.md` §5), disposition **counter-proposed +
+needs-spike**. Decisive fact: `engine/formation.ts` deliberately slots
+the queen **front** ("soak the queen-guard's damage"), both factions —
+so the proposed melee-immune rear zone _inverts_ her combat role rather
+than merely making her legible. Resolution: (1) the legibility intent
+is met now by an **accurate** distinct-queen rendering (unique,
+loss=scenario-loss, depicted as the front-anchor she actually is) —
+world-loop / UI layer, ungated, unblocks Organize Army; (2) the
+rear-zone **mechanic** is an approved pursuit but gated — a
+high-magnitude, **bilateral** sim change under §7.6, preceded by a
+**spike** quantifying the balance blast radius across every queen-guard
+scenario (both factions) before any Template A; (3) "rendering-only
+now, mechanic later" is **withdrawn for this request** — unlike the
+middle-rank precedent, a safe-rear diagram over a front-soak sim would
+ship a UI that contradicts the engine. queen-loss-as-scenario-loss and
+non-queen front/back semantics unchanged. Spike scoped standalone
+(`docs/spike-queen-rear-zone.md`).
+
 ---
 
 ## 8. Open questions

@@ -200,6 +200,62 @@ Organize Army spec. UI-experience "plays-the-same" validation
 instrument: separate scoped spike, to be proposed as a standalone
 follow-up. Recorded in `roadmap-tier-1.md` §7.6.
 
+### Exchange #3 — Queen-behind-grid rear zone
+
+**Request (UX):** add a rear formation zone (third position beyond
+front/back) inhabited only by the queen; from rear she is targetable by
+ranged/magic only (not melee) and initiates attacks against either row;
+rendered behind the squad grid in Organize Army + party-detail. Intent:
+the queen reads as the architecturally distinct, scenario-ending anchor.
+
+**Reply (Dev) — Disposition: Counter-proposed + Needs-spike.**
+
+- **Decision.** Legibility intent met now by an _accurate_
+  distinct-queen rendering; the rear-zone _mechanic_ is a gated sim
+  redesign pursued on a separate spike-gated track. "Rendering-only
+  now, mechanic later" is **withdrawn for this request** (it would ship
+  a UI that contradicts the sim).
+- **Decisive code fact.** `engine/formation.ts:59-63` deliberately
+  places the queen in the **front** row ("the queen needs to soak the
+  queen-guard's damage"), bilaterally (spider-queen identical). The
+  request _inverts_ the queen's combat role (front damage-soak →
+  melee-immune rear unit); it does not merely make her legible.
+- **Cost decomposition.**
+  - Accurate distinct-queen rendering (unique, loss=scenario-loss,
+    depicted as the front-anchor she is): **Cheap**, world-loop/UI
+    layer, ungated, truthful. Unblocks Organize Army now.
+  - "Rendering-only safe-rear" preview: **rejected as a correctness
+    hazard** — the engine fights the queen front; a rear-safe diagram
+    would make Organize Army lie. Differs from the middle-rank
+    precedent (harmless cosmetic); explicitly withdrawn.
+  - Rear-zone combat mechanic (rear-targeting profile + queen
+    initiation): **Expensive, golden-master-gated, bilateral.** Changes
+    a load-bearing difficulty lever in every queen-guard scenario, both
+    factions; net curve effect non-obvious → must be measured. Mini
+    Phase-D rebalance + AI updates + re-baseline + review.
+  - §7.5 "9 + 1-in-rear" cleanup: **not independently bankable** — it
+    presupposes the expensive mechanic.
+- **Invariant impact.** Rendering: none. Mechanic: golden-master-gated
+  (§7.6) _and_ high-magnitude / bilateral — the spike is the honest
+  precondition, not an afterthought. queen-loss-as-scenario-loss and
+  non-queen front/back semantics unchanged.
+- **Counter-proposal.** Split the intent (legible queen — accurate
+  rendering, now) from the proposed solution (rear mechanic — a
+  gameplay redesign, spike-gated then Template A).
+- **Confirms (returned, closed):** accurate distinct-queen rendering
+  satisfies the intent for now ✓; rear-zone mechanic pursued as a
+  separate gated track ✓; "rendering-only now" withdrawn for this
+  request ✓.
+- **Decision record:** roadmap §7.7. Spike scoped as a standalone
+  follow-up (`docs/spike-queen-rear-zone.md`).
+
+**Outcome:** Resolved. Organize Army proceeds with an accurate
+distinct-queen rendering (no sim risk). The rear-zone mechanic is an
+approved pursuit on a spike-gated track: the spike quantifies the
+balance blast radius across all queen-guard scenarios (both factions)
+_before_ any Template A sim change. Recorded in `roadmap-tier-1.md`
+§7.7.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are
