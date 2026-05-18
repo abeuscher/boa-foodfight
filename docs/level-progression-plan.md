@@ -489,6 +489,49 @@ economy is viable only under `eradicate`/forced-co-occupation (L6).
 Sibling to §4c/§4d: a structural property of the frozen engine, not a
 per-level defect.
 
+## 4f. L7 PARKED + the card-host structural finding
+
+L7 (Living Room) is **PARKED**, not shipped, after **four**
+falsifications (build + RE-ARBITRATION 1/2/3) — the last with engine
+dep #9 (the authorized targeted un-freeze: opt-in `goldPerTurn`,
+ownership-credited, which correctly resolved §4e's economy gap and
+DOES fund the in-sim card market). The licensed ~64 rebound for L7
+remained unreachable. Full WIP + the three RE-ARBITRATION records are
+preserved on branch `claude/l7-parked-wip` (DO NOT MERGE) for the
+disposition decision.
+
+**Root cause (decisive, isolated only after dep #9 removed the
+economy blocker):** the ruled card market is hosted on the **immobile
+queen-guard** running the **gate-29-locked shared `ai/baseline.ts`
+card heuristics** — cards land on the queen-guard/self, never the
+assault. So funding the economy cannot convert to fortress-breaking;
+the reachable win-rate space is **bimodal** (~58% garrison / ~80%+
+rejoin) with **[62,66] a structural dead zone**, no in-latitude
+interpolator (`goldPerTurn` saturates at the 3-card hand cap).
+
+**Binding cross-level guidance for L8–L10 (recorded so the parked
+detail is not lost):**
+
+1. **A player-favorable rebound MUST NOT be built on the
+   commander-card economy** while the card-host heuristic is locked —
+   it cannot convert to a win-rate swing in a `capture-post`
+   fortress matchup. Use levers the locked AI paths demonstrably
+   convert: geometry/objective/concealment/victory-structure (what
+   carried L5/L6), or a `goldPerTurn` POST whose payoff is something
+   the mobile assault AI already acts on (NOT cards).
+2. `eradicate`/`recruit-count` mission scenarios (L6, L8) force
+   decisive play and do not exhibit the §4c grind or this card-host
+   trap the same way — prefer their structurally-robust levers.
+3. L7's disposition (un-freeze the card-host heuristic / §4.1
+   scenario-identity redesign / grandfather + §5 curve amend) is
+   **deferred to the post-L8–L10 consolidated review**, decided with
+   the full curve and with knowledge of whether L8–L10 hit the same
+   root cause.
+
+Sibling to §4c/§4d/§4e: a structural property of the locked AI
+paths + frozen engine, recorded on the trunk so it survives the L7
+park.
+
 ---
 
 ## 5. Deviations from §4.1
