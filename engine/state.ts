@@ -217,6 +217,11 @@ const buildPosts = (mapFile: MapFile): ReadonlyMap<PostId, Post> => {
             },
           }
         : {}),
+      // Engine dependency #9 — opt-in per-POST in-sim gold income.
+      // Conditional spread (same shape as the optional fields above):
+      // absent in the map ⇒ the key is never written, so the loaded
+      // POST is byte-identical and the end-of-turn sweep finds nothing.
+      ...(p.goldPerTurn !== undefined ? { goldPerTurn: p.goldPerTurn } : {}),
       tags: p.tags,
       // Round 17 — POST hold mechanic. No capture in progress at
       // scenario start for any POST (faction-locked, neutral, or
