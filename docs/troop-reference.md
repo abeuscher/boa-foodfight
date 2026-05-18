@@ -277,17 +277,36 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   capacity rule (§4) applies to `partyAssignments`: each party's
   members' total `slotCost` must fit 9 (12 for the queen-guard party).
 
-- **Backend operators the org UI will call — STATUS.** The persistence
-  _model_ exists and is complete, but several _mutation operators_ a
-  troop-org UI needs are **not yet implemented** (no engine-freeze
-  risk, no UI dependency — pure `WorldRoster → WorldRoster`
-  transforms): move-unit-between-parties, swap-leader, create/disband
-  party, equip/unequip item, and a multi-item shop purchase + an
-  exposed effective-stats accessor (`effectiveStats` exists in
-  `engine/world-levelup.ts` but is not surfaced for UI binding). These
-  are the contract the UI binds to; treat the function signatures as
-  TBD until built (see the world-loop status note maintained
-  separately).
+- **Backend operators the org UI binds to — SHIPPED.** Module
+  `engine/world-organize.ts` (pure `WorldRoster → WorldRoster`,
+  between-scenario world-loop layer — ungated per roadmap §7.6; 29
+  behavioral tests). This is the stable contract for the Organize Army
+  UI:
+
+  ```
+  // Mutating operators — each returns OrganizeResult:
+  //   { roster: WorldRoster; ok: boolean; error?: string }
+  // On failure the input roster is returned unchanged and `error`
+  // is a UI-surfaceable reason.
+
+  moveUnit(roster, unitId, toPartyId, templates)        // idle or cross-party; cap-checked; idempotent
+  createParty(roster, partyId, unitIds, leaderId, tpl)  // pulls members out of old parties; cap + leader-eligible checked
+  disbandParty(roster, partyId)                         // units → idle pool; queen-guard cannot be disbanded
+  swapLeader(roster, partyId, newLeaderId, templates)   // member + leader-eligible enforced
+  equipItem(roster, unitId, itemId | null)              // set/clear the unit's persistent item
+
+  // Read accessors:
+  partySlotUsage(roster, partyId, templates) → { used, cap, free }
+  unitEffectiveStats(unit, templates) → Stats | undefined   // base + campaign level bonus
+  ```
+
+  Invariants: slot cap is the single source of truth from
+  `world-inject` (roadmap §7.5: 9 standard, 12 queen-guard);
+  `templates` is `readonly UnitTemplate[]` (needed for slotCost +
+  `leader-eligible`); operators never mutate inputs and consume no RNG
+  / I/O. **Not yet built (separate follow-up):** multi-item shop
+  purchase — `engine/world-shop.ts` still only does the single
+  `mouse-merc` recruit smoke-test.
 
 ---
 

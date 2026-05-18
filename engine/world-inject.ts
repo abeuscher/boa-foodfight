@@ -64,10 +64,10 @@ import type { WorldRoster } from './world-state.ts';
 /** Default party slot cap in Tier 1. Raised 8→9 per the UX↔Gameplay
  * change request (roadmap §7.5): a ceiling for legible 3×3 rendering,
  * not a mandate to fill — authored rosters keep their compositions. */
-const PARTY_SLOT_CAP = 9;
+export const PARTY_SLOT_CAP = 9;
 /** The queen-guard's exceptional 12-slot capacity (game-outline). */
-const QUEEN_GUARD_SLOT_CAP = 12;
-const QUEEN_GUARD_PARTY_ID = 'queen-guard' as PartyId;
+export const QUEEN_GUARD_SLOT_CAP = 12;
+export const QUEEN_GUARD_PARTY_ID = 'queen-guard' as PartyId;
 
 /**
  * Phase-B follow-up — a leveled unit's combat-relevant level facts,
@@ -111,7 +111,7 @@ export interface InjectResult {
   readonly report: InjectReport;
 }
 
-const slotCapForParty = (partyId: PartyId): number =>
+export const slotCapForParty = (partyId: PartyId): number =>
   partyId === QUEEN_GUARD_PARTY_ID ? QUEEN_GUARD_SLOT_CAP : PARTY_SLOT_CAP;
 
 /**
