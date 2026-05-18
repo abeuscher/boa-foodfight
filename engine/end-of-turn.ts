@@ -13,12 +13,13 @@
  * surface and is expected to come from the shared replay tick clock.
  */
 
+import { resolveAbilityParam } from './abilities.ts';
 import { decayCardBuffs } from './cards.ts';
 import { applyCharismaPromotions } from './charisma.ts';
 import { distance, sameCoord } from './coord.ts';
 import { discoverItems } from './items.ts';
 import { PHASE_LENGTH } from './phase.ts';
-import type { ItemsFile, JellyFile, QueenFile } from './schemas/index.ts';
+import type { AbilitiesFile, ItemsFile, JellyFile, QueenFile } from './schemas/index.ts';
 import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
   AbilityId,
@@ -43,6 +44,10 @@ import type {
 } from './types.ts';
 
 const HYPNOTIZE_REBOUND_IMMUNITY = 10;
+/** Engine dep #10 — id used to look up the hypnotize
+ * `reboundImmunityTurns` param in the loaded abilities file when the
+ * scenario opts in. */
+const HYPNOTIZE_ABILITY = 'hypnotize' as AbilityId;
 const STINKBUG_TEMPLATE_ID = 'stinkbug' as UnitTemplateId;
 /** The ant-mage recruit ability. A living ant unit whose template
  * grants this is a "recruiter"; when none remain the recruit-count
@@ -67,6 +72,14 @@ export interface EndOfTurnInput {
    * consumable effects on pickup. Optional for backwards compat with
    * pre-round-14 callers (in which case discovery is skipped). */
   readonly items?: ItemsFile;
+  /**
+   * Engine dependency #10 — loaded `abilities.json`. Only consulted
+   * for the hypnotize `reboundImmunityTurns` param, and ONLY when the
+   * scenario opts in via `state.abilityParamsAuthoritative` (docs
+   * §4g). Optional / unused on every shipped scenario, so the
+   * rebound-immunity tick stays the hardcoded constant and the
+   * gate-29 locked baseline is byte-identical. */
+  readonly abilities?: AbilitiesFile;
 }
 
 export interface EndOfTurnOutcome {
@@ -949,6 +962,20 @@ export const endOfTurn = (
   //       `hypnotize-rebound-started`.
   //       spiderImmunityRemaining > 0 (without active hypnosis) →
   //       decrement; immunity expires when it hits 0.
+  // Engine dep #10 — opt-in: the rebound-immunity window length is
+  // the hypnotize ability's `reboundImmunityTurns` param when the
+  // scenario sets `abilityParamsAuthoritative`, else the hardcoded
+  // constant verbatim. `resolveAbilityParam` returns the constant
+  // unconditionally on the flag-off path (without inspecting the data
+  // file), so every shipped scenario / the gate-29 baseline is
+  // byte-identical. Pure value substitution; this tick has no RNG.
+  const reboundImmunityTurns = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    input.abilities,
+    HYPNOTIZE_ABILITY,
+    'reboundImmunityTurns',
+    HYPNOTIZE_REBOUND_IMMUNITY,
+  );
   const newStatus = new Map<PartyId, NeutralStatus>();
   for (const [id, status] of working.neutralStatus) {
     let next: NeutralStatus = status;
@@ -959,7 +986,7 @@ export const endOfTurn = (
           ...status,
           hypnotizedBy: null,
           hypnoticControlRemaining: 0,
-          spiderImmunityRemaining: HYPNOTIZE_REBOUND_IMMUNITY,
+          spiderImmunityRemaining: reboundImmunityTurns,
         };
         events.push({
           kind: 'hypnotize-rebound-started',

@@ -458,6 +458,14 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const victoryCondition: VictoryCondition =
     vcData === undefined ? DEFAULT_VICTORY_CONDITION : toVictoryCondition(vcData);
 
+  // Engine dependency #10 — opt-in: when the map declares
+  // `abilityParamsAuthoritative: true`, the hypnotize/recruit handlers
+  // read their tuning from the loaded `abilities.json` instead of the
+  // hardcoded constants (docs §4g). Absent / false on every shipped
+  // map (`data/level-1..8`), so the hardcoded path — and the gate-29
+  // locked baseline — is byte-identical.
+  const abilityParamsAuthoritative = randomizedMap.abilityParamsAuthoritative === true;
+
   const state: GameState = {
     turn: 0,
     seed,
@@ -482,6 +490,7 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     cardDeck: initialMarket.cardDeck,
     spiderBlitzMode,
     victoryCondition,
+    abilityParamsAuthoritative,
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({

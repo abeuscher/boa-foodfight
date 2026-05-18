@@ -801,6 +801,19 @@ export interface GameState {
    * L1 path stays byte-identical.
    */
   readonly victoryCondition?: VictoryCondition;
+  /**
+   * Engine dependency #10 — opt-in scenario flag (resolved from
+   * `map.json` at load time, `engine/state.ts`). When `true`, the
+   * hypnotize + recruit handlers (and the rebound-immunity application
+   * point in `end-of-turn.ts`) read their tuning params from the
+   * loaded `abilities.json` def instead of the hardcoded module
+   * constants — closing the docs §4g "abilities.json hypnotize/recruit
+   * params are inert" finding. Optional for backwards compatibility:
+   * absent / `false` (every shipped map + hand-built test state) ⇒ the
+   * historical hardcoded constants are used on the identical code path,
+   * so L1–L7 and the gate-29 locked baseline are byte-identical.
+   */
+  readonly abilityParamsAuthoritative?: boolean;
   readonly winner: Faction | null;
 }
 

@@ -63,6 +63,38 @@ const HYPNOTIZE_MIN_TURNS = 5;
 const HYPNOTIZE_MAX_TURNS = 10;
 export const HYPNOTIZE_REBOUND_IMMUNITY = 10;
 
+/**
+ * Engine dependency #10 — defensively resolve a single numeric tuning
+ * param for hypnotize / recruit (docs §4g). This is a pure value
+ * substitution: it never touches RNG, ordering, or any other ability.
+ *
+ *   - `authoritative` false / absent (the default — every shipped
+ *     scenario and hand-built test state): return `fallback` (the
+ *     hardcoded module constant) unconditionally, WITHOUT inspecting
+ *     `abilities` at all. The flag-off path is therefore provably
+ *     byte-identical to the pre-dep-#10 code — the same constant value
+ *     flows into the same expression.
+ *   - `authoritative` true: look up the ability def in the loaded
+ *     `abilities.json`; if `params[key]` is a finite number use it,
+ *     otherwise fall back to `fallback` (data-missing ⇒ deterministic
+ *     hardcoded behavior, never NaN/undefined).
+ *
+ * Scope is strictly hypnotize + recruit at the call sites; this helper
+ * has no side effects and is RNG-free.
+ */
+export const resolveAbilityParam = (
+  authoritative: boolean | undefined,
+  abilities: AbilitiesFile | undefined,
+  abilityId: AbilityId,
+  key: string,
+  fallback: number,
+): number => {
+  if (authoritative !== true || !abilities) return fallback;
+  const def = abilities.abilities.find((a) => a.id === abilityId);
+  const raw = def?.params[key];
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : fallback;
+};
+
 export const partyHasAbility = (
   party: Party,
   abilityId: AbilityId,
@@ -152,6 +184,16 @@ interface HandlerArgs {
   damageZones: DamageZone[];
   tick: () => number;
 }
+
+/**
+ * Args for the RNG-driven neutral-control handlers (hypnotize +
+ * recruit). Both need the forked `rng` and — engine dep #10 — the
+ * loaded `abilities` file (consulted only when the scenario opts in
+ * via `state.abilityParamsAuthoritative`; `undefined` on the
+ * back-compat callers that don't load the full scenario). One alias
+ * keeps the two handler signatures from drifting.
+ */
+type NeutralRngArgs = HandlerArgs & { rng: Rng; abilities: AbilitiesFile | undefined };
 
 /** Drop the ability order from the issuing party. Used by every
  * handler when bailing out (missing ability, invalid target, etc.). */
@@ -378,6 +420,7 @@ const recruitNeutral = (args: {
   rng: Rng;
   target: Party;
   targetKind: NeutralKind;
+  abilities: AbilitiesFile | undefined;
 }): HandlerResult => {
   const {
     party,
@@ -391,9 +434,20 @@ const recruitNeutral = (args: {
     rng,
     target,
     targetKind,
+    abilities,
   } = args;
   const events: ReplayEvent[] = [];
-  const success = rng.next() < RECRUIT_SUCCESS_RATE;
+  // Engine dep #10 — opt-in: data-authoritative recruit success rate
+  // when the scenario sets the flag, else the hardcoded constant
+  // (byte-identical on the flag-off path). RNG draw is unchanged.
+  const recruitSuccessRate = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    abilities,
+    RECRUIT,
+    'successRate',
+    RECRUIT_SUCCESS_RATE,
+  );
+  const success = rng.next() < recruitSuccessRate;
   events.push(abilityUsedEvent(state, party.id, RECRUIT, tick));
   events.push({
     kind: 'recruit-attempted-neutral',
@@ -428,9 +482,35 @@ const recruitNeutral = (args: {
  * Auto-fail (silently consume) when the neutral is currently
  * hypnotized OR has rebound immunity remaining.
  */
-const handleHypnotize = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
+const handleHypnotize = (args: NeutralRngArgs): HandlerResult => {
   const { party, slot, state, parties, webbedTiles, neutralStatus, damageZones, tick, rng } = args;
+  const { abilities } = args;
   const events: ReplayEvent[] = [];
+  // Engine dep #10 — opt-in: data-authoritative hypnotize tuning when
+  // the scenario sets `abilityParamsAuthoritative`, else the hardcoded
+  // constants verbatim (byte-identical flag-off path). Pure numeric
+  // substitution — the RNG draw sequence below is unchanged.
+  const hypnotizeSuccessRate = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    abilities,
+    HYPNOTIZE,
+    'successRate',
+    HYPNOTIZE_SUCCESS_RATE,
+  );
+  const hypnotizeMinTurns = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    abilities,
+    HYPNOTIZE,
+    'minControlTurns',
+    HYPNOTIZE_MIN_TURNS,
+  );
+  const hypnotizeMaxTurns = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    abilities,
+    HYPNOTIZE,
+    'maxControlTurns',
+    HYPNOTIZE_MAX_TURNS,
+  );
   if (party.faction !== 'spider') {
     consumeOrder(party, slot, parties);
     return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
@@ -470,12 +550,14 @@ const handleHypnotize = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
   const newUnits = party.units.map((u) =>
     u.id === caster.id ? { ...u, currentHp: casterHpAfter } : u,
   );
-  const success = rng.next() < HYPNOTIZE_SUCCESS_RATE;
+  const success = rng.next() < hypnotizeSuccessRate;
   // Compute control duration unconditionally (the RNG is consumed
   // either way) but only apply on success. This keeps replay-stream
   // RNG draws aligned across success/fail branches for a given seed.
-  const controlSpan = HYPNOTIZE_MAX_TURNS - HYPNOTIZE_MIN_TURNS + 1;
-  const controlTurns = HYPNOTIZE_MIN_TURNS + rng.int(controlSpan);
+  // Dep #10: the `min + rng.int(max - min + 1)` shape is unchanged —
+  // only `min`/`max` may be data-sourced when the scenario opts in.
+  const controlSpan = hypnotizeMaxTurns - hypnotizeMinTurns + 1;
+  const controlTurns = hypnotizeMinTurns + rng.int(controlSpan);
   events.push(abilityUsedEvent(state, party.id, HYPNOTIZE, tick));
   events.push({
     kind: 'hypnotize-attempted',
@@ -507,8 +589,9 @@ const handleHypnotize = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
   return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
 };
 
-const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
+const handleRecruit = (args: NeutralRngArgs): HandlerResult => {
   const { party, slot, state, parties, webbedTiles, neutralStatus, damageZones, tick, rng } = args;
+  const { abilities } = args;
   const events: ReplayEvent[] = [];
   if (!partyHasAbility(party, RECRUIT, state.unitTemplates)) {
     consumeOrder(party, slot, parties);
@@ -537,6 +620,7 @@ const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
         rng,
         target,
         targetKind: status.kind,
+        abilities,
       });
     }
   }
@@ -546,7 +630,17 @@ const handleRecruit = (args: HandlerArgs & { rng: Rng }): HandlerResult => {
     events.push(abilityUsedEvent(state, party.id, RECRUIT, tick));
     return { nextParties: parties, nextWebbedTiles: webbedTiles, events, handled: true };
   }
-  const success = rng.next() < RECRUIT_SUCCESS_RATE;
+  // Engine dep #10 — opt-in: data-authoritative recruit success rate
+  // (legacy enemy-spider branch), else the hardcoded constant. RNG
+  // draw is unchanged; flag-off path is byte-identical.
+  const recruitSuccessRate = resolveAbilityParam(
+    state.abilityParamsAuthoritative,
+    abilities,
+    RECRUIT,
+    'successRate',
+    RECRUIT_SUCCESS_RATE,
+  );
+  const success = rng.next() < recruitSuccessRate;
   events.push({
     kind: 'ability-used',
     turn: state.turn,
@@ -803,7 +897,7 @@ export const resolveAbilityOrders = (
         r = handleSpinWeb(baseArgs);
         break;
       case RECRUIT:
-        r = handleRecruit({ ...baseArgs, rng });
+        r = handleRecruit({ ...baseArgs, rng, abilities });
         break;
       case SPAWN_SPIDERLINGS:
         r = handleSpawnSpiderlings(baseArgs);
@@ -812,7 +906,7 @@ export const resolveAbilityOrders = (
         r = handleScoutPing(baseArgs);
         break;
       case HYPNOTIZE:
-        r = handleHypnotize({ ...baseArgs, rng });
+        r = handleHypnotize({ ...baseArgs, rng, abilities });
         break;
       case WEB_MEND:
         r = handleWebMend({ ...baseArgs, abilities });
