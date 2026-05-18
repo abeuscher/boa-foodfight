@@ -782,6 +782,22 @@ Where this roadmap defers to other docs:
   gameplay rulings (its §0/§D). "One playback layer" = shared
   event/timing layer + a NEW spatial renderer (its §B). Parallel UX
   track; does not block Phase-D.
+- **`docs/ui-main-screen-spec.md`** (RECORDED, forward spec): the
+  first per-view UI spec — the default cube-view play screen
+  (three-zone layout, active+splayed faces, left roster, right
+  contextual actions, HUD pod, notification strip, order lifecycle,
+  RTWP "Advancing time"). Engine-reconciled (2-turn capture pip,
+  turn-granularity order clearing, no valid-tile glow per §A.3,
+  conquest=no-timer / mission=thematic per pacing §B, Attack/Recall
+  quarantined per §0). **Supersedes UI memo §A.4** re the right-rail
+  Confirm/Clear (reciprocal note in §A.4). Companion to the cube-view
+  memo; forward/dormant — does not block Phase-D.
+- **`docs/playability-critic-rubric.md`** (RECORDED, forward spec):
+  authoritative Playability Critic rubric — two player-agent loops
+  (competent/naive), determinism fence, per-criterion activation
+  gates, "do not relitigate" guardrails (§A.3 / §4c–§4e balance).
+  Dormant until the UI + player-agent harness exist; does not block
+  Phase-D.
 - **`docs/design-memo-pacing-and-turn-cap.md`** (RECORDED, post-Phase-D
   L4): real-time-with-pause pacing; stalemate as a real third outcome
   (NOT score-resolved); L1 exempt on the tutorial/anchor ground (also
