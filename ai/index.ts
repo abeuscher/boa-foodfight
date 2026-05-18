@@ -10,6 +10,7 @@ import { baselineL4Player } from './baseline-l4.ts';
 import { baselineL5Player } from './baseline-l5.ts';
 import { baselineL6Player } from './baseline-l6.ts';
 import { baselineL8Player } from './baseline-l8.ts';
+import { baselineL9Player } from './baseline-l9.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
@@ -25,6 +26,7 @@ import { spiderL4 } from './spider-l4.ts';
 import { spiderL5 } from './spider-l5.ts';
 import { spiderL6 } from './spider-l6.ts';
 import { spiderL8 } from './spider-l8.ts';
+import { spiderL9 } from './spider-l9.ts';
 import { spiderTutorial } from './spider-tutorial.ts';
 import { turtlePlayer } from './turtle.ts';
 import type { AIPolicy } from './types.ts';
@@ -62,7 +64,10 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
  * hunter — a standalone hunt doctrine, NOT a capture-post chain-marcher)
  * and `baseline-l8` (the L8 / Attic RECRUIT-COUNT recruiter/racer — a
  * standalone recruit doctrine, also NOT a capture-post chain-marcher)
- * are registered here for the identical reason.
+ * are registered here for the identical reason. `baseline-l9` (the L9 /
+ * Basement capture-post chain-marcher → fuse-box, with the Sump-Pump as
+ * a chain link whose capture drains the dynamic-hazard basin) is
+ * registered here for the same load-bearing reason.
  */
 export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'escort-l2': escortL2Player,
@@ -72,6 +77,7 @@ export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'baseline-l5': baselineL5Player,
   'baseline-l6': baselineL6Player,
   'baseline-l8': baselineL8Player,
+  'baseline-l9': baselineL9Player,
 };
 
 /**
@@ -89,6 +95,7 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l5': spiderL5,
   'spider-l6': spiderL6,
   'spider-l8': spiderL8,
+  'spider-l9': spiderL9,
 };
 
 export {
@@ -97,6 +104,7 @@ export {
   baselineL5Player,
   baselineL6Player,
   baselineL8Player,
+  baselineL9Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -112,6 +120,7 @@ export {
   spiderL5,
   spiderL6,
   spiderL8,
+  spiderL9,
   spiderTutorial,
   turtlePlayer,
 };

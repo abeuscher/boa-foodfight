@@ -571,6 +571,55 @@ those params, and must NOT budget an un-opted ability-param delta as
 a curve lever. Sibling to §4c–§4f; unlike them this one is
 **resolved** (the lever is now live, opt-in), not merely tracked.
 
+## 4h. L9 grandfathered + the systemic late-tier-curve finding
+
+**L9 (Basement) — human ruling, GRANDFATHERED at ~37%.** L9 was
+falsified twice (binding 2-clause doctrine → 22% bistable; then the
+GPA-sanctioned Level-side basin re-placement onto the actual assault
+route → the ruled `damage:1` genuinely integrates, both doctrine
+clauses fully seed-robust [pump-flip 100/100, spider re-take 96/100],
+yet the contested-fortress capture-post is **structurally bistable**:
+~14–45% [fuse-box +5def/+2heal holds] or ~81–100% [overrun], a
+~40-pt dead-zone with no config near the ruled [52,54]). No ruled
+value fudged, no clause weakened, all invariants green. Human
+decision: **ship L9 at its defensible lower-regime ~37%** — a
+deliberate **"brutal basement" trough** and a conscious **§5 curve
+inversion** (L9 ~37 sits _below_ the L10 ~50 climax). The L9
+ship-gate is amended (see `docs/debate/l9-gameplay-pa-arbitration.md`
+§GRANDFATHERED): interest ≥75 (87 ✓) + both doctrine clauses
+seed-robust (✓) + decisive (✓); the [52,54] win-band is **withdrawn
+for L9**. Ruled invariants otherwise intact; gate-29 byte-identical;
+L1–L8 no-regression.
+
+**Curve, amended (L7 parked, L9 inverted):**
+L1 ~75(spec) · L2 76 · L3 67 · L4 60 · L5 66 · L6 56 ·
+**L7 PARKED** (no shippable value; §4f) · **L8 51** ·
+**L9 ~37 (grandfathered trough, below the L10 climax)** ·
+L10 ~50 (climax, pending). The monotone-descent intent of §5 holds
+through L6; the late tier is shaped by structural reality, not the
+original illustrative numbers.
+
+**Systemic finding (RECORDED; holistic decision DEFERRED to the
+consolidated review).** Three late-tier scenarios, three different
+structural blocks, one root class — **the §5 late-tier (L7–L10) win
+targets are not reliably reachable for these scenario designs under
+the frozen engine + locked AI doctrine**, because a ruled
+mechanic's leverage keeps being mis-estimated relative to what the
+AI doctrine actually exercises (the §4d/§4e/§4g / L7-card-host /
+L9-bistable-fortress family): L7 PARKED (4 falsifications, design
+space empty); L8 needed a RE-ARBITRATION (the GPA itself flagged
+late-tier tightness; succeeded after the band was re-ruled with the
+measured reality); L9 GRANDFATHERED (structurally bistable; no
+in-band config exists). This is the headline Tier-1-retrospective
+input. The holistic late-tier-curve policy decision — re-baseline
+the §5 late curve to measured-achievable bands / accept the parked
+
+- grandfathered shape / a deeper engine-or-AI-doctrine investment —
+  is the user's, taken at the post-L10 consolidated end-of-Phase-D
+  review with the complete 10-level achievable-vs-target picture.
+  Not re-decided per level; L9's grandfather is the pragmatic per-level
+  ship, not the systemic resolution.
+
 ---
 
 ## 5. Deviations from §4.1
