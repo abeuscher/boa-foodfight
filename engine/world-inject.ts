@@ -21,7 +21,7 @@
  * posture. If a carried party shrank (units died last scenario) the
  * party is rebuilt smaller. If a scaffold party has no surviving
  * carried units it is dropped entirely (so a wiped vanguard doesn't
- * respawn for free). The 8-slot cap (12 for the queen guard) is
+ * respawn for free). The 9-slot cap (12 for the queen guard) is
  * enforced — overflow carried units are trimmed deterministically
  * (roster order) and reported.
  *
@@ -61,8 +61,10 @@ import type { GameState, Party, PartyId, Unit, UnitId, UnitTemplate } from './ty
 import { cumulativeLevelBonus } from './world-levelup.ts';
 import type { WorldRoster } from './world-state.ts';
 
-/** Default party slot cap in Tier 1 (game-outline "Campaign structure"). */
-const PARTY_SLOT_CAP = 8;
+/** Default party slot cap in Tier 1. Raised 8→9 per the UX↔Gameplay
+ * change request (roadmap §7.5): a ceiling for legible 3×3 rendering,
+ * not a mandate to fill — authored rosters keep their compositions. */
+const PARTY_SLOT_CAP = 9;
 /** The queen-guard's exceptional 12-slot capacity (game-outline). */
 const QUEEN_GUARD_SLOT_CAP = 12;
 const QUEEN_GUARD_PARTY_ID = 'queen-guard' as PartyId;

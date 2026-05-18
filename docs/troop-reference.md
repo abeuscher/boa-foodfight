@@ -112,21 +112,22 @@ are never standalone; they live in a party.
 `engine/schemas/roster.ts`, `data/level-N/roster-ants.json` /
 `roster-spiders.json`. Each party:
 
-| Field              | Notes                                                                |
-| ------------------ | -------------------------------------------------------------------- |
-| `id`               | Unique within the faction roster                                     |
-| `leaderClass`      | A leader class id (§9)                                               |
-| `leaderIndex`      | Index into `units` marking which unit is the leader                  |
-| `slotCapacity`     | **Queen's home party = 12; standard parties = 8** (Tier-1 party cap) |
-| `units`            | List of `{ templateId, count }`                                      |
-| `startingLocation` | `{ plane, x, y }`                                                    |
-| `posture`          | `run` \| `fight` \| `defend`                                         |
+| Field              | Notes                                                                                                 |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `id`               | Unique within the faction roster                                                                      |
+| `leaderClass`      | A leader class id (§9)                                                                                |
+| `leaderIndex`      | Index into `units` marking which unit is the leader                                                   |
+| `slotCapacity`     | **Queen's home party = 12; standard-party ceiling = 9** (roadmap §7.5; a ceiling, not a fill mandate) |
+| `units`            | List of `{ templateId, count }`                                                                       |
+| `startingLocation` | `{ plane, x, y }`                                                                                     |
+| `posture`          | `run` \| `fight` \| `defend`                                                                          |
 
 **Capacity rule:** the sum of each member's `slotCost` must fit within
-`slotCapacity`. A standard 8-slot party = 8 small units, or e.g. 4 small
-
-- 2 medium, etc. The queen's party is 12 to seat the huge (slot-4) queen
-  plus a guard.
+`slotCapacity`. The standard-party ceiling is **9** (raised 8→9 per
+roadmap §7.5 for legible 3×3 rendering — a ceiling, not a fill mandate;
+authored rosters keep their compositions, many still summing ≤8). A
+9-slot party = up to 9 small units, or e.g. 3 small + 3 medium. The
+queen's party is 12 to seat the huge (slot-4) queen plus a guard.
 
 **Runtime party (engine state during a scenario):**
 `engine/types.ts:489` (`Party`). Adds: `units` (full `Unit` objects with
@@ -274,7 +275,7 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   `partyAssignments` (how they're grouped). It is **ant-only** (you
   organize your colony; the opponent is scenario-authored). The
   capacity rule (§4) applies to `partyAssignments`: each party's
-  members' total `slotCost` must fit 8 (12 for the queen-guard party).
+  members' total `slotCost` must fit 9 (12 for the queen-guard party).
 
 - **Backend operators the org UI will call — STATUS.** The persistence
   _model_ exists and is complete, but several _mutation operators_ a

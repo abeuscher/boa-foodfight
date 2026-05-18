@@ -677,6 +677,23 @@ tuning; the new Progression Agents operate **across** scenarios for
 distribution. The Gameplay PA _commissions_ the within-scenario loop on a
 given scenario, with a curve target.
 
+### 7.5 Standard party slot capacity (8 → 9 ceiling)
+
+Cross-track change request (UX→Gameplay, exchange #1; full prose in
+`docs/change-request-protocol.md` §5). UX needs the Organize Army UI to
+render parties legibly (a 3×3 grid). Resolution: standard-party
+`slotCapacity` ceiling is **9** (queen-guard unchanged at 12). 9 is a
+**ceiling, not a mandate** — per-scenario rosters keep their authored
+compositions, so starting armies stay byte-identical and the §5
+win-rate curve / gate-29 are unaffected. The formation-slot system
+(front/back/reserve, `engine/formation.ts`) is **untouched** — it runs
+inside deterministic scenario execution and is freeze-bound.
+"Middle rank as a tactical mechanic" was bundled in the request and is
+explicitly **parked** as a separate future change request to be weighed
+against engine-freeze policy on its own merits. Embodied:
+`engine/world-inject.ts` `PARTY_SLOT_CAP` 8→9; `harness/reconciler.ts`
+Tier-1 authoring guard `>8`→`>9`.
+
 ---
 
 ## 8. Open questions

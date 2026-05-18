@@ -13,7 +13,8 @@ const startingPartySchema = z.object({
   leaderClass: idSchema,
   /** Index into `units` identifying which unit is the leader. */
   leaderIndex: z.number().int().nonnegative(),
-  /** Total slot capacity. Queen's party = 12 in Level 1; standard parties = 8. */
+  /** Total slot capacity. Queen's party = 12; standard-party ceiling = 9
+   * (raised 8→9 per roadmap §7.5; a ceiling, not a fill mandate). */
   slotCapacity: z.number().int().min(1),
   units: z.array(startingUnitSchema).min(1),
   startingLocation: tileCoordSchema,
