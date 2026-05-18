@@ -694,6 +694,28 @@ against engine-freeze policy on its own merits. Embodied:
 `engine/world-inject.ts` `PARTY_SLOT_CAP` 8→9; `harness/reconciler.ts`
 Tier-1 authoring guard `>8`→`>9`.
 
+### 7.6 Engine-freeze transition (frozen → golden-master-gated)
+
+Cross-track change request (UX→Gameplay, exchange #2; full prose in
+`docs/change-request-protocol.md` §5), disposition **counter-proposed**.
+The L1–L10 freeze succeeded and is not revoked retroactively; its phase
+is over. Resolution: the **deterministic combat-sim path** moves from
+_frozen_ to **golden-master-gated** — sim-path changes are admissible
+but each is a Template A request requiring a deliberately re-baselined
+replay set, an explicit L1–L10 balance-curve re-check, and review (the
+Phase-D discipline as standing policy). Litmus: _does it change the
+bytes `runScenario` produces under a fixed seed?_ No → ungated; yes →
+gated. The **between-scenario / world-loop layer is outside the sim
+freeze** (functionally always was) — built under normal behavioral
+testing, no gate, proceeds now. Gate-29 / byte-identical replays are
+**retained and repurposed** as the sim-path change-detection tripwire,
+**not decommissioned**. Schemas (`engine/schemas/*.ts`) and the type
+model (`engine/types.ts`) remain hard-stable. The post-UI
+"plays-the-same" validation instrument is deferred to a separate scoped
+spike. Consequence: §7.5's parked middle-rank-as-mechanic is
+**un-parked** — now a fileable gated sim-path request, naturally
+sequenced after the Organize Army spec.
+
 ---
 
 ## 8. Open questions

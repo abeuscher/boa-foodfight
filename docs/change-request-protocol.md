@@ -1,6 +1,8 @@
 # Change-Request Protocol (UX ↔ Gameplay/Engine)
 
-**Status:** Canonical, living. This is the single home for the
+**Status:** Canonical, living, **official** — ratified as the standing
+cross-track process as of Exchange #2 (two exchanges resolved under it).
+This is the single home for the
 cross-track change-request _process_ and the _exchange log_. Resolved
 _decisions_ live in `roadmap-tier-1.md` §7 "Tensions resolved" (this doc
 points at them; it does not duplicate them). Structure is fixed —
@@ -140,6 +142,63 @@ front/middle/back).
 comments updated. Middle-rank-as-mechanic **parked** as a future
 standalone request, to be weighed explicitly against engine-freeze
 policy after the Organize Army spec lands.
+
+### Exchange #2 — Engine-freeze transition (frozen → golden-master-gated)
+
+**Request (UX):** transition the engine frozen → "gated-open": (1)
+acknowledge the freeze succeeded, (2) engine modification re-enters the
+change-request flow as a priced item rather than categorically
+out-of-scope, (3) renegotiate the byte-identical-replay testing
+instrument for the UI era. Schemas/type model stay stable.
+Precedent-setting; non-blocking.
+
+**Reply (Dev) — Disposition: Counter-proposed.**
+
+- **Decision.** Yes to a deliberate phase transition; no to the implied
+  broad-open mechanism and to retiring byte-identical replays. Frozen →
+  **golden-master-gated**, scoped precisely to the deterministic sim
+  path.
+- **Cost decomposition.**
+  - Posture transition (freeze succeeded; engine changes become
+    priceable, not categorically barred): **Cheap** — policy, no code.
+  - World-loop / between-scenario layer declared _not under the sim
+    freeze_: **Free / already true.** Never executed inside
+    `runScenario`; built without breaking gate-29 twice already.
+    Unblocks all operator work now.
+  - Sim-path changes become golden-master-gated (Template A +
+    re-baselined replay set + explicit L1–L10 balance re-check +
+    review): **Moderate, per-change.** Phase-D discipline promoted from
+    ad-hoc to policy, not a new philosophy.
+  - New UI-experience test instrument ("plays the same" not "bytes the
+    same"): **Unknown — deferred to a scoped spike**, held as a
+    separate follow-up per requester's election.
+- **Invariant impact.** This decision _defines_ how invariant impact is
+  handled henceforth. Litmus: _does the change alter the bytes
+  `runScenario` produces under a fixed seed?_ No → ungated; yes →
+  admissible but gated (re-baseline + balance re-check + review).
+  Gate-29 is **retained and repurposed** as the change-detection
+  tripwire that forces the deliberate-re-baseline conversation —
+  explicitly **not** decommissioned. Trustworthy numbers are protected
+  by making every sim-path change loud and deliberate, not by
+  forbidding change.
+- **Counter-proposal.** Three-layer model: schemas/types hard-stable;
+  world-loop layer ungated (build now); sim path golden-master-gated.
+  UI-experience instrument → separate scoped spike; the posture
+  decision does not block on it.
+- **Confirms (returned, closed):** gated-open = golden-master-gated for
+  the sim path specifically ✓; world-loop operators proceed now,
+  decoupled ✓; UI-experience test spike held as a separate follow-up ✓.
+- **Decision record:** roadmap §7.6. No code (posture/policy only;
+  gate-29 unchanged).
+
+**Outcome:** Resolved. Engine posture: frozen → **golden-master-gated**,
+effective now. World-loop operator work unblocked immediately and
+decoupled from any further posture question. Exchange #1's parked
+middle-rank-as-mechanic is hereby **un-parked** — fileable as a normal
+gated sim-path request (Exchange #3), naturally sequenced after the
+Organize Army spec. UI-experience "plays-the-same" validation
+instrument: separate scoped spike, to be proposed as a standalone
+follow-up. Recorded in `roadmap-tier-1.md` §7.6.
 
 ---
 
