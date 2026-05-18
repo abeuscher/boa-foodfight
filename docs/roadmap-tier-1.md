@@ -802,6 +802,24 @@ Where this roadmap defers to other docs:
   the latter a build-time `battle.ts` verify). Couples to the
   not-yet-written party-detail spec (unit drill-down). Forward/dormant
   — does not block Phase-D.
+- **`docs/ui-party-detail-spec.md`** (RECORDED, forward spec): the
+  third per-view UI spec — the read-only inspection side-panel
+  (formation preview, party-level modifier stack, unit drill-down,
+  current-order/face-indicator, reserved future-editing region).
+  Engine-grounded (ability source = `units.json` template list via
+  `engine/abilities.ts`, NOT `battle-abilities.ts`; values
+  scenario-resolved per §4g); no map-thumbnail (§A.4 no-minimap
+  honored); closes the open coupling from the main-screen "Inspect"
+  and the battle-mode click-unit (OQ#5). Forward/dormant.
+- **`docs/ui-end-of-scenario-spec.md`** (RECORDED, forward spec): the
+  fourth per-view UI spec — the outcome/debrief takeover. Separates
+  outcome label (Victory/Defeat/Stalemate) from resolution path
+  (decisive / mission-timeout / score-resolved per §A.3+round-19 /
+  Stalemate-terminal forward-§D); engine-truthful reveal timing
+  (deciding combat plays its battle panel first); stats
+  engine-surfaced only; "stalemate" reserved per the battle-mode
+  vocabulary note; L1 permanently score-resolved (§A.3). Completes
+  the four-spec per-view set. Forward/dormant.
 - **`docs/playability-critic-rubric.md`** (RECORDED, forward spec):
   authoritative Playability Critic rubric — two player-agent loops
   (competent/naive), determinism fence, per-criterion activation
