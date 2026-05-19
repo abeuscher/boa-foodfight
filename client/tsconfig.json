@@ -3,7 +3,8 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -20,23 +21,7 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["react", "react-dom"]
   },
-  "include": [
-    "engine/**/*",
-    "data/**/*",
-    "ai/**/*",
-    "harness/**/*",
-    "critics/**/*",
-    "viewer/**/*",
-    "client/scripts/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "out",
-    "viewer/dist",
-    "viewer/viewer.spec.ts",
-    "viewer/playwright.config.ts"
-  ]
+  "include": ["src/**/*"]
 }

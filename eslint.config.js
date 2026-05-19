@@ -18,6 +18,13 @@ export default tseslint.config(
       // Playwright spec uses @playwright/test; lint config can't easily handle both.
       'viewer/viewer.spec.ts',
       'viewer/playwright.config.ts',
+      // Browser client: own tsconfig (DOM + JSX), typechecked via
+      // `pnpm typecheck:client`. The flat config's typed/React rules
+      // don't apply here, same segregation as viewer browser code.
+      // `client/scripts/**` (Node fixture tooling) stays linted.
+      'client/src/**',
+      'client/dist/**',
+      'client/vite.config.ts',
     ],
   },
   ...tseslint.configs.recommendedTypeChecked,
