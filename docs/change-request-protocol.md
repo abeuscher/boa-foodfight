@@ -389,6 +389,50 @@ one arrival level is the recorded human design ruling. Per-level
 catalog content is the deferred design pass. Recorded
 `roadmap-tier-1.md` §7.10.
 
+### Exchange #8 — Reinforcement-at-POST
+
+**Request (UX):** capturing a designated POST spawns a scenario-data
+party. Reusable across L1–L10; L0's G14 is the first consumer.
+Routed as the §7.12 CR; PM ruled the gameplay questions.
+
+**Reply (Dev) — Disposition: Accepted + decomposed (first gated
+sim-path mechanic in the series).**
+
+- **Decisive framing.** Exchanges #4–#6 were ungated world-loop
+  layer. This hooks capture resolution (`engine/post-capture.ts`,
+  inside `runScenario`) → §7.6 golden-master-gated. Followed the
+  gated discipline: Template A → review → implement → **byte-identity
+  proof** → record. Cheap-gated, not expensive: guarded so the new
+  branch is unreachable on every shipped scenario (no roster has
+  `reinforcements`), byte-identical by construction (dep-#9 /
+  `levelBonus` / §7.9 precedent).
+- **Cost (delivered ≈ as decomposed):** optional `reinforcements` on
+  the roster file (refinement: sibling to `parties`, not nested in a
+  starting party — better home, still no 12th file, still
+  backward-compatible); load-time build into `GameState.reinforcements`
+  (party fully built at load → sim-time hook is a pure insert, no
+  templates/abilities threaded into the sim); the guarded
+  `post-capture.ts` hook; `reinforcement-spawned` event; shared
+  `buildUnit` helper (keeps `buildParties` ids byte-identical, kills
+  the would-be duplication).
+- **PM rulings built:** capture-complete; configurable arrival POST
+  (default captured); configurable faction; single-shot
+  (`firedReinforcements`); named pre-defined inline. **Deferred:**
+  capture-initiate, pool-model — non-breaking later CR.
+- **Engine-truth confirmed (verified):** no start==end party
+  assumption; AI/score/victory read live `state.parties`; generic AI
+  needs no change (L0's Beatrice-squad scripted behavior is the
+  separate `SCENARIO_PLAYER_AIS` L0 dependency); UX auto-pause
+  consumes the event (engine emits only).
+- **Decision record:** roadmap §7.12.
+
+**Outcome:** Resolved + shipped. Byte-identity proof: full suite
+**732/732** (replay-snapshot / replay-determinism / world-loop green;
++3 new tests only), 0 jscpd clones, typecheck clean. The sim-path
+change is provably inert on every shipped scenario. L0's G14
+unblocked (L0 still gated on its own Exchange #7 / §7.11). Recorded
+`roadmap-tier-1.md` §7.12.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are

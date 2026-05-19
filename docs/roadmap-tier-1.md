@@ -839,6 +839,49 @@ here (not a dev contract). 729/729, gate-29 intact. Next backend
 items unchanged: world-inject formation honoring → §7.8 extract-merge
 → multi-item shop.
 
+### 7.12 Reinforcement-at-POST (first gated sim-path mechanic)
+
+Cross-track change request (UX→Gameplay, exchange #8; full prose in
+`docs/change-request-protocol.md` §5). (§7.11 — L0 prologue, Exchange
+#7 — records separately; it references this as a forward dependency
+and does not need to precede it.) Disposition **accepted +
+decomposed**. Capturing a designated POST spawns a scenario-data
+party at the captured (or a configured) POST.
+
+**First mechanic since Exchange #4 to touch the frozen sim path.**
+Exchanges #4–#6 were ungated world-loop layer; the capture-complete
+hook lives in `engine/post-capture.ts` (inside `runScenario`), so per
+§7.6 this is **golden-master-gated**. Resolved via the gated
+discipline: Template A (the CR) → review (the accepted
+decomposition) → implement → **byte-identity proof run** → record.
+The change is structured so the new branch is unreachable on every
+shipped scenario (no roster carries `reinforcements` ⇒ the
+`GameState.reinforcements` field is absent ⇒ guard false ⇒ zero
+parties/events/RNG) — gate-29 byte-identical **by construction**,
+same precedent as dep-#9 `goldPerTurn` / `levelBonus` / §7.9. Proof:
+full suite 732/732 (replay-snapshot, replay-determinism, world-loop
+all green; +3 new tests only).
+
+Shipped: optional `reinforcements` block on the **roster file**
+(`engine/schemas/roster.ts`, sibling to `parties` — a faithful
+refinement of the cost-decomposition's "optional field, no 12th
+file"; standalone-trigger fits the roster file, not a nested
+starting-party); built into a `GameState.reinforcements` map at load
+(`engine/state.ts`, party fully constructed there so the sim-time
+hook is a pure insert, no templates/abilities threaded into capture);
+the guarded `post-capture.ts` hook; a `reinforcement-spawned` replay
+event (UX-layer auto-pause consumes it — engine emits only). Shared
+`buildUnit` helper extracted so `buildParties` and the reinforcement
+builder can't diverge (buildParties' unit ids unchanged → shipped
+scenarios byte-identical).
+
+PM-ruled shape (per dev's priced recommendation): capture-complete
+trigger; configurable arrival POST (default = captured); configurable
+faction; single-shot per trigger POST (`firedReinforcements`); named
+pre-defined inline party. **Deferred** (non-breaking later CR):
+capture-initiate trigger; pool-model identity. L0's G14 consumes
+this; L0 cannot ship until §7.12 has landed (it now has).
+
 ---
 
 ## 8. Open questions

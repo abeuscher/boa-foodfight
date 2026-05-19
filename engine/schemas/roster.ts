@@ -21,11 +21,29 @@ const startingPartySchema = z.object({
   posture: postureSchema,
 });
 
+/**
+ * Roadmap §7.12 (Exchange #8) — reinforcement-at-POST. Capturing
+ * `triggerPostId` spawns `party` at `arrivalPostId` (default: the
+ * trigger POST). `faction` defaults to the roster's faction. The
+ * spawned party reuses the exact starting-party shape; its
+ * `startingLocation` is ignored — arrival is the resolved POST tile.
+ * Sibling to `parties` (not nested in a starting party) — the more
+ * sensible home for a standalone trigger, still backward-compatible,
+ * still no 12th loader file.
+ */
+const reinforcementDefSchema = z.object({
+  triggerPostId: idSchema,
+  arrivalPostId: idSchema.optional(),
+  faction: factionSchema.optional(),
+  party: startingPartySchema,
+});
+
 export const rosterFileSchema = z
   .object({
     version: z.literal(1),
     faction: factionSchema,
     parties: z.array(startingPartySchema).min(1),
+    reinforcements: z.array(reinforcementDefSchema).optional(),
   })
   .refine((file) => file.parties.every((p) => p.leaderIndex < p.units.length), {
     message: 'leaderIndex must be a valid index into units',

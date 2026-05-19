@@ -814,7 +814,41 @@ export interface GameState {
    * so L1–L7 and the gate-29 locked baseline are byte-identical.
    */
   readonly abilityParamsAuthoritative?: boolean;
+  /**
+   * Roadmap §7.12 (Exchange #8) — reinforcement-at-POST. Scenario-data
+   * configured parties that spawn when a designated POST completes
+   * capture, keyed by the trigger POST id. The `party` is fully built
+   * at load (`engine/state.ts`); the capture-complete hook in
+   * `engine/post-capture.ts` inserts it at the arrival POST. Optional
+   * and absent on every shipped scenario (no roster carries
+   * `reinforcements`), so the hook is provably inert and gate-29 stays
+   * byte-identical — same discipline as `victoryCondition` /
+   * `abilityParamsAuthoritative`.
+   */
+  readonly reinforcements?: ReadonlyMap<PostId, ReinforcementConfig>;
+  /**
+   * Roadmap §7.12 — single-shot tracking: trigger POST ids whose
+   * reinforcement has already fired this scenario. Absent/empty until
+   * a reinforcement spawns.
+   */
+  readonly firedReinforcements?: ReadonlySet<PostId>;
   readonly winner: Faction | null;
+}
+
+/**
+ * Roadmap §7.12 — a resolved reinforcement trigger. Built at scenario
+ * load from the roster file's optional `reinforcements` block; the
+ * `party` is a fully-constructed `Party` (units, leader, formation)
+ * ready to insert, with its `location` overridden to the arrival
+ * POST's tile at spawn time.
+ */
+export interface ReinforcementConfig {
+  /** POST whose capture-complete fires this reinforcement. */
+  readonly triggerPostId: PostId;
+  /** Where the party arrives (defaults to the trigger POST at load). */
+  readonly arrivalPostId: PostId;
+  /** Pre-built party; `location` is set from the arrival POST on spawn. */
+  readonly party: Party;
 }
 
 // ---------------------------------------------------------------------------
@@ -998,6 +1032,14 @@ export type ReplayEvent =
   | (ReplayEventCommon & {
       readonly kind: 'spiderlings-spawned';
       readonly fromPartyId: PartyId;
+      readonly newPartyIds: readonly PartyId[];
+    })
+  | (ReplayEventCommon & {
+      /** Roadmap §7.12 — a reinforcement party spawned because
+       * `postId` completed capture; arrived at `arrivalPostId`. */
+      readonly kind: 'reinforcement-spawned';
+      readonly postId: PostId;
+      readonly arrivalPostId: PostId;
       readonly newPartyIds: readonly PartyId[];
     })
   | (ReplayEventCommon & {

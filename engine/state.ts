@@ -49,6 +49,7 @@ import type {
 import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type {
   AbilityId,
+  Faction,
   FogTile,
   GameState,
   ItemSpawn,
@@ -58,6 +59,7 @@ import type {
   PartyId,
   Post,
   PostId,
+  ReinforcementConfig,
   Terrain,
   Tile,
   TileCoord,
@@ -264,6 +266,31 @@ export const applyPostJitter = (mapFile: MapFile, seed: number): MapFile => {
   return { ...mapFile, posts };
 };
 
+/**
+ * Build one `Unit` from a template + a caller-supplied id. Sole owner
+ * of the per-unit init shape so `buildParties` and the §7.12
+ * reinforcement builder can't diverge. The caller controls the id
+ * string, so `buildParties` keeps its exact counter scheme and every
+ * shipped scenario's units stay byte-identical.
+ *
+ * Round 21 — caster-eligible templates (intelligence ≥ 5, `caster`
+ * tag, or a tier-2/3 ability) get an MP pool; non-casters get none.
+ * Round 26 — only promotable templates carry `charisma: 50`.
+ */
+const buildUnit = (tmpl: UnitTemplate, id: UnitId, abilities: AbilitiesFile): Unit => {
+  const mpSlotsField = isCasterTemplate(tmpl, abilities) ? { mpSlots: INITIAL_MP_SLOTS } : {};
+  const charismaField = isPromotableTemplate(tmpl.id) ? { charisma: INITIAL_CHARISMA } : {};
+  return {
+    id,
+    templateId: tmpl.id,
+    currentHp: tmpl.baseStats.hp,
+    level: 1,
+    xp: 0,
+    ...mpSlotsField,
+    ...charismaField,
+  };
+};
+
 const buildParties = (
   rosters: readonly RosterFile[],
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
@@ -283,32 +310,8 @@ const buildParties = (
         }
         for (let i = 0; i < entry.count; i++) {
           unitCounter += 1;
-          // Round 21 — initialize MP pool (mechanics memo §1.1) for
-          // caster-eligible templates: intelligence ≥ 5, the `caster`
-          // tag, or any template that carries a tier-2/3 ability
-          // (e.g., archer's volley, footman's phalanx-charge).
-          // Non-casters get no `mpSlots` field so their tier-1
-          // abilities (e.g., footman `brace`) fire freely.
-          const mpSlotsField = isCasterTemplate(tmpl, abilities)
-            ? { mpSlots: INITIAL_MP_SLOTS }
-            : {};
-          // Round 26 — charisma-gated promotion (mechanics memo §1.4).
-          // Seed `charisma: 50` only on promotable templates (the 8
-          // listed in `PROMOTION_TREE`). Queens, neutrals, and
-          // specialty units (worker / tank / potato-bug / spiderling)
-          // never carry charisma since they can't promote — the
-          // missing field is read by the engine as "outside the
-          // promotion track."
-          const charismaField = isPromotableTemplate(tmpl.id) ? { charisma: INITIAL_CHARISMA } : {};
-          units.push({
-            id: `u${String(unitCounter).padStart(4, '0')}-${entry.templateId}` as UnitId,
-            templateId: tmpl.id,
-            currentHp: tmpl.baseStats.hp,
-            level: 1,
-            xp: 0,
-            ...mpSlotsField,
-            ...charismaField,
-          });
+          const id = `u${String(unitCounter).padStart(4, '0')}-${entry.templateId}` as UnitId;
+          units.push(buildUnit(tmpl, id, abilities));
         }
       }
       const leaderUnit = units[partyDef.leaderIndex];
@@ -338,6 +341,70 @@ const buildParties = (
     }
   }
   return parties;
+};
+
+/**
+ * Roadmap §7.12 (Exchange #8) — build the reinforcement-trigger map
+ * from the rosters' optional `reinforcements` blocks. Each party is
+ * fully constructed here (templates available) so the capture-complete
+ * hook in `post-capture.ts` is a pure insert with no sim-time
+ * dependency on templates/abilities. Returns an empty map when no
+ * roster carries reinforcements — `buildInitialStateInternal` then
+ * omits the GameState field entirely, keeping every shipped scenario
+ * byte-identical.
+ */
+const buildReinforcements = (
+  rosters: readonly RosterFile[],
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  abilities: AbilitiesFile,
+  posts: ReadonlyMap<PostId, Post>,
+): Map<PostId, ReinforcementConfig> => {
+  const out = new Map<PostId, ReinforcementConfig>();
+  for (const roster of rosters) {
+    for (const def of roster.reinforcements ?? []) {
+      const triggerPostId = def.triggerPostId as PostId;
+      const arrivalPostId = (def.arrivalPostId ?? def.triggerPostId) as PostId;
+      const faction: Faction = def.faction ?? roster.faction;
+      const pd = def.party;
+      const units: Unit[] = [];
+      let n = 0;
+      for (const entry of pd.units) {
+        const tmpl = templates.get(entry.templateId as UnitTemplateId);
+        if (!tmpl) {
+          throw new Error(
+            `reinforcement '${pd.id}' references unknown templateId '${entry.templateId}'`,
+          );
+        }
+        for (let i = 0; i < entry.count; i++) {
+          n += 1;
+          const id = `reinf-${def.triggerPostId}-${String(n)}-${entry.templateId}` as UnitId;
+          units.push(buildUnit(tmpl, id, abilities));
+        }
+      }
+      const leaderUnit = units[pd.leaderIndex];
+      if (!leaderUnit) {
+        throw new Error(
+          `reinforcement '${pd.id}' leaderIndex ${String(pd.leaderIndex)} out of range`,
+        );
+      }
+      const location = posts.get(arrivalPostId)?.location ?? pd.startingLocation;
+      const party: Party = {
+        id: pd.id as PartyId,
+        faction,
+        units,
+        leaderId: leaderUnit.id,
+        location,
+        orders: [],
+        posture: pd.posture,
+        strategyModifiers: [],
+        jellyDoses: 0,
+        leaderless: false,
+        formation: assignFormation(units, templates),
+      };
+      out.set(triggerPostId, { triggerPostId, arrivalPostId, party });
+    }
+  }
+  return out;
 };
 
 const buildInitialFog = (tiles: ReadonlyMap<string, Tile>): ReadonlyMap<string, FogTile> => {
@@ -406,6 +473,8 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
   const tiles = buildTiles(randomizedMap);
   const posts = buildPosts(randomizedMap);
   const baseParties = buildParties(data.rosters, unitTemplates, data.abilities);
+  // §7.12 — reinforcement triggers (empty for every shipped scenario).
+  const reinforcements = buildReinforcements(data.rosters, unitTemplates, data.abilities, posts);
   const fog = buildInitialFog(tiles);
 
   // Round 8: spawn three neutral parties (one each mice/cockroaches/
@@ -491,6 +560,9 @@ const buildInitialStateInternal = (data: ScenarioData, seed: number): BuildIniti
     spiderBlitzMode,
     victoryCondition,
     abilityParamsAuthoritative,
+    // Omit entirely when no scenario uses reinforcements → byte-identical
+    // GameState for every shipped scenario (gate-29 safe by construction).
+    ...(reinforcements.size > 0 ? { reinforcements } : {}),
     winner: null,
   };
   const neutralSpawnEvents: NeutralSpawnEvent[] = spawnResult.events.map((e) => ({

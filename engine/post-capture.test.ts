@@ -24,7 +24,16 @@ import { describe, expect, it } from 'vitest';
 
 import { POST_CAPTURE_TURNS, resolvePostCapture } from './post-capture.ts';
 import { loadScenario } from './state.ts';
-import type { Faction, GameState, Party, PartyId, PostId, ReplayEvent } from './types.ts';
+import type {
+  Faction,
+  GameState,
+  Party,
+  PartyId,
+  PostId,
+  ReinforcementConfig,
+  ReplayEvent,
+  UnitId,
+} from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -303,5 +312,83 @@ describe('engine/post-capture', () => {
     expect(eventsOfKind(out.events, 'post-capture-started')).toHaveLength(0);
     expect(eventsOfKind(out.events, 'post-capture-progressed')).toHaveLength(0);
     expect(eventsOfKind(out.events, 'post-capture-aborted')).toHaveLength(0);
+  });
+
+  // --- §7.12 (Exchange #8) reinforcement-at-POST hook ---
+
+  const REINF_PARTY_ID = 'reinf-squad' as PartyId;
+  const mkReinforcements = (
+    s: GameState,
+    postId: PostId,
+  ): ReadonlyMap<PostId, ReinforcementConfig> => {
+    const post = s.posts.get(postId);
+    if (!post) throw new Error(`no post ${String(postId)}`);
+    const tmpl = [...s.unitTemplates.values()].find((t) => t.faction === 'ant');
+    if (!tmpl) throw new Error('no ant template');
+    const uid = 'reinf-u1' as UnitId;
+    const party: Party = {
+      id: REINF_PARTY_ID,
+      faction: 'ant',
+      units: [{ id: uid, templateId: tmpl.id, currentHp: tmpl.baseStats.hp, level: 1, xp: 0 }],
+      leaderId: uid,
+      location: post.location,
+      orders: [],
+      posture: 'fight',
+      strategyModifiers: [],
+      jellyDoses: 0,
+      leaderless: false,
+      formation: { front: [uid], back: [], reserve: [] },
+    };
+    return new Map([[postId, { triggerPostId: postId, arrivalPostId: postId, party }]]);
+  };
+
+  it('12. reinforcement spawns on capture-complete', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const ant = firstFieldAnt(state);
+    const midPost = firstMidPost(state);
+    let working = placePartyOnPost(state, ant.id, midPost);
+    working = { ...working, reinforcements: mkReinforcements(working, midPost) };
+    const tick = makeTickClock();
+    working = resolvePostCapture(working, tick).state; // turn 1: progress
+    const b = resolvePostCapture(working, tick); // turn 2: complete + hook
+    expect(b.state.posts.get(midPost)?.owner).toBe<Faction>('ant');
+    const spawned = eventsOfKind(b.events, 'reinforcement-spawned');
+    expect(spawned).toHaveLength(1);
+    expect(spawned[0]?.postId).toBe(midPost);
+    expect(spawned[0]?.newPartyIds).toEqual([REINF_PARTY_ID]);
+    expect(b.state.parties.get(REINF_PARTY_ID)).toBeDefined();
+    expect(b.state.firedReinforcements?.has(midPost)).toBe(true);
+  });
+
+  it('13. reinforcement is single-shot (firedReinforcements blocks re-spawn)', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const ant = firstFieldAnt(state);
+    const midPost = firstMidPost(state);
+    let working = placePartyOnPost(state, ant.id, midPost);
+    working = {
+      ...working,
+      reinforcements: mkReinforcements(working, midPost),
+      firedReinforcements: new Set([midPost]),
+    };
+    const tick = makeTickClock();
+    working = resolvePostCapture(working, tick).state;
+    const b = resolvePostCapture(working, tick);
+    expect(b.state.posts.get(midPost)?.owner).toBe<Faction>('ant'); // capture still works
+    expect(eventsOfKind(b.events, 'reinforcement-spawned')).toHaveLength(0);
+    expect(b.state.parties.get(REINF_PARTY_ID)).toBeUndefined();
+  });
+
+  it('14. no reinforcement config → capture unchanged, no spawn (gate-29-safe)', () => {
+    const { state } = loadScenario(DATA_DIR, 1);
+    const ant = firstFieldAnt(state);
+    const midPost = firstMidPost(state);
+    let working = placePartyOnPost(state, ant.id, midPost);
+    const tick = makeTickClock();
+    working = resolvePostCapture(working, tick).state;
+    const b = resolvePostCapture(working, tick);
+    expect(b.state.posts.get(midPost)?.owner).toBe<Faction>('ant');
+    expect(eventsOfKind(b.events, 'reinforcement-spawned')).toHaveLength(0);
+    expect(b.state.reinforcements).toBeUndefined();
+    expect(b.state.firedReinforcements).toBeUndefined();
   });
 });

@@ -190,6 +190,29 @@ const applyCaptureTick = (state: GameState, tick: () => number): PostCaptureOutc
     const flip = setPostOwner(working, postId, newOwner, tick);
     working = flip.state;
     events.push(...flip.events);
+
+    // §7.12 (Exchange #8) — reinforcement-at-POST. Provably inert
+    // unless this scenario's roster data configured a trigger for
+    // this POST: `working.reinforcements` is absent on every shipped
+    // scenario, so the guard is false, zero parties/events/RNG —
+    // gate-29 byte-identical by construction. Single-shot per trigger
+    // POST. The party was fully built at load; this is a pure insert.
+    const reinf = working.reinforcements?.get(postId);
+    if (reinf && !(working.firedReinforcements?.has(postId) ?? false)) {
+      const nextParties = new Map(working.parties);
+      nextParties.set(reinf.party.id, reinf.party);
+      const fired = new Set(working.firedReinforcements ?? []);
+      fired.add(postId);
+      working = { ...working, parties: nextParties, firedReinforcements: fired };
+      events.push({
+        kind: 'reinforcement-spawned',
+        turn: state.turn,
+        tick: tick(),
+        postId,
+        arrivalPostId: reinf.arrivalPostId,
+        newPartyIds: [reinf.party.id],
+      });
+    }
   }
   return { state: working, events };
 };
