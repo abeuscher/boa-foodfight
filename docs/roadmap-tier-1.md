@@ -889,6 +889,47 @@ pre-defined inline party. **Deferred** (non-breaking later CR):
 capture-initiate trigger; pool-model identity. L0's G14 consumes
 this; L0 cannot ship until §7.12 has landed (it now has).
 
+### 7.13 Mid-scenario save (Option B — input-stream replay)
+
+Cross-track change request (UX→Gameplay, exchange #9; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted,
+Option B**. A mid-scenario save (L0 beat 7; reusable L1–L10) so a
+late loss replays the encounter, not the whole scenario.
+
+**Not sim-path / not golden-master-gated.** `runScenario` and every
+combat file are untouched; this adds a save module that _uses_ the
+existing deterministic `runScenario` via two new policies. No
+byte-identity proof needed for the save code; the determinism
+round-trip test is the correctness guarantee. (Full suite 741/741,
+no existing test moved.)
+
+Shipped (`engine/scenario-save.ts` + `engine/schemas/scenario-save.ts`):
+the frozen on-disk contract `{ version, scenarioId, seed,
+savedAtTurn, orderLog }` (orderLog = the player's per-turn issued
+orders); `recordingPlayer` (captures a player handle's per-turn
+orders), `replayPlayer` (re-issues a logged stream), `restoreScenario`
+(re-runs `runScenario` with the replay policy bounded to
+`savedAtTurn`; forwards the seed-loaded neutral/item spawn payloads
+so the re-run is bit-identical), and stable serialize / schema-
+validated parse. Determinism rests on `runScenario`'s **per-policy
+rng fork** (`turn.ts` `rng.fork(policy-name-turn)`): enemy/neutral
+streams are independent of the player policy, so replaying the
+player's recorded orders reproduces the world exactly — proven by a
+round-trip test (record → save → restore == original at the save
+turn).
+
+PM-ruled v1 shape: auto-save at an authored point, single slot,
+authored-points-only, cleared on win/scenario-exit. Cross-version is
+moot for the use case (save+resume are same session/engine).
+**Defined-but-deferred:** the auto-save _trigger_ (a scenario-data
+point that fires the save) — its firing needs the unbuilt human
+turn-driver; the format + restore (this module) are buildable and
+tested now with synthetic logs, so the UI later only has to emit the
+frozen `orderLog` shape. Input-log production is part of the same
+unbuilt real-time UI L0 depends on wholesale, so it adds no marginal
+L0 slip risk. L0 beat 7 consumes this; L0 cannot ship until §7.13
+has landed (it now has).
+
 ---
 
 ## 8. Open questions

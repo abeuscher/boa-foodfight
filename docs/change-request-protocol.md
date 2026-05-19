@@ -433,6 +433,48 @@ change is provably inert on every shipped scenario. L0's G14
 unblocked (L0 still gated on its own Exchange #7 / §7.11). Recorded
 `roadmap-tier-1.md` §7.12.
 
+### Exchange #9 — Mid-scenario save
+
+**Request (UX):** save mid-scenario so a late loss replays the
+encounter, not the whole scenario. L0 beat 7; reusable L1–L10. Dev
+priced Option A (full GameState snapshot) vs Option B (input-stream
+replay).
+
+**Reply (Dev) — Disposition: Accepted, Option B.**
+
+- **Recommendation, plain:** A = "photograph the whole board"
+  (snapshot every field; instant reload but a _forever_ serializer +
+  schema-migration tax — GameState gains fields constantly). B =
+  "record the recipe" (seed + the player's move log; re-run to the
+  save point). B is far less code, zero maintenance tax, rides the
+  determinism that's the project's most-proven property.
+- **The reframe that killed the slip-risk worry:** B's "needs UI
+  input logging" is **subsumed** — L0 cannot run at all without the
+  unbuilt real-time UI (it's a human-clicked tutorial); input logging
+  is a small part of that same layer. So B adds no marginal L0 risk.
+  And §7.13 owns the input-log _contract_ + restore + synthetic-log
+  tests, so the engine deliverable is buildable/tested **now**,
+  UI-independent (done — 741/741); the UI later just emits the frozen
+  shape.
+- **Two precision corrections to the CR (recorded):** "reuses replay
+  infra" → it reuses proven _determinism_; the order-replay driver is
+  net-new (small). Cross-version concern is moot (save+resume same
+  session/engine).
+- **Not sim-path / not gated.** No byte-identity proof required; the
+  round-trip determinism test is the guarantee.
+- **PM rulings:** auto-save at an authored point, single slot,
+  authored-points-only, cleared on win/exit. Auto-save _trigger_
+  firing deferred (needs the unbuilt human turn-driver); format +
+  restore shipped now.
+- **Decision record:** roadmap §7.13.
+
+**Outcome:** Resolved + shipped. `engine/scenario-save.ts` +
+schema + record/replay/restore + serialize/parse; round-trip
+determinism test green. Full suite **741/741** (67 files), 0 jscpd
+clones, typecheck clean; no existing test moved (not sim-path). L0
+beat 7 unblocked; L0 still gated on its own Exchange #7 / §7.11.
+Recorded `roadmap-tier-1.md` §7.13.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are
