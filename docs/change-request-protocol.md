@@ -389,6 +389,56 @@ one arrival level is the recorded human design ruling. Per-level
 catalog content is the deferred design pass. Recorded
 `roadmap-tier-1.md` §7.10.
 
+### Exchange #7 — L0 prepended prologue (tutorial scenario)
+
+**Request (UX):** create L0 as a prepended-prologue tutorial scenario
+at `data/tutorial/`, outside the Tier-1 curve; record the structural
+framing + the cross-track amendments it drives. Resolved in numeric
+order after #8/#9 (the L0-driven CRs landed first). Substrate drafts
+in `docs/drafts/` (manual, ruleset, beat outline, the two CRs).
+
+**Reply (Dev) — Disposition: Accepted (concurrence).** §7.11 is a
+decision-of-record, not engine work; the ask was concurrence on four
+points:
+
+1. **Exempt-by-absence framing — accurate** (verified twice:
+   path-agnostic loader; harnesses + reconciler hardcoded to
+   `data/level-1`; gate-29 is an AI-vs-AI metric anchor, not a keyed
+   replay artifact; single-party/queen-less clean; `level-1-tutorial`
+   - `SCENARIO_PLAYER_AIS` precedent). One precision recorded in
+     §7.11 ("frozen replays" → metric anchor, not a perturbable
+     artifact).
+2. **Sequencing — sound, and already satisfied.** Both hard engine
+   deps **shipped**: §7.12 (Exchange #8, `53a7252`) and §7.13
+   (Exchange #9, `a248cfc`). §7.11 records referencing them as
+   landed, not forward. Player-AI skill tiers stays a separate
+   non-blocking future exchange.
+3. **Cross-track amendments — engine-clean and correctly scoped**
+   from the engine side (recruit-as-order L5→L0 and archer/mage→L0
+   verified obstruction-free). Completeness of the design-spec list
+   is PM/design's call (outside this exchange's dev ask).
+4. **Direct-ratify recommendation:** Playability rubric criterion 7
+   (recently-adopted canonical doc), pacing memo §A.3 (recorded
+   exemption's justification), and mechanic-distribution-plan (debut
+   shifts ripple into L1–L10 authoring/measurement) — ratify with
+   owners, not only queue. Routing is PM's.
+
+- **Stale-state correction surfaced:** the package described
+  §7.12/§7.13 as in-flight; both are shipped — §7.11 text, the
+  ruleset G14 line, and the beat-outline beat-5/7 "if it slips"
+  contingencies updated to "landed" before recording.
+- **Decision record:** roadmap §7.11. No code (decision-of-record;
+  engine deps already implemented under §7.12/§7.13).
+
+**Outcome:** Resolved. L0 recorded as a prepended prologue
+(`data/tutorial/`, exempt-by-absence, standalone — no roster
+carry-forward, linear `L0 → world loop → L1`); victory `capture-post`
+/ conjunctive lose; squad 2-2-2 + reinforcement + optional recruit;
+one balance-measured beat at 90% vs baseline. Both engine
+prerequisites landed; remaining L0 work is content/design + the
+cross-track amendments. Recorded `roadmap-tier-1.md` §7.11; substrate
+drafts remain UX-track artifacts in `docs/drafts/`.
+
 ### Exchange #8 — Reinforcement-at-POST
 
 **Request (UX):** capturing a designated POST spawns a scenario-data

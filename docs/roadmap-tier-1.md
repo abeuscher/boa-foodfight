@@ -852,6 +852,76 @@ here (not a dev contract). 729/729, gate-29 intact. Next backend
 items unchanged: world-inject formation honoring → §7.8 extract-merge
 → multi-item shop.
 
+### 7.11 L0 — prepended prologue (tutorial scenario)
+
+Cross-track change request (UX→Gameplay, exchange #7; full prose in
+`docs/change-request-protocol.md` §5; substrate working drafts in
+`docs/drafts/` — L0 manual, ruleset, beat outline, the two CRs).
+Disposition **accepted (dev concurrence)** — §7.11 is a
+decision-of-record (structural/design), not engine work; dev's role
+was concurrence on framing + forward-dependency mapping.
+
+**The decision.** L0 is the tutorial level, created as a **prepended
+prologue, not a renumber**: a standalone scenario at
+**`data/tutorial/`**, outside the Tier-1 L1–L10 curve. L1–L10 keep
+their indices, data dirs, win-rate-curve positions, and deterministic
+behaviour unaffected. L0 dissolves the recorded contradiction of L1
+being both the "all mechanics on" frozen reference (§2/§3, gate-29
+anchor) and the de-facto tutorial — L0 takes the tutorial role; L1
+keeps the anchor role.
+
+- **Exempt-by-absence** from gate-29, the win-rate curve, coevo,
+  tune, and the reconciler — no flags, no path magic; those systems
+  are opt-in and L0 simply isn't opted in (dev-verified:
+  `loadScenario` path-agnostic; harnesses + reconciler hardcoded to
+  `data/level-1`; gate-29 is an AI-vs-AI win-rate metric anchor, not
+  a stored replay artifact L0 could perturb). All 11 scenario JSON
+  files must exist in `data/tutorial/`. Single-party / queen-less is
+  a clean load (forward note: the level-1-only reconciler would fail
+  a queen-less scenario if ever generalised).
+- **World-loop relationship:** standalone — L0 does _not_ join the
+  extract/inject roster carry-forward. Linear `L0 → world loop → L1`;
+  the campaign still "starts" at L1 with the authored L1 roster.
+  L0 needs its own scouting AI in `SCENARIO_PLAYER_AIS` (off the
+  measured path) + a hardcoded runner pointer, mirroring the existing
+  `level-1-tutorial` precedent — additive, no engine change.
+- **Victory** `capture-post` (the winter-house entrance). **Lose**
+  conjunctive: Antonio falls **AND** the summer hill is lost; either
+  alone recoverable. Lose surfaced in the beat-1 briefing as a
+  failure condition, not demonstrated.
+- **Squad:** Antonio's six — 2 footmen / 2 archers / 2 mages (three
+  canonical troop types) — plus a mid-scenario reinforcement squad
+  (via §7.12) and an optional recruited neutral (via recruit-neutral).
+- **Tutorial philosophy:** skill-building, not difficulty; advance
+  absent catastrophic mistake. Exactly one balance-measured beat
+  (beat 8, the entrance) tuned to **90% ant win rate**, measured by
+  the existing harness over full-L0 × 100 seeds vs the baseline
+  player AI (== beat-8 win rate by construction, since beats 1–7 are
+  scripted-safe); re-anchors to the beginner tier when the
+  player-AI-skill-tier forward CR lands.
+
+**Forward dependencies — both engine deps LANDED.** §7.12
+(reinforcement-at-POST, beat 5) and §7.13 (mid-scenario save, beat 7)
+are **shipped** (Exchanges #8/#9). L0's engine prerequisites are
+complete; remaining L0 work is content/design (Level PA geometry,
+tutorial design doc, UX-surface spec) + the cross-track amendments.
+Player-AI skill tiers remains a separate non-blocking future
+exchange.
+
+**Cross-track amendments (design/critic-owned, no engine
+dependency):** Playability rubric criterion 7 (learn-on-L0 /
+transfer-to-L1), pacing memo §A.3 (L1 stalemate-exemption keeps the
+anchor/gate-29 justification; the tutorial leg drops), cube-view memo
+(L1-tutorial language → L0; single-plane degradation dev-confirmed
+fine), level-progression-plan §0/§2 (L1 keeps anchor, drops tutorial
+characterisation), mechanic-distribution-plan (recruit-as-order debut
+L5→L0; archer/mage debut → L0, mid-tier becomes roster-build surface
+— engine-clean, verified), UX handoff, and a new general
+briefing-with-objectives convention (Briefing view spec; L0 first
+consumer). Dev recommends the Playability rubric, pacing memo §A.3,
+and mechanic-distribution-plan changes be ratified directly with
+their owners, not only queued.
+
 ### 7.12 Reinforcement-at-POST (first gated sim-path mechanic)
 
 Cross-track change request (UX→Gameplay, exchange #8; full prose in
