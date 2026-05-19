@@ -57,9 +57,74 @@
 import { isPromotableTemplate } from './charisma.ts';
 import { assignFormation } from './formation.ts';
 import { INITIAL_MP_SLOTS, isCasterTemplate } from './mp-tiers.ts';
-import type { GameState, Party, PartyId, Unit, UnitId, UnitTemplate } from './types.ts';
+import type { Formation, GameState, Party, PartyId, Unit, UnitId, UnitTemplate } from './types.ts';
 import { cumulativeLevelBonus } from './world-levelup.ts';
-import type { WorldRoster } from './world-state.ts';
+import type { WorldFormation, WorldRoster } from './world-state.ts';
+
+/** Formation rank caps — mirror the frozen `engine/formation.ts`
+ * model and roadmap §7.9 (front ≤ 3, back ≤ 2, reserve unbounded). */
+const FORMATION_FRONT_CAP = 3;
+const FORMATION_BACK_CAP = 2;
+
+/**
+ * Roadmap §7.9 follow-on — honor a player's sparse formation override
+ * when staging a carried party (world-loop path only; never reached on
+ * the static / gate-29 path, which carries no override → byte-identical
+ * by construction).
+ *
+ * Sparse semantics: the override lists only units the player explicitly
+ * placed. Each member's rank = (queen ⇒ front, hard pin) else its
+ * explicit override rank else the rank the engine's `assignFormation`
+ * would give it (so unplaced members keep the auto layout). The hard
+ * caps are then re-enforced deterministically in roster order
+ * (overflow → reserve), with the queen seated first so a
+ * player-stuffed front can't displace her pinned slot.
+ */
+export const honorFormation = (
+  units: readonly Unit[],
+  override: WorldFormation,
+  templates: GameState['unitTemplates'],
+): Formation => {
+  const auto = assignFormation(units, templates);
+  const autoRank = new Map<UnitId, 'front' | 'back' | 'reserve'>();
+  for (const id of auto.front) autoRank.set(id, 'front');
+  for (const id of auto.back) autoRank.set(id, 'back');
+  for (const id of auto.reserve) autoRank.set(id, 'reserve');
+
+  const ofFront = new Set<UnitId>(override.front);
+  const ofBack = new Set<UnitId>(override.back);
+  const ofReserve = new Set<UnitId>(override.reserve);
+  const isQueen = (u: Unit): boolean =>
+    templates.get(u.templateId)?.tags.includes('queen') ?? false;
+  const desired = (u: Unit): 'front' | 'back' | 'reserve' => {
+    if (isQueen(u)) return 'front';
+    if (ofFront.has(u.id)) return 'front';
+    if (ofBack.has(u.id)) return 'back';
+    if (ofReserve.has(u.id)) return 'reserve';
+    return autoRank.get(u.id) ?? 'reserve';
+  };
+
+  const front: UnitId[] = [];
+  const back: UnitId[] = [];
+  const reserve: UnitId[] = [];
+  const placed = new Set<UnitId>();
+  // Pass 1 — queen(s) pinned front, priority over any other fill.
+  for (const u of units) {
+    if (isQueen(u) && front.length < FORMATION_FRONT_CAP) {
+      front.push(u.id);
+      placed.add(u.id);
+    }
+  }
+  // Pass 2 — everyone else in roster order; caps; overflow → reserve.
+  for (const u of units) {
+    if (placed.has(u.id)) continue;
+    const want = desired(u);
+    if (want === 'front' && front.length < FORMATION_FRONT_CAP) front.push(u.id);
+    else if (want === 'back' && back.length < FORMATION_BACK_CAP) back.push(u.id);
+    else reserve.push(u.id);
+  }
+  return { front, back, reserve };
+};
 
 /** Default party slot cap in Tier 1. Raised 8→9 per the UX↔Gameplay
  * change request (roadmap §7.5): a ceiling for legible 3×3 rendering,
@@ -241,7 +306,13 @@ export const injectWorldRoster = (
       droppedParties.push(assignment.partyId);
       continue;
     }
-    const formation = assignFormation(units, base.unitTemplates);
+    // §7.9 — honor a player's persisted formation override when
+    // present; else auto-assign exactly as before (every shipped
+    // save/replay omits the field → byte-identical fallback).
+    const formation =
+      assignment.formation !== undefined
+        ? honorFormation(units, assignment.formation, base.unitTemplates)
+        : assignFormation(units, base.unitTemplates);
     newParties.set(assignment.partyId, {
       id: assignment.partyId,
       faction: 'ant',

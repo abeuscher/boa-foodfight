@@ -785,11 +785,18 @@ CR's coupling rationale does not survive the architecture. Resolution:
    (signatures: `removeUnit`/`dismissUnit` take `templates` for the
    tag check — a contract refinement over the Q10 answer, recorded in
    `troop-reference.md` §10). 718/718, gate-29 intact.
-3. **world-inject honoring** the persisted formation (else fall back to
-   `assignFormation`, unchanged static path) — the **next tracked
-   backend item**, sequenced before the §7.8 extract-merge and
-   multi-item shop. Gate-29-safe by construction (static path never
-   carries a formation override).
+3. **world-inject honoring** the persisted formation — **SHIPPED**
+   (follow-on). `honorFormation` (`engine/world-inject.ts`): sparse
+   override applied per member (queen ⇒ front hard-pin; explicit rank;
+   else the engine's `assignFormation` auto rank), hard caps
+   re-enforced deterministically in roster order (front ≤ 3 / back ≤
+   2, overflow → reserve, queen seated first). Absent override ⇒
+   `assignFormation` exactly as before; the static / gate-29 path
+   never carries one ⇒ byte-identical by construction. Proof: full
+   suite **737/737** (replay-snapshot / replay-determinism /
+   world-loop / world-extract / world-save all green; +5 new tests
+   only). Ungated world-loop layer (§7.6). Remaining backend items:
+   §7.8 extract-merge → multi-item shop.
 
 **Middle rank** stays folded into the §7.7 queen-rear spike (one
 formation/`battle.ts` re-baseline, not three); `setUnitRank`'s `Rank`

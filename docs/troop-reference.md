@@ -346,12 +346,13 @@ error?, recruitedUnitId? }`. Deducts the catalog cost from
   `world-inject` (roadmap §7.5: 9 standard, 12 queen-guard);
   `templates` is `readonly UnitTemplate[]` (needed for slotCost +
   `leader-eligible` + `queen` tag); operators never mutate inputs and
-  consume no RNG / I/O. **Tracked follow-ons, in order:** (1)
-  `world-inject` honoring the persisted formation (§7.9 — falls back
-  to `assignFormation` when absent; gate-29-safe by construction);
-  (2) the §7.8 extract carry-forward merge; (3) multi-item shop
-  purchase (`engine/world-shop.ts` is still the single `mouse-merc`
-  smoke-test).
+  consume no RNG / I/O. **Tracked follow-ons:** (1) `world-inject`
+  honoring the persisted formation (§7.9) — **SHIPPED**
+  (`honorFormation`; sparse override + auto fallback + hard caps +
+  queen-pin; byte-identical when absent; 737/737). **Remaining, in
+  order:** (2) the §7.8 extract carry-forward merge; (3) multi-item
+  shop purchase (`engine/world-shop.ts` is still the single
+  `mouse-merc` smoke-test).
 
 ---
 
