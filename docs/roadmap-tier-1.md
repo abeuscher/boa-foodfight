@@ -752,13 +752,19 @@ collection/schema; (2) shipped this window — the `barracksUnits` read
 accessor (`engine/world-organize.ts`, 704/704) — which clears the
 Organize Army hard-block (spec binds to the accessor + operators, a
 stable contract); (3) the **one real gap**, missed by the cost guess,
-is that `extractWorldRoster` rebuilds the next roster from combat
-survivors only, so an _undeployed_ barracks unit is dropped at the
-scenario boundary — cross-scenario barracks persistence needs an
-extract/runner **carry-forward merge** (world-loop layer, **ungated**
-per §7.6), which is the **next backend item, sequenced before
-multi-item shop**. Confirmed: no barracks cap (slot caps are per-party
-only); wiped-in-combat units die and do not return (decision (d)).
+was that `extractWorldRoster` rebuilt the next roster from combat
+survivors only, dropping _undeployed_ barracks units at the scenario
+boundary — **now SHIPPED** (follow-on). `ExtractInput.carryForward`
+(optional): the world-loop runner passes the prior roster's
+`barracksUnits` and they are appended to the next roster **verbatim**
+(no XP / no heal — they didn't fight), in **no party assignment**
+(still barracks next scenario), id-deduped against survivors, dead
+pruned. Absent / empty ⇒ byte-identical to before (explicit no-op
+test + suite unchanged). World-loop layer, **ungated** (§7.6). Full
+suite 745/745, no existing test moved. Confirmed: no barracks cap
+(slot caps are per-party only); wiped-in-combat units die and do not
+return (decision (d)). **Remaining backend: multi-item shop** (the
+last queued item).
 
 ### 7.9 Player-mutable formation + B4 operators
 

@@ -63,6 +63,17 @@ export interface ExtractInput {
   /** The scenario's winner (`finalState.winner`); `null` only on the
    * degenerate no-policy timeout path. */
   readonly winner: Faction | null;
+  /**
+   * Roadmap §7.8 — carry-forward barracks. Units that were in the
+   * prior roster but **undeployed** (in no party → never injected →
+   * absent from `finalState`) would otherwise be silently dropped.
+   * The world-loop runner passes the prior roster's `barracksUnits`
+   * here; they are appended to the next roster's pool **unchanged**
+   * (no XP / no heal — they didn't fight) and in **no party
+   * assignment** (still barracks next scenario). Absent on the static
+   * path and pre-§7.8 callers ⇒ behaviour identical to before.
+   */
+  readonly carryForward?: readonly WorldUnit[];
 }
 
 /**
@@ -73,7 +84,8 @@ export interface ExtractInput {
  * promoted / equipped item forward, and records the party assignment
  * (so the next scenario can re-form the same party shapes). Dead units
  * are pruned (belt-and-braces via `pruneDeadWorldUnits`, though the
- * walk already excludes them).
+ * walk already excludes them). §7.8: `input.carryForward` barracks
+ * units (undeployed → not in `finalState`) are appended verbatim.
  */
 export const extractWorldRoster = (input: ExtractInput): WorldRoster => {
   const { finalState, winner } = input;
@@ -115,6 +127,16 @@ export const extractWorldRoster = (input: ExtractInput): WorldRoster => {
     const leaderId = leaderAlive ? party.leaderId : survivors[0]?.id;
     if (leaderId === undefined) continue;
     partyAssignments.push({ partyId: party.id, unitIds: survivorIds, leaderId });
+  }
+
+  // §7.8 — append carry-forward barracks units verbatim (id-deduped
+  // against survivors; in no assignment ⇒ they stay barracks next
+  // scenario). Deterministic: prior-roster order, after survivors.
+  const survivorIdsAll = new Set(units.map((u) => u.id));
+  for (const u of input.carryForward ?? []) {
+    if (survivorIdsAll.has(u.id)) continue;
+    units.push(u);
+    survivorIdsAll.add(u.id);
   }
 
   const roster: WorldRoster = { faction: 'ant', units, partyAssignments };

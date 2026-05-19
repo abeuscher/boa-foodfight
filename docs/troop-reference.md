@@ -349,10 +349,12 @@ error?, recruitedUnitId? }`. Deducts the catalog cost from
   consume no RNG / I/O. **Tracked follow-ons:** (1) `world-inject`
   honoring the persisted formation (§7.9) — **SHIPPED**
   (`honorFormation`; sparse override + auto fallback + hard caps +
-  queen-pin; byte-identical when absent; 737/737). **Remaining, in
-  order:** (2) the §7.8 extract carry-forward merge; (3) multi-item
+  queen-pin; byte-identical when absent). (2) §7.8 extract
+  carry-forward merge — **SHIPPED** (`ExtractInput.carryForward`;
+  runner passes prior `barracksUnits`; appended verbatim, unassigned,
+  deduped; byte-identical when empty). **Remaining:** (3) multi-item
   shop purchase (`engine/world-shop.ts` is still the single
-  `mouse-merc` smoke-test).
+  `mouse-merc` smoke-test) — the last queued backend item.
 
 ---
 

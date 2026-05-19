@@ -40,6 +40,7 @@ import { extractGold, extractWorldRoster } from '../engine/world-extract.ts';
 import type { LeveledUnitSummary } from '../engine/world-inject.ts';
 import { injectWorldRoster, scaffoldFromState } from '../engine/world-inject.ts';
 import { applyRosterLevelUps } from '../engine/world-levelup.ts';
+import { barracksUnits } from '../engine/world-organize.ts';
 import { findLatestSave, loadWorldStateFile, saveWorldState } from '../engine/world-save.ts';
 import { applyShopPurchase, MOUSE_MERC_COST, MOUSE_MERC_TEMPLATE } from '../engine/world-shop.ts';
 import type { WorldRoster, WorldState } from '../engine/world-state.ts';
@@ -239,10 +240,16 @@ const buildPostScenarioState = (
   args: Args,
   scenarioIndex: number,
   result: ScenarioRunResult,
+  /** §7.8 — the roster that fed THIS scenario. Its undeployed
+   * (barracks) units never reach `finalState`; carry them forward so
+   * benched units survive the boundary. Absent for scenario 0 (no
+   * prior campaign roster). */
+  priorRoster?: WorldRoster,
 ): { state: WorldState; unitsLeveled: number; totalLevelsGained: number } => {
   const roster = extractWorldRoster({
     finalState: result.finalState,
     winner: result.winner,
+    carryForward: priorRoster ? barracksUnits(priorRoster) : [],
   });
   const leveled = applyRosterLevelUps(roster, result.finalState.unitTemplates);
   return {
@@ -318,7 +325,8 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
   // scaffold-rebuilt from the carried L1 roster, so the campaign
   // veterans guard a fresh Aunt Ant through the pipe.
   const scenario1Result = runOneScenario(args, 1, shop.state.roster);
-  const built1 = buildPostScenarioState(args, 1, scenario1Result);
+  // §7.8 — scenario 1 was fed `shop.state.roster`; carry its barracks.
+  const built1 = buildPostScenarioState(args, 1, scenario1Result, shop.state.roster);
   saveWorldState(built1.state, args.outRoot);
 
   return {

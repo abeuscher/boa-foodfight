@@ -8,7 +8,7 @@ import { createTickClock } from './replay.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
 import { runScenario } from './turn.ts';
-import type { GameState, UnitId } from './types.ts';
+import type { GameState, ItemId, UnitId, UnitTemplateId } from './types.ts';
 import {
   extractGold,
   extractWorldRoster,
@@ -17,6 +17,7 @@ import {
   XP_PARTICIPATION,
   XP_WINNING_SIDE,
 } from './world-extract.ts';
+import type { WorldUnit } from './world-state.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -124,6 +125,74 @@ describe('engine/world-extract', () => {
       const finalState = runL1(1);
       expect(extractGold(finalState)).toBe(finalState.playerGold.ant);
       expect(extractGold(finalState)).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('§7.8 carry-forward barracks', () => {
+    const mkWU = (id: string, over: Partial<WorldUnit> = {}): WorldUnit => ({
+      id: id as UnitId,
+      templateId: 'ant-footman' as UnitTemplateId,
+      currentHp: 6,
+      level: 1,
+      xp: 0,
+      charisma: 50,
+      promoted: false,
+      item: null,
+      ...over,
+    });
+
+    it('appends undeployed units verbatim, in no party assignment', () => {
+      const finalState = runL1(1);
+      const benched = mkWU('barracks-vet', {
+        level: 3,
+        xp: 250,
+        promoted: true,
+        item: 'sword' as ItemId,
+      });
+      const roster = extractWorldRoster({
+        finalState,
+        winner: finalState.winner,
+        carryForward: [benched],
+      });
+      const got = roster.units.find((u) => u.id === ('barracks-vet' as UnitId));
+      expect(got).toEqual(benched); // unchanged — no XP, no heal
+      const assignedIds = new Set(roster.partyAssignments.flatMap((a) => a.unitIds));
+      expect(assignedIds.has('barracks-vet' as UnitId)).toBe(false); // still barracks
+      // Survivors are still there too.
+      expect(roster.units.length).toBeGreaterThan(1);
+    });
+
+    it('absent / empty carryForward is identical to before (no-op)', () => {
+      const finalState = runL1(2);
+      const a = extractWorldRoster({ finalState, winner: finalState.winner });
+      const b = extractWorldRoster({ finalState, winner: finalState.winner, carryForward: [] });
+      expect(b).toEqual(a);
+    });
+
+    it('id-dedupes against survivors (survivor wins)', () => {
+      const finalState = runL1(1);
+      const base = extractWorldRoster({ finalState, winner: finalState.winner });
+      const survivorId = base.units[0]?.id;
+      if (survivorId === undefined) throw new Error('no survivor');
+      const collide = mkWU(String(survivorId), { level: 99 });
+      const roster = extractWorldRoster({
+        finalState,
+        winner: finalState.winner,
+        carryForward: [collide],
+      });
+      const matches = roster.units.filter((u) => u.id === survivorId);
+      expect(matches).toHaveLength(1);
+      expect(matches[0]?.level).not.toBe(99); // survivor retained, carry skipped
+    });
+
+    it('prunes a dead carry-forward unit', () => {
+      const finalState = runL1(1);
+      const roster = extractWorldRoster({
+        finalState,
+        winner: finalState.winner,
+        carryForward: [mkWU('barracks-corpse', { currentHp: 0 })],
+      });
+      expect(roster.units.some((u) => u.id === ('barracks-corpse' as UnitId))).toBe(false);
     });
   });
 });
