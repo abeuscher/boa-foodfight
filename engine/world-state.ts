@@ -82,10 +82,32 @@ export interface WorldLevelUpBonus {
   readonly intelligence: number;
 }
 
+/**
+ * Roadmap §7.9 — player-set formation override (sparse). Lists only
+ * the units the player has *explicitly* placed in a rank; surviving
+ * members not listed here are auto-assigned by the engine at scenario
+ * staging (`engine/world-inject`, the §7.9 honoring follow-on). The
+ * queen is always front (queen-pin). Caps mirror the engine model:
+ * the operator guards explicit front ≤ 3 / back ≤ 2; `world-inject`
+ * re-enforces the hard caps at staging.
+ */
+export interface WorldFormation {
+  readonly front: readonly UnitId[];
+  readonly back: readonly UnitId[];
+  readonly reserve: readonly UnitId[];
+}
+
 export interface WorldPartyAssignment {
   readonly partyId: PartyId;
   readonly unitIds: readonly UnitId[];
   readonly leaderId: UnitId;
+  /**
+   * Roadmap §7.9 — optional sparse player formation override. Absent
+   * until the player sets a rank (engine auto-assigns when absent —
+   * preserves byte-identical saves / replays, same discipline as
+   * `WorldUnit.levelUpBonus`).
+   */
+  readonly formation?: WorldFormation;
 }
 
 export interface WorldRoster {
@@ -164,6 +186,18 @@ export const serializeWorldState = (ws: WorldState): string =>
           partyId: a.partyId,
           unitIds: [...a.unitIds],
           leaderId: a.leaderId,
+          // Only emit when the player has set a formation, so a save
+          // with no formation overrides stays byte-identical to the
+          // pre-§7.9 format.
+          ...(a.formation !== undefined
+            ? {
+                formation: {
+                  front: [...a.formation.front],
+                  back: [...a.formation.back],
+                  reserve: [...a.formation.reserve],
+                },
+              }
+            : {}),
         })),
       },
       gold: ws.gold,
@@ -204,6 +238,15 @@ export const deserializeWorldState = (str: string): WorldState => {
         partyId: a.partyId as PartyId,
         unitIds: a.unitIds.map((id) => id as UnitId),
         leaderId: a.leaderId as UnitId,
+        ...(a.formation !== undefined
+          ? {
+              formation: {
+                front: a.formation.front.map((id) => id as UnitId),
+                back: a.formation.back.map((id) => id as UnitId),
+                reserve: a.formation.reserve.map((id) => id as UnitId),
+              },
+            }
+          : {}),
       })),
     },
     gold: parsed.gold,

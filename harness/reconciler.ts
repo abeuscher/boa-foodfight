@@ -226,7 +226,8 @@ if (!queenParty) {
   }
 }
 
-// Rule: every other party respects an 8-slot cap in Tier 1.
+// Rule: every other party respects a 9-slot cap in Tier 1 (raised
+// 8→9 per roadmap §7.5 — ceiling for legible 3×3 rendering).
 for (const [file, roster] of [
   ['roster-ants.json', rosterAnts],
   ['roster-spiders.json', rosterSpiders],
@@ -237,11 +238,11 @@ for (const [file, roster] of [
       return tmpl?.tags.includes('queen') ?? false;
     });
     if (isQueenParty) continue;
-    if (party.slotCapacity > 8) {
+    if (party.slotCapacity > 9) {
       record(
         'roster.tier1-cap',
         file,
-        `non-queen party '${party.id}' has slotCapacity ${String(party.slotCapacity)}, max 8 in Tier 1`,
+        `non-queen party '${party.id}' has slotCapacity ${String(party.slotCapacity)}, max 9 in Tier 1`,
       );
     }
     let used = 0;

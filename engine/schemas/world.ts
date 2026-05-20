@@ -49,6 +49,15 @@ const partyAssignmentSchema = z.object({
   partyId: idSchema,
   unitIds: z.array(idSchema),
   leaderId: idSchema,
+  /** Roadmap §7.9 — optional sparse player formation override.
+   * Omitted on pre-§7.9 saves; absence ⇒ engine auto-assigns. */
+  formation: z
+    .object({
+      front: z.array(idSchema),
+      back: z.array(idSchema),
+      reserve: z.array(idSchema),
+    })
+    .optional(),
 });
 
 const worldRosterSchema = z.object({

@@ -4,13 +4,22 @@ import { describe, expect, it } from 'vitest';
 
 import { ENEMY_AIS, neutralPlayer, PLAYER_AIS } from '../ai/index.ts';
 
+import { assignFormation } from './formation.ts';
 import { createTickClock } from './replay.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
 import { runScenario } from './turn.ts';
-import type { GameState, PartyId } from './types.ts';
+import type {
+  Formation,
+  GameState,
+  PartyId,
+  Unit,
+  UnitId,
+  UnitTemplate,
+  UnitTemplateId,
+} from './types.ts';
 import { extractWorldRoster } from './world-extract.ts';
-import { injectWorldRoster, scaffoldFromState } from './world-inject.ts';
+import { honorFormation, injectWorldRoster, scaffoldFromState } from './world-inject.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -106,5 +115,141 @@ describe('engine/world-inject', () => {
     expect(antParties.length).toBe(0);
     expect(report.droppedParties.length).toBe(scaffold.size);
     expect(report.antUnitsPlaced).toBe(0);
+  });
+});
+
+describe('honorFormation (§7.9 follow-on)', () => {
+  const ZERO_AFF = {
+    floor: { attack: 0, armor: 0 },
+    ceiling: { attack: 0, armor: 0 },
+    wall: { attack: 0, armor: 0 },
+  };
+  const mkT = (
+    id: string,
+    size: UnitTemplate['size'],
+    slotCost: number,
+    tags: string[],
+  ): UnitTemplate => ({
+    id: id as UnitTemplateId,
+    name: id,
+    faction: 'ant',
+    size,
+    slotCost,
+    movement: 'ground',
+    baseStats: { hp: 6, attack: 7, agility: 5, armor: 2, intelligence: 1, constitution: 7 },
+    abilities: [],
+    tags,
+    planeAffinity: ZERO_AFF,
+  });
+  const TEMPLATES: ReadonlyMap<UnitTemplateId, UnitTemplate> = new Map<
+    UnitTemplateId,
+    UnitTemplate
+  >([
+    ['melee' as UnitTemplateId, mkT('melee', 'small', 1, ['melee'])],
+    ['caster' as UnitTemplateId, mkT('caster', 'small', 1, ['caster'])],
+    ['queen' as UnitTemplateId, mkT('queen', 'huge', 4, ['queen', 'leader-eligible'])],
+  ]);
+  const u = (id: string): UnitId => id as UnitId;
+  const mkUnits = (spec: [string, string][]): Unit[] =>
+    spec.map(([id, t]) => ({
+      id: u(id),
+      templateId: t as UnitTemplateId,
+      currentHp: 6,
+      level: 1,
+      xp: 0,
+    }));
+  const rankOf = (f: Formation, id: UnitId): 'front' | 'back' | 'reserve' =>
+    f.front.includes(id) ? 'front' : f.back.includes(id) ? 'back' : 'reserve';
+
+  it('an empty override yields exactly the auto layout', () => {
+    const units = mkUnits([
+      ['u1', 'melee'],
+      ['u2', 'melee'],
+      ['u3', 'caster'],
+    ]);
+    expect(honorFormation(units, { front: [], back: [], reserve: [] }, TEMPLATES)).toEqual(
+      assignFormation(units, TEMPLATES),
+    );
+  });
+
+  it('honors an explicit placement; unplaced members keep the auto rank', () => {
+    const units = mkUnits([
+      ['u1', 'melee'],
+      ['u2', 'caster'],
+    ]);
+    const auto = assignFormation(units, TEMPLATES);
+    const r = honorFormation(units, { front: [], back: [], reserve: [u('u1')] }, TEMPLATES);
+    expect(rankOf(r, u('u1'))).toBe('reserve'); // explicit override applied
+    expect(rankOf(r, u('u2'))).toBe(rankOf(auto, u('u2'))); // unplaced → auto
+  });
+
+  it('re-enforces the front cap (overflow → reserve, roster order)', () => {
+    const units = mkUnits([
+      ['a', 'melee'],
+      ['b', 'melee'],
+      ['c', 'melee'],
+      ['d', 'melee'],
+    ]);
+    const r = honorFormation(
+      units,
+      { front: [u('a'), u('b'), u('c'), u('d')], back: [], reserve: [] },
+      TEMPLATES,
+    );
+    expect(r.front).toEqual([u('a'), u('b'), u('c')]);
+    expect(r.reserve).toContain(u('d'));
+  });
+
+  it('pins the queen to front even when the override benches her and front is stuffed', () => {
+    const units = mkUnits([
+      ['m1', 'melee'],
+      ['m2', 'melee'],
+      ['m3', 'melee'],
+      ['q', 'queen'],
+    ]);
+    const r = honorFormation(
+      units,
+      { front: [u('m1'), u('m2'), u('m3')], back: [], reserve: [u('q')] },
+      TEMPLATES,
+    );
+    expect(r.front).toContain(u('q')); // queen-pin wins (pass 1)
+    expect(r.front).toHaveLength(3); // cap; queen + 2 of m1..m3
+    expect(r.reserve).toContain(u('m3')); // overflow — queen took a slot
+    expect(r.back).not.toContain(u('q'));
+    expect(r.reserve).not.toContain(u('q'));
+  });
+
+  it('injectWorldRoster wires the override end-to-end', () => {
+    const finalState = runL1(1);
+    const roster = extractWorldRoster({ finalState, winner: finalState.winner });
+    const target = roster.partyAssignments.find(
+      (pa) => pa.partyId !== ('queen-guard' as PartyId) && pa.unitIds.length >= 1,
+    );
+    if (!target) throw new Error('no field ant party in carried roster');
+    const first = target.unitIds[0];
+    if (first === undefined) throw new Error('empty party');
+    const withOverride = {
+      ...roster,
+      partyAssignments: roster.partyAssignments.map((pa) =>
+        pa.partyId === target.partyId
+          ? {
+              ...pa,
+              formation: {
+                front: [] as UnitId[],
+                back: [] as UnitId[],
+                reserve: [first],
+              },
+            }
+          : pa,
+      ),
+    };
+    const next = loadScenario(DATA_DIR, 2);
+    const scaffold = scaffoldFromState(next.state);
+    const { state } = injectWorldRoster(next.state, withOverride, scaffold);
+    const party = state.parties.get(target.partyId);
+    expect(party).toBeDefined();
+    // The explicitly-reserved leader-region unit is honored into reserve
+    // (assignFormation would not auto-reserve it) — proves the branch.
+    expect(party?.formation?.reserve).toContain(first);
+    expect(party?.formation?.front).not.toContain(first);
   });
 });

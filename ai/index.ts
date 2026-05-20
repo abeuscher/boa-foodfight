@@ -5,6 +5,7 @@
  * diversity measurement (Phase 4 success criterion).
  */
 
+import { baselineL10Player } from './baseline-l10.ts';
 import { baselineL3Player } from './baseline-l3.ts';
 import { baselineL4Player } from './baseline-l4.ts';
 import { baselineL5Player } from './baseline-l5.ts';
@@ -20,6 +21,7 @@ import { jellyRushPlayer } from './jelly-rush.ts';
 import { neutralPlayer } from './neutral.ts';
 import { rushPlayer } from './rush.ts';
 import { spiderL1 } from './spider-l1.ts';
+import { spiderL10 } from './spider-l10.ts';
 import { spiderL2 } from './spider-l2.ts';
 import { spiderL3 } from './spider-l3.ts';
 import { spiderL4 } from './spider-l4.ts';
@@ -67,7 +69,12 @@ export const PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
  * are registered here for the identical reason. `baseline-l9` (the L9 /
  * Basement capture-post chain-marcher → fuse-box, with the Sump-Pump as
  * a chain link whose capture drains the dynamic-hazard basin) is
- * registered here for the same load-bearing reason.
+ * registered here for the same load-bearing reason. `baseline-l10`
+ * (the L10 / Garage capture-post finale — a multi-route chain-marcher:
+ * five columns bound to four distinct Side-Door→Engine-Block routes via
+ * the shared chain-march + the L4 `switchContest` opt-in + an L10-only
+ * route-fork wrapper, NO shared default touched) is registered here for
+ * the same load-bearing reason.
  */
 export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'escort-l2': escortL2Player,
@@ -78,6 +85,7 @@ export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'baseline-l6': baselineL6Player,
   'baseline-l8': baselineL8Player,
   'baseline-l9': baselineL9Player,
+  'baseline-l10': baselineL10Player,
 };
 
 /**
@@ -96,6 +104,7 @@ export const ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
   'spider-l6': spiderL6,
   'spider-l8': spiderL8,
   'spider-l9': spiderL9,
+  'spider-l10': spiderL10,
 };
 
 export {
@@ -105,6 +114,7 @@ export {
   baselineL6Player,
   baselineL8Player,
   baselineL9Player,
+  baselineL10Player,
   baselinePlayer,
   baselineTutorialPlayer,
   divePlayer,
@@ -121,6 +131,7 @@ export {
   spiderL6,
   spiderL8,
   spiderL9,
+  spiderL10,
   spiderTutorial,
   turtlePlayer,
 };

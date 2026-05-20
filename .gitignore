@@ -12,3 +12,4 @@ coverage/
 .husky/_/
 out/
 viewer/dist/
+client/dist/

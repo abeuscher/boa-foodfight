@@ -22,7 +22,15 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["engine/**/*", "data/**/*", "ai/**/*", "harness/**/*", "critics/**/*", "viewer/**/*"],
+  "include": [
+    "engine/**/*",
+    "data/**/*",
+    "ai/**/*",
+    "harness/**/*",
+    "critics/**/*",
+    "viewer/**/*",
+    "client/scripts/**/*"
+  ],
   "exclude": [
     "node_modules",
     "dist",

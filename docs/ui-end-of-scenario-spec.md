@@ -356,8 +356,9 @@ in, including L1).
 - **Post-scenario destination.** Where Continue takes the player
   depends on the world-loop screen, which is §0 quarantined. This
   spec specifies that Continue closes the screen and hands control
-  to the post-scenario destination, whatever that destination is at
-  build time.
+  to the post-scenario destination; that destination is now named
+  by `docs/ui-hill-hub-spec.md` (the Hill hub), though the
+  world-loop screen itself remains owned by that spec, not this one.
 - **Retry from end-of-scenario.** Not specced here. If a "retry
   this scenario" affordance is wanted, it joins the Continue button
   in a small action row; layout supports it. The verb itself is a
@@ -366,9 +367,12 @@ in, including L1).
 ## Forward dependencies (not silent gaps)
 
 - **Stalemate variant** — pacing §D OPEN. See above.
-- **Post-scenario destination** — world-loop screen is §0
-  quarantined. This spec hands control to that destination without
-  specifying it.
+- **Post-scenario destination** — **now specified** by
+  `docs/ui-hill-hub-spec.md`: Continue returns to the Hill hub
+  (reciprocal of that spec's "End-of-scenario Continue destination"
+  resolution). This spec still does not own the world-loop screen
+  (§0); it hands control to the Hill hub as the named destination,
+  and the Hill spec carries the world-loop gameplay-review deps.
 - **Per-scenario graphic library** — whether each scenario has its
   own win/defeat graphic or there is a shared library is a build
   decision and depends on art-direction work that is §D deferred.

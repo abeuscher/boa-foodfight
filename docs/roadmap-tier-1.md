@@ -394,6 +394,46 @@ forcing it back to spec.
 The Level-1 spec window (`[65%, 80%]`) acts as a **hard ceiling and floor**
 for L1 only. L2–L10 are governed by the Tier-1 curve, not the L1 spec.
 
+### 5.1 Realized curve — Phase-D, user-ratified re-baseline (AUTHORITATIVE)
+
+The table above is the **original illustrative intent**, retained for
+provenance. Phase-D measured the achievable curve under the frozen
+engine + locked AI doctrine. Per the systemic finding
+(`docs/level-progression-plan.md` §4h / §4i: the late-tier
+contested-fortress family is structurally bistable, and the finale's
+named continuity lever (day/night) is engine-hardcoded and inert), the
+illustrative ~75→~50 glide is **not reachable** for the late scenarios
+as designed. At the consolidated end-of-Phase-D review the user ruled
+**"Accept & re-baseline"**: the measured-achievable curve below is now
+the **official Tier-1 shipped reality**; this §5.1 table supersedes the
+§5 illustrative targets for L2–L10.
+
+| Scenario | Realized (shipped) | Disposition                                                                                                                                                                 |
+| -------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1       | ~75%               | Shipped — frozen tutorial anchor (gate-29 byte-identity)                                                                                                                    |
+| L2       | 76%                | Shipped — clean                                                                                                                                                             |
+| L3       | 67%                | Shipped — clean                                                                                                                                                             |
+| L4       | 60%                | Shipped — clean                                                                                                                                                             |
+| L5       | 66%                | Shipped — clean                                                                                                                                                             |
+| L6       | 56%                | Shipped — clean                                                                                                                                                             |
+| **L7**   | **— (no value)**   | **PARKED — final.** 4 falsifications; card-host structural dead-end (§4f). Not a shipped playable scenario.                                                                 |
+| L8       | 51%                | Shipped — clean                                                                                                                                                             |
+| **L9**   | **~37%**           | Shipped — **GRANDFATHERED** (bistable; doctrine seed-robust; band withdrawn; §4h)                                                                                           |
+| **L10**  | **~44%**           | Shipped — **GRANDFATHERED — final.** Bistable; multi-route doctrine partially inert (acknowledged); band withdrawn; >L9 trough so the finale reads as a climb-out (§4h/§4i) |
+
+**Ruled consequences of the re-baseline (user decision, binding):**
+(1) L7 is **permanently parked** — Tier-1 ships with **9 playable
+scenarios** (L1–L6, L8–L10); L7 remains a documented structural
+dead-end (park WIP on `claude/l7-parked-wip`, DO NOT MERGE). (2) L10
+ships **grandfathered at ~44%** with the [≈48,52] band formally
+withdrawn and its partially-inert multi-route doctrine honestly
+recorded — it is the finale at the _achievable_ band, not the
+illustrative one. (3) No L10 cosmetic "in-band" relabel (the user
+explicitly rejected the band-fudge option — the discipline of never
+fudging a ruled value to hit a band holds through the finale).
+(4) The systemic late-tier-curve question is **closed** by this
+re-baseline; it is not reopened per level.
+
 ---
 
 ## 6. Agent architecture
@@ -552,26 +592,40 @@ _environment_-progression patterns — the existing memos cover unit and
 faction mechanics well but weren't framed around environment progression.
 That memo feeds the Level PA.
 
-### 6.5 World-loop shop schedule (resolved)
+### 6.5 World-loop shop schedule (SUPERSEDED — persistent hub)
 
-Between-scenario rest points (the **grasshopper shop** from
-`game-outline.md`'s "Shops" section) appear after the following
-scenarios only:
+> **SUPERSEDED by user decision at the consolidated end-of-Phase-D
+> review.** The per-scenario "shop available only after L2/L3/L4/L6/L8/L9"
+> schedule below is **RETIRED**. The recorded world-loop UX
+> (`docs/ui-hill-hub-spec.md`) establishes a **persistent between-scenario
+> Hill hub** — the same place every time, regardless of which scenario
+> was just completed or is coming next — which is incompatible with a
+> gated per-scenario shop schedule. The user ruled "Retire §6.5 schedule
+> now": the **Grasshopper shop (and the Anthill recruit surface — ruled
+> two distinct systems, same review) are available every time the player
+> is at the Hill**, not on a fixed L1/L5/L7/L10-excluded cadence.
+> Inventory-refresh cadence (when the Grasshopper restocks) is a separate
+> content/balance decision left to Tier-2 world-loop implementation. The
+> table below is retained struck-through for provenance only and is **not
+> authoritative**.
 
-| After scenario | Shop available                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| L1             | No — deliberate. The first reward landing is post-L2 so the player feels concrete progression after their first real test. |
-| L2             | Yes — first shop introduction.                                                                                             |
-| L3             | Yes                                                                                                                        |
-| L4             | Yes                                                                                                                        |
-| L5             | No                                                                                                                         |
-| L6             | Yes                                                                                                                        |
-| L7             | No                                                                                                                         |
-| L8             | Yes                                                                                                                        |
-| L9             | Yes                                                                                                                        |
-| L10            | No (tier finale)                                                                                                           |
+~~Between-scenario rest points (the **grasshopper shop**) appear after
+the following scenarios only:~~
 
-Each shop offers three kinds of action:
+| ~~After scenario~~ | ~~Shop available~~                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| ~~L1~~             | ~~No — deliberate. The first reward landing is post-L2 so the player feels concrete progression after their first real test.~~ |
+| ~~L2~~             | ~~Yes — first shop introduction.~~                                                                                             |
+| ~~L3~~             | ~~Yes~~                                                                                                                        |
+| ~~L4~~             | ~~Yes~~                                                                                                                        |
+| ~~L5~~             | ~~No~~                                                                                                                         |
+| ~~L6~~             | ~~Yes~~                                                                                                                        |
+| ~~L7~~             | ~~No~~                                                                                                                         |
+| ~~L8~~             | ~~Yes~~                                                                                                                        |
+| ~~L9~~             | ~~Yes~~                                                                                                                        |
+| ~~L10~~            | ~~No (tier finale)~~                                                                                                           |
+
+The Hill (persistent) offers three kinds of action:
 
 1. **Items** — sells the items roster (R14 mechanic). Future expansion
    adds the Risk-2210-style commander cards (Mechanics memo §1.3).
@@ -622,6 +676,335 @@ The existing designer-agent system operates **inside** scenarios for
 tuning; the new Progression Agents operate **across** scenarios for
 distribution. The Gameplay PA _commissions_ the within-scenario loop on a
 given scenario, with a curve target.
+
+### 7.5 Standard party slot capacity (8 → 9 ceiling)
+
+Cross-track change request (UX→Gameplay, exchange #1; full prose in
+`docs/change-request-protocol.md` §5). UX needs the Organize Army UI to
+render parties legibly (a 3×3 grid). Resolution: standard-party
+`slotCapacity` ceiling is **9** (queen-guard unchanged at 12). 9 is a
+**ceiling, not a mandate** — per-scenario rosters keep their authored
+compositions, so starting armies stay byte-identical and the §5
+win-rate curve / gate-29 are unaffected. The formation-slot system
+(front/back/reserve, `engine/formation.ts`) is **untouched** — it runs
+inside deterministic scenario execution and is freeze-bound.
+"Middle rank as a tactical mechanic" was bundled in the request and is
+explicitly **parked** as a separate future change request to be weighed
+against engine-freeze policy on its own merits. Embodied:
+`engine/world-inject.ts` `PARTY_SLOT_CAP` 8→9; `harness/reconciler.ts`
+Tier-1 authoring guard `>8`→`>9`.
+
+### 7.6 Engine-freeze transition (frozen → golden-master-gated)
+
+Cross-track change request (UX→Gameplay, exchange #2; full prose in
+`docs/change-request-protocol.md` §5), disposition **counter-proposed**.
+The L1–L10 freeze succeeded and is not revoked retroactively; its phase
+is over. Resolution: the **deterministic combat-sim path** moves from
+_frozen_ to **golden-master-gated** — sim-path changes are admissible
+but each is a Template A request requiring a deliberately re-baselined
+replay set, an explicit L1–L10 balance-curve re-check, and review (the
+Phase-D discipline as standing policy). Litmus: _does it change the
+bytes `runScenario` produces under a fixed seed?_ No → ungated; yes →
+gated. The **between-scenario / world-loop layer is outside the sim
+freeze** (functionally always was) — built under normal behavioral
+testing, no gate, proceeds now. Gate-29 / byte-identical replays are
+**retained and repurposed** as the sim-path change-detection tripwire,
+**not decommissioned**. Schemas (`engine/schemas/*.ts`) and the type
+model (`engine/types.ts`) remain hard-stable. The post-UI
+"plays-the-same" validation instrument is deferred to a separate scoped
+spike. Consequence: §7.5's parked middle-rank-as-mechanic is
+**un-parked** — now a fileable gated sim-path request, naturally
+sequenced after the Organize Army spec.
+
+### 7.7 Queen rear-zone (legibility now; mechanic spike-gated)
+
+Cross-track change request (UX→Gameplay, exchange #3; full prose in
+`docs/change-request-protocol.md` §5), disposition **counter-proposed +
+needs-spike**. Decisive fact: `engine/formation.ts` deliberately slots
+the queen **front** ("soak the queen-guard's damage"), both factions —
+so the proposed melee-immune rear zone _inverts_ her combat role rather
+than merely making her legible. Resolution: (1) the legibility intent
+is met now by an **accurate** distinct-queen rendering (unique,
+loss=scenario-loss, depicted as the front-anchor she actually is) —
+world-loop / UI layer, ungated, unblocks Organize Army; (2) the
+rear-zone **mechanic** is an approved pursuit but gated — a
+high-magnitude, **bilateral** sim change under §7.6, preceded by a
+**spike** quantifying the balance blast radius across every queen-guard
+scenario (both factions) before any Template A; (3) "rendering-only
+now, mechanic later" is **withdrawn for this request** — unlike the
+middle-rank precedent, a safe-rear diagram over a front-soak sim would
+ship a UI that contradicts the engine. queen-loss-as-scenario-loss and
+non-queen front/back semantics unchanged. Spike scoped standalone
+(`docs/spike-queen-rear-zone.md`).
+
+### 7.8 Barracks (unassigned-units pool)
+
+Cross-track change request (UX→Gameplay, exchange #4; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted
+(decomposed) + cost correction**. Decisive fact: the barracks data
+shape **already exists** — it is the derived view `WorldRoster.units`
+minus everything referenced by a `partyAssignment`; the shipped
+operators already use it as source/sink (`disbandParty` → idle,
+`createParty` / `moveUnit` ← idle) and `schemas/world.ts` already
+persists idle units (no "must-be-assigned" constraint). Resolution:
+(1) "barracks" is canonically the derived unassigned set, **not** a new
+collection/schema; (2) shipped this window — the `barracksUnits` read
+accessor (`engine/world-organize.ts`, 704/704) — which clears the
+Organize Army hard-block (spec binds to the accessor + operators, a
+stable contract); (3) the **one real gap**, missed by the cost guess,
+was that `extractWorldRoster` rebuilt the next roster from combat
+survivors only, dropping _undeployed_ barracks units at the scenario
+boundary — **now SHIPPED** (follow-on). `ExtractInput.carryForward`
+(optional): the world-loop runner passes the prior roster's
+`barracksUnits` and they are appended to the next roster **verbatim**
+(no XP / no heal — they didn't fight), in **no party assignment**
+(still barracks next scenario), id-deduped against survivors, dead
+pruned. Absent / empty ⇒ byte-identical to before (explicit no-op
+test + suite unchanged). World-loop layer, **ungated** (§7.6). Full
+suite 745/745, no existing test moved. Confirmed: no barracks cap
+(slot caps are per-party only); wiped-in-combat units die and do not
+return (decision (d)). **Remaining backend: multi-item shop** (the
+last queued item).
+
+### 7.9 Player-mutable formation + B4 operators
+
+Cross-track change request (UX→Gameplay, exchange #5; full prose in
+`docs/change-request-protocol.md` §5), disposition **decomposed-yes +
+counter, with cost correction**. Verified architecture: `assignFormation`
+is called at exactly two chokepoints — `engine/state.ts` (static /
+gate-29 path, no `WorldRoster`) and `engine/world-inject.ts` (campaign
+path); the balance curve is measured AI-vs-AI on the static path, which
+never carries a player formation. Therefore **player-mutable front/back
+formation is ungated world-loop work, not a Phase-D rebalance** — the
+CR's coupling rationale does not survive the architecture. Resolution:
+
+1. **Persistent formation** — optional sparse override
+   `WorldFormation { front, back, reserve }` on `WorldPartyAssignment`,
+   omitted-when-absent (byte-identical saves / replays, same discipline
+   as `WorldUnit.levelUpBonus`). **Shipped.**
+2. **Operators (shipped)** — `setUnitRank` (sparse; front ≤ 3 / back ≤
+   2 explicit caps; queen pinned front), `removeUnit` (→ barracks,
+   detach semantics), `dismissUnit` (→ removed from roster); plus the
+   **queen-pin correctness hardening** on `moveUnit` / `createParty`
+   (queen cannot leave queen-guard or join a new squad). Queen-pin
+   coverage = move / create / remove / dismiss / setUnitRank
+   (signatures: `removeUnit`/`dismissUnit` take `templates` for the
+   tag check — a contract refinement over the Q10 answer, recorded in
+   `troop-reference.md` §10). 718/718, gate-29 intact.
+3. **world-inject honoring** the persisted formation — **SHIPPED**
+   (follow-on). `honorFormation` (`engine/world-inject.ts`): sparse
+   override applied per member (queen ⇒ front hard-pin; explicit rank;
+   else the engine's `assignFormation` auto rank), hard caps
+   re-enforced deterministically in roster order (front ≤ 3 / back ≤
+   2, overflow → reserve, queen seated first). Absent override ⇒
+   `assignFormation` exactly as before; the static / gate-29 path
+   never carries one ⇒ byte-identical by construction. Proof: full
+   suite **737/737** (replay-snapshot / replay-determinism /
+   world-loop / world-extract / world-save all green; +5 new tests
+   only). Ungated world-loop layer (§7.6). Remaining backend items:
+   §7.8 extract-merge → multi-item shop.
+
+**Middle rank** stays folded into the §7.7 queen-rear spike (one
+formation/`battle.ts` re-baseline, not three); `setUnitRank`'s `Rank`
+deliberately omits `'middle'` until the spike rules. Mid-scenario
+formation is **locked** (set in hub, frozen at scenario start);
+`party-detail-spec.md` drops its mid-scenario "change formation" verb
+(amendment recorded) but still reflects engine-driven `promoteReserve`.
+
+### 7.10 Anthill recruit (operator + catalog)
+
+Cross-track change request (UX→Gameplay, exchange #6; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted +
+human design ruling**. Recruit is its own system (distinct from the
+Grasshopper shop — Anthill nursery vs. trader; separate module
+`engine/world-recruit.ts`). World-loop layer, **ungated** per §7.6
+(between-scenario, off the static/gate-29 path; the catalog is
+deliberately NOT loaded by `loadScenario`). Shipped:
+
+1. **`recruitUnit(state, templateId, catalog, templates) → { state,
+ok, error?, recruitedUnitId? }`** — deducts the catalog cost from
+   `WorldState.gold`, appends a fresh `WorldUnit` to the roster (→
+   barracks), deterministic id (`rngSeed` + roster size, per
+   `applyShopPurchase`). Failure: not in catalog / unknown template /
+   insufficient gold. **Contract refinement over the Q-list answer:
+   the parsed catalog is a 4th param** so the recruitable set + cost
+   are authoritative from data, not UI-passed.
+2. **Recruit catalog** `data/level-N/recruits.json`
+   (`engine/schemas/recruits.ts`: `{ version: 1, recruits:
+[{ templateId, cost }] }`, unique ids). Authoritative source of
+   recruitable-set + cost + per-scenario availability. A level-1 stub
+   shipped (footman/scout/cockroach); full per-level content is the
+   deferred design pass. Authoring rule: catalogs must not list queen
+   templates (the catalog is the recruit gate).
+3. **Recruit arrival level — human design ruling:** the **lower
+   median level across the full roster** (deployed + barracks, no
+   filter) **− 1, clamped to ≥ 1**. `levelUpBonus` computed via
+   `world-levelup.cumulativeLevelBonus` (omitted at level 1 —
+   byte-stable). The whole-roster median creates an **intentional
+   soft-cap**: mass-recruiting drags the median down so later recruits
+   arrive weaker (confirmed-intended, pushes deploy/dismiss before
+   hoarding). Charisma seeded only on promotable templates
+   (`isPromotableTemplate`, same rule as `loadScenario`).
+
+Engineering committed flat-level-1 as the trivial default; the
+median-minus-one scaling is the **human's** balance ruling, recorded
+here (not a dev contract). 729/729, gate-29 intact. Next backend
+items unchanged: world-inject formation honoring → §7.8 extract-merge
+→ multi-item shop.
+
+### 7.11 L0 — prepended prologue (tutorial scenario)
+
+Cross-track change request (UX→Gameplay, exchange #7; full prose in
+`docs/change-request-protocol.md` §5; substrate working drafts in
+`docs/drafts/` — L0 manual, ruleset, beat outline, the two CRs).
+Disposition **accepted (dev concurrence)** — §7.11 is a
+decision-of-record (structural/design), not engine work; dev's role
+was concurrence on framing + forward-dependency mapping.
+
+**The decision.** L0 is the tutorial level, created as a **prepended
+prologue, not a renumber**: a standalone scenario at
+**`data/tutorial/`**, outside the Tier-1 L1–L10 curve. L1–L10 keep
+their indices, data dirs, win-rate-curve positions, and deterministic
+behaviour unaffected. L0 dissolves the recorded contradiction of L1
+being both the "all mechanics on" frozen reference (§2/§3, gate-29
+anchor) and the de-facto tutorial — L0 takes the tutorial role; L1
+keeps the anchor role.
+
+- **Exempt-by-absence** from gate-29, the win-rate curve, coevo,
+  tune, and the reconciler — no flags, no path magic; those systems
+  are opt-in and L0 simply isn't opted in (dev-verified:
+  `loadScenario` path-agnostic; harnesses + reconciler hardcoded to
+  `data/level-1`; gate-29 is an AI-vs-AI win-rate metric anchor, not
+  a stored replay artifact L0 could perturb). All 11 scenario JSON
+  files must exist in `data/tutorial/`. Single-party / queen-less is
+  a clean load (forward note: the level-1-only reconciler would fail
+  a queen-less scenario if ever generalised).
+- **World-loop relationship:** standalone — L0 does _not_ join the
+  extract/inject roster carry-forward. Linear `L0 → world loop → L1`;
+  the campaign still "starts" at L1 with the authored L1 roster.
+  L0 needs its own scouting AI in `SCENARIO_PLAYER_AIS` (off the
+  measured path) + a hardcoded runner pointer, mirroring the existing
+  `level-1-tutorial` precedent — additive, no engine change.
+- **Victory** `capture-post` (the winter-house entrance). **Lose**
+  conjunctive: Antonio falls **AND** the summer hill is lost; either
+  alone recoverable. Lose surfaced in the beat-1 briefing as a
+  failure condition, not demonstrated.
+- **Squad:** Antonio's six — 2 footmen / 2 archers / 2 mages (three
+  canonical troop types) — plus a mid-scenario reinforcement squad
+  (via §7.12) and an optional recruited neutral (via recruit-neutral).
+- **Tutorial philosophy:** skill-building, not difficulty; advance
+  absent catastrophic mistake. Exactly one balance-measured beat
+  (beat 8, the entrance) tuned to **90% ant win rate**, measured by
+  the existing harness over full-L0 × 100 seeds vs the baseline
+  player AI (== beat-8 win rate by construction, since beats 1–7 are
+  scripted-safe); re-anchors to the beginner tier when the
+  player-AI-skill-tier forward CR lands.
+
+**Forward dependencies — both engine deps LANDED.** §7.12
+(reinforcement-at-POST, beat 5) and §7.13 (mid-scenario save, beat 7)
+are **shipped** (Exchanges #8/#9). L0's engine prerequisites are
+complete; remaining L0 work is content/design (Level PA geometry,
+tutorial design doc, UX-surface spec) + the cross-track amendments.
+Player-AI skill tiers remains a separate non-blocking future
+exchange.
+
+**Cross-track amendments (design/critic-owned, no engine
+dependency):** Playability rubric criterion 7 (learn-on-L0 /
+transfer-to-L1), pacing memo §A.3 (L1 stalemate-exemption keeps the
+anchor/gate-29 justification; the tutorial leg drops), cube-view memo
+(L1-tutorial language → L0; single-plane degradation dev-confirmed
+fine), level-progression-plan §0/§2 (L1 keeps anchor, drops tutorial
+characterisation), mechanic-distribution-plan (recruit-as-order debut
+L5→L0; archer/mage debut → L0, mid-tier becomes roster-build surface
+— engine-clean, verified), UX handoff, and a new general
+briefing-with-objectives convention (Briefing view spec; L0 first
+consumer). Dev recommends the Playability rubric, pacing memo §A.3,
+and mechanic-distribution-plan changes be ratified directly with
+their owners, not only queued.
+
+### 7.12 Reinforcement-at-POST (first gated sim-path mechanic)
+
+Cross-track change request (UX→Gameplay, exchange #8; full prose in
+`docs/change-request-protocol.md` §5). (§7.11 — L0 prologue, Exchange
+#7 — records separately; it references this as a forward dependency
+and does not need to precede it.) Disposition **accepted +
+decomposed**. Capturing a designated POST spawns a scenario-data
+party at the captured (or a configured) POST.
+
+**First mechanic since Exchange #4 to touch the frozen sim path.**
+Exchanges #4–#6 were ungated world-loop layer; the capture-complete
+hook lives in `engine/post-capture.ts` (inside `runScenario`), so per
+§7.6 this is **golden-master-gated**. Resolved via the gated
+discipline: Template A (the CR) → review (the accepted
+decomposition) → implement → **byte-identity proof run** → record.
+The change is structured so the new branch is unreachable on every
+shipped scenario (no roster carries `reinforcements` ⇒ the
+`GameState.reinforcements` field is absent ⇒ guard false ⇒ zero
+parties/events/RNG) — gate-29 byte-identical **by construction**,
+same precedent as dep-#9 `goldPerTurn` / `levelBonus` / §7.9. Proof:
+full suite 732/732 (replay-snapshot, replay-determinism, world-loop
+all green; +3 new tests only).
+
+Shipped: optional `reinforcements` block on the **roster file**
+(`engine/schemas/roster.ts`, sibling to `parties` — a faithful
+refinement of the cost-decomposition's "optional field, no 12th
+file"; standalone-trigger fits the roster file, not a nested
+starting-party); built into a `GameState.reinforcements` map at load
+(`engine/state.ts`, party fully constructed there so the sim-time
+hook is a pure insert, no templates/abilities threaded into capture);
+the guarded `post-capture.ts` hook; a `reinforcement-spawned` replay
+event (UX-layer auto-pause consumes it — engine emits only). Shared
+`buildUnit` helper extracted so `buildParties` and the reinforcement
+builder can't diverge (buildParties' unit ids unchanged → shipped
+scenarios byte-identical).
+
+PM-ruled shape (per dev's priced recommendation): capture-complete
+trigger; configurable arrival POST (default = captured); configurable
+faction; single-shot per trigger POST (`firedReinforcements`); named
+pre-defined inline party. **Deferred** (non-breaking later CR):
+capture-initiate trigger; pool-model identity. L0's G14 consumes
+this; L0 cannot ship until §7.12 has landed (it now has).
+
+### 7.13 Mid-scenario save (Option B — input-stream replay)
+
+Cross-track change request (UX→Gameplay, exchange #9; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted,
+Option B**. A mid-scenario save (L0 beat 7; reusable L1–L10) so a
+late loss replays the encounter, not the whole scenario.
+
+**Not sim-path / not golden-master-gated.** `runScenario` and every
+combat file are untouched; this adds a save module that _uses_ the
+existing deterministic `runScenario` via two new policies. No
+byte-identity proof needed for the save code; the determinism
+round-trip test is the correctness guarantee. (Full suite 741/741,
+no existing test moved.)
+
+Shipped (`engine/scenario-save.ts` + `engine/schemas/scenario-save.ts`):
+the frozen on-disk contract `{ version, scenarioId, seed,
+savedAtTurn, orderLog }` (orderLog = the player's per-turn issued
+orders); `recordingPlayer` (captures a player handle's per-turn
+orders), `replayPlayer` (re-issues a logged stream), `restoreScenario`
+(re-runs `runScenario` with the replay policy bounded to
+`savedAtTurn`; forwards the seed-loaded neutral/item spawn payloads
+so the re-run is bit-identical), and stable serialize / schema-
+validated parse. Determinism rests on `runScenario`'s **per-policy
+rng fork** (`turn.ts` `rng.fork(policy-name-turn)`): enemy/neutral
+streams are independent of the player policy, so replaying the
+player's recorded orders reproduces the world exactly — proven by a
+round-trip test (record → save → restore == original at the save
+turn).
+
+PM-ruled v1 shape: auto-save at an authored point, single slot,
+authored-points-only, cleared on win/scenario-exit. Cross-version is
+moot for the use case (save+resume are same session/engine).
+**Defined-but-deferred:** the auto-save _trigger_ (a scenario-data
+point that fires the save) — its firing needs the unbuilt human
+turn-driver; the format + restore (this module) are buildable and
+tested now with synthetic logs, so the UI later only has to emit the
+frozen `orderLog` shape. Input-log production is part of the same
+unbuilt real-time UI L0 depends on wholesale, so it adds no marginal
+L0 slip risk. L0 beat 7 consumes this; L0 cannot ship until §7.13
+has landed (it now has).
 
 ---
 
@@ -820,6 +1203,26 @@ Where this roadmap defers to other docs:
   engine-surfaced only; "stalemate" reserved per the battle-mode
   vocabulary note; L1 permanently score-resolved (§A.3). Completes
   the four-spec per-view set. Forward/dormant.
+- **`docs/ui-hill-hub-spec.md`** (RECORDED, forward spec): the first
+  world-loop UI spec — the between-scenario Hill hub (three-band
+  hub-and-spoke; Deploy/Organize/Recruit/Shop/System verb rail;
+  persistent-hub model; Antonio present-but-mute; flat-for-v1
+  scene). Carries two **gameplay-review dependencies** (cube memo §0
+  — UI specs don't make gameplay rulings): persistent-hub vs roadmap
+  §6.4–6.5 "no shop" schedule, and Recruit-vs-Shop as distinct vs
+  unified systems. Resolves the end-of-scenario "Continue
+  destination" forward dep (Continue → Hill; reciprocal recorded in
+  that spec). Forward/dormant — does not block Phase-D.
+- **`docs/ui-briefing-spec.md`** (RECORDED, forward spec): the
+  second world-loop UI spec — the Deploy→scenario surface (Antonio
+  briefing panel + the orientation moment). §A.3-clean: the
+  orientation indicator is direction-only, never a path/route
+  preview; per-victory-kind variants (capture-post default, escort,
+  eradicate with a deliberate one-shot fog exception, recruit-count
+  with no directional indicator per level-progression-plan §4g —
+  single random-plane neutral, no recruit POST). First half of the
+  shared Briefing/Tutorial surface; partially unblocks playability
+  rubric criterion 7. Forward/dormant — does not block Phase-D.
 - **`docs/playability-critic-rubric.md`** (RECORDED, forward spec):
   authoritative Playability Critic rubric — two player-agent loops
   (competent/naive), determinism fence, per-criterion activation
