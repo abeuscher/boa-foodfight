@@ -30,7 +30,7 @@ export function Recruit({ state, apply }: Props): JSX.Element {
               <li key={r.templateId}>
                 <span className="unit">{templateName(id)}</span>
                 <span className="acts">
-                  <span className="cost">{r.cost} gold</span>
+                  <span className="cost">{r.cost} buttons</span>
                   <button
                     disabled={!affordable}
                     onClick={() => {
