@@ -1071,6 +1071,38 @@ retired); **barracks is a derived view + persistent surface** (§7.8),
 `barracksUnits` = `units` minus assigned, no separate collection.
 Operator contracts live in `docs/troop-reference.md` §10.
 
+### 7.16 Tutorial Overlay (in-scenario coaching system)
+
+Cross-track change request (UX→Dev, exchange #12; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted**.
+Doc-only; **zero engine work, byte-safe** — the overlay is a read-only
+consumer over `TurnOutcome.events[]` + client UI state, emitting nothing
+the sim sees (same posture as the auto-pause layer); no gate-29 /
+balance-curve impact.
+
+`docs/ui-tutorial-overlay-spec.md` (RECORDED) defines the in-scenario
+tutorial as a **reusable step-type grammar** — acknowledge-modal,
+highlight-and-explain (control), point-and-do action-gate (action),
+free-play nudge (strategy / world-loop / unstick) — with a per-step
+pause model riding pacing §A.1 and an active-not-passive sequencing rule
+(first gate = a real order; back half = play-with-nudges). L0 is a
+re-authorable worked example, not a fixed script; the Briefing view
+(§ `ui-briefing-spec.md`) keeps the goal statement.
+
+Dev-verified: both client-capability confirmations granted —
+action-observability **by construction** (every gate action is a client
+UI event, with a today/when-built split: speed/pause + sub-view today,
+order-issue once the live engine-in-browser path lands, face-select once
+the cube view is built); stall detection fully client-side today (a last
+-input idle timer, **unrelated** to the engine `stalemate-approach`
+forward-dep). Two corrections folded into the spec: the order
+**"Confirm" affordance does not exist** (main-screen Supersession note —
+the destination-click is the issue), and the type-4 nudge signals
+**inherit the auto-pause observability split** (`party-idle` state-derived,
+`newly-visible-enemy` on the pending §3d ant-visibility projection). The
+action-gate **build** sequences after the live engine-in-browser path
+(the next dev arc); the other step-types work over replay playback.
+
 ---
 
 ## 8. Open questions

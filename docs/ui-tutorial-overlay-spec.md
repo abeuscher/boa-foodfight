@@ -1,13 +1,17 @@
 # Tutorial Overlay — UX Spec (In-Scenario Coaching System)
 
-**Intended location:** `docs/ui-tutorial-overlay-spec.md`
-**Status:** DRAFT — awaiting ratification through the change-request
-protocol. The in-scenario half of the tutorial surface; the
-between-scenario half (goal statement, narrative orientation) lives in
-the already-RECORDED `docs/ui-briefing-spec.md`. Companion to
-`docs/ui-main-screen-spec.md` (the chrome the overlay coaches against)
-and `docs/auto-pause-events.md` (the observable signals action-gates
-and nudges bind to).
+**Location:** `docs/ui-tutorial-overlay-spec.md`
+**Status:** RECORDED (Exchange #12, accepted) — ratified through the
+change-request protocol; dev-verified zero engine work, byte-safe
+(read-only consumer over the turn-stream + client UI state, same posture
+as the auto-pause layer). **Forward spec** — not built; the action-gate
+build sequences after the live engine-in-browser path (see
+"Engine/client confirmations"). The in-scenario half of the tutorial
+surface; the between-scenario half (goal statement, narrative
+orientation) lives in the already-RECORDED `docs/ui-briefing-spec.md`.
+Companion to `docs/ui-main-screen-spec.md` (the chrome the overlay
+coaches against) and `docs/auto-pause-events.md` (the observable signals
+action-gates and nudges bind to).
 
 **Posture — a system, not a script.** This spec defines a **reusable
 grammar of tutorial step-types** and answers "how do we introduce an
@@ -101,8 +105,10 @@ points at the thing it describes. Dismiss with OK.
 
 - **Pause:** paused (it is an acknowledge-modal variant).
 - **Use for:** "this is the time control," "this is your party
-  roster," "this is where orders are confirmed." The **answer to "how
-  do we introduce a control."**
+  roster," "this is how you issue an order" (select party → Move →
+  click destination — there is no separate Confirm affordance; the
+  destination-click is the issue, per `ui-main-screen-spec.md`). The
+  **answer to "how do we introduce a control."**
 
 ### 3. Point-and-do action-gate (introduce an _action_)
 
@@ -175,7 +181,7 @@ the specifics):
    this map. (Paused; scenario opens paused.)
 3. **Introduce the controls mission 1 needs** — a short run of
    highlight-and-explain steps: time/pause controls **first**, then
-   the party roster rail, the contextual-action rail / order-confirm,
+   the party roster rail, the contextual-action rail (order issuance),
    and the HUD pod read-outs. Only the controls L0 actually uses; not
    an exhaustive UI tour.
 4. **Hand over agency** — point-and-do gate: the player **issues a
@@ -206,7 +212,7 @@ the tutorial's runtime.
   main-screen chrome region** they target and point at it. Targets are
   the regions named in `ui-main-screen-spec.md`: active face,
   peripheral faces, left rail (party roster), right rail (contextual
-  actions / order-confirm), bottom-left HUD pod (incl. time/pause
+  actions / order issuance), bottom-left HUD pod (incl. time/pause
   controls), bottom-right notification strip.
 - **Emphasis treatment** (glow vs outline vs arrow, and whether to
   dim/spotlight-mask the rest of the screen) is **visual-direction
@@ -226,20 +232,37 @@ free-play nudges (type 4) fire on an **observable state condition**.
 Both bind to signals the client already has or that the auto-pause
 contract already names — the overlay is a consumer, not a new producer:
 
-- **Player actions** (gate advance): order confirmed for a party (the
-  order-lifecycle Confirm in `ui-main-screen-spec.md`); time/speed
-  changed via the HUD pod; a sub-view opened; a face rotated/selected.
-  These are **client UI events** — the engine is headless and does not
-  emit them.
-- **State conditions** (nudge fire): the same observable signals the
-  auto-pause set reads — a party went idle (`party-idle`), an enemy
-  became newly visible (`newly-visible-enemy`), a combat resolved
-  (`combat-init` / `battle-resolved`), a POST was captured
-  (`post-captured`). A **stall** is "no player action for N seconds of
-  live play" — same family as the `stalemate-approach` forward-dep.
-
-This needs a **client-capability confirmation**, not engine work (see
-"Engine/client confirmations").
+- **Player actions** (gate advance): an **order issued** for a party
+  (the destination-click that places a move order — `ui-main-screen-spec.md`
+  has no separate Confirm affordance; the destination-click _is_ the
+  issue); **time/speed changed** via the HUD pod; a **sub-view opened**;
+  a **face rotated/selected**. These are all **client UI events** — the
+  engine is headless and does not emit them. Dev-confirmed observability
+  split (Exchange #12): speed/pause-changed and sub-view-opened are
+  observable **today** (the merged clock layer + app nav own them);
+  **order-issued** is observable once the **live engine-in-browser /
+  order-issuance path** exists (today's in-scenario view is replay
+  playback, no order issuance), and **face-select** once the cube view
+  is built. Both are unbuilt-but-client-owned-when-built, so the gate is
+  trivial to wire then.
+- **State conditions** (nudge fire): the same turn-stream signals the
+  auto-pause set reads, and they **inherit auto-pause's observability
+  split** — they are not all "free." A **combat resolved**
+  (`combat-init` / `battle-resolved`) and a **POST captured**
+  (`post-captured`) are directly event-keyed and observable today; a
+  **party went idle** (`party-idle`) is state-derived (needs per-turn
+  order-queue diffing) and an **enemy became newly visible**
+  (`newly-visible-enemy`) still rides the **pending ant-visibility
+  projection** (the open Exchange #10 §3d confirmation, unresolved). So
+  nudges keyed on those two carry the same deferred / pending-visibility
+  status they have in the clock layer.
+- A **stall** is "no player action for N seconds of live play" — a
+  **pure client-side idle timer** (a last-input timestamp + an elapsed
+  check that resets on any player action and accrues only while the
+  clock is live). Dev-confirmed: this is **unrelated** to the engine
+  `stalemate-approach` forward-dep (a sim-level inactivity terminal,
+  pacing §D) — conceptually similar, no shared mechanism, and the
+  tutorial stall is **not blocked** on anything.
 
 ## Skip, replay, and forgiveness
 
@@ -264,10 +287,12 @@ reference fill-in, kept in sync with `docs/drafts/L0-beat-outline.md`
 
 - **Orient (type 1):** Antonio's start, the exit he must reach,
   "survive the crossing." Paused.
-- **Controls (type 2 ×N):** pause/speed first → party roster → order
-  confirm → HUD read-outs. Only L0's controls.
-- **First order (type 3):** point at Antonio's party → "give him a
-  move order" → confirm → "now start the clock." Live from here.
+- **Controls (type 2 ×N):** pause/speed first → party roster → how to
+  issue an order (select → Move → destination) → HUD read-outs. Only
+  L0's controls.
+- **First order (type 3):** point at Antonio's party → "give him a move
+  order" → click destination (the order issues) → "now start the
+  clock." Live from here.
 - **Play with nudges (type 4):** first fog reveal, first spider
   contact, first combat each get a one-time nudge; stall-nudge if the
   player idles. Player plays the crossing.
@@ -293,21 +318,32 @@ authored-save-point feature exists.
 4. **Pacing default-paused-on-start.** Pacing memo §A.1 canon; the
    overlay rides it, does not redefine it.
 
-## Engine/client confirmations needed
+## Engine/client confirmations (dev-answered, Exchange #12)
 
-1. **Client action-observability for gates.** Confirm the client can
-   detect the player actions gates bind to — order-confirmed,
-   speed-changed, sub-view-opened, face-selected. These are
-   client-runtime UI events (the engine is headless), so this is a
-   **client-capability** confirmation, not engine work; flagged so the
-   overlay's advance model isn't assumed.
-2. **Stall detection.** Confirm "no player action for N seconds of
-   live play" is computable client-side (it should be — same family as
-   the auto-pause idle signals).
+1. **Client action-observability for gates — GRANTED, by construction.**
+   Every action a gate keys off is a client UI event the client itself
+   produces (never the headless engine). With a today/when-built split:
+   **speed/pause-changed** and **sub-view-opened** are observable now;
+   **order-issued** is observable once the live engine-in-browser /
+   order-issuance path lands; **face-select** once the cube view is
+   built. See "Advance conditions."
+2. **Stall detection — GRANTED, fully client-side, today.** A
+   last-input timestamp + elapsed check; unrelated to the engine
+   `stalemate-approach` forward-dep.
 
-No engine work is anticipated: the overlay consumes already-emitted
-turn-stream events and client UI state; it produces nothing the sim
-path sees, so no gate-29 / balance-curve impact.
+**Build-sequencing note (does not block ratification).** The
+acknowledge-modal, highlight-and-explain, and free-play-nudge step-types
+can largely be built over the existing replay-playback view. The
+**point-and-do action-gate** — specifically the load-bearing "first real
+order" moment — depends on the **live engine-in-browser / order-issuance
+path** (the next dev arc), since replay playback has no order issuance.
+So the spec ratifies now (free), but the action-gate build sequences
+after live-play lands — which aligns with where dev is headed next.
+
+No engine work: the overlay consumes already-emitted turn-stream events
+and client UI state; it produces nothing the sim path sees, so no
+gate-29 / balance-curve impact (confirmed read-only, same posture as the
+auto-pause layer).
 
 ## Forward dependencies
 
@@ -333,8 +369,8 @@ path sees, so no gate-29 / balance-curve impact.
   goal statement and narrative orientation this overlay continues from.
 - `docs/ui-main-screen-spec.md` — the chrome regions the overlay
   anchors to (time controls, rails, HUD pod, faces, notification
-  strip) and the order-lifecycle Confirm that the first action-gate
-  detects.
+  strip) and the order-lifecycle (destination-click issue, no separate
+  Confirm affordance) that the first action-gate detects.
 - `docs/auto-pause-events.md` — the observable turn-stream signals the
   free-play nudges and stall detector reuse; the shared pause surface.
 - `docs/design-memo-pacing-and-turn-cap.md` §A.1 — default-paused-on-

@@ -603,6 +603,55 @@ routing doc is marked RESOLVED (this §5 entry is canonical). Signatures
 dev-verified; `reorderParties` forward-dep'd; engine cost zero (all
 bindings shipped). Recorded `roadmap-tier-1.md` §7.15.
 
+### Exchange #12 — Tutorial Overlay (in-scenario coaching system)
+
+**Request (UX):** ratify `ui-tutorial-overlay-spec.md` — an in-scenario
+coaching **system** (not an L0 script): a four-type step grammar
+(acknowledge-modal, highlight-and-explain = control, point-and-do
+action-gate = action, free-play nudge = strategy/world-loop/unstick), a
+per-step pause model riding pacing §A.1, and an active-not-passive
+sequencing rule (first gate = a real order; back half = play-with-nudges).
+L0 included as a re-authorable worked example. Non-blocking; no engine
+work expected. Two client-capability confirmations asked.
+
+**Reply (Dev) — Disposition: Accepted.**
+
+- **Zero engine work, byte-safe confirmed.** Read-only consumer over
+  `TurnOutcome.events[]` + client UI state; emits nothing the sim sees —
+  same posture as the auto-pause layer. No gate-29 / balance-curve.
+- **Confirmation 1 (action-observability): GRANTED by construction** —
+  every gate action is a client UI event, never the headless engine.
+  Today/when-built split: speed/pause-changed + sub-view-opened
+  observable **now**; **order-issued** observable once the live
+  engine-in-browser / order-issuance path lands; **face-select** once
+  the cube view is built.
+- **Confirmation 2 (stall detection): GRANTED, fully client-side today**
+  — last-input timestamp + elapsed check; **unrelated** to the engine
+  `stalemate-approach` forward-dep (no shared mechanism, not blocked).
+- **Correction (folded in):** `ui-main-screen-spec.md` has **no order
+  Confirm affordance** (Supersession note removed the Confirm/Clear
+  panel — "the destination-click is the confirm"). Reworded: the gate
+  advances on **order issued (destination click)**; type-2 teaches the
+  command itself, not a Confirm.
+- **Correction (folded in):** the type-4 nudge state-signals **inherit
+  the auto-pause split** — `post-captured` + `battle-resolved` observable
+  today, but `party-idle` (state-derived) and `newly-visible-enemy`
+  (pending ant-visibility projection, Exchange #10 §3d) carry the same
+  deferred/pending-visibility status.
+- **Sequencing (not blocking):** the action-gate build depends on the
+  live engine-in-browser path; modal/highlight/nudge types work over
+  replay playback. Ratify now; action-gate build sequences after
+  live-play (the next dev arc).
+- **Decision record:** roadmap §7.16.
+
+**Outcome:** Resolved + ratified (doc-only). Spec RECORDED and promoted
+`docs/drafts/` → `docs/ui-tutorial-overlay-spec.md`, with both
+corrections folded in (order-issue not Confirm; nudge-signal observability
+split) and the dev-answered confirmations + build-sequencing note
+recorded in it. The `exchange-12-tutorial-overlay.md` routing doc is
+marked RESOLVED (this §5 entry is canonical). Zero engine work, byte-safe.
+Recorded `roadmap-tier-1.md` §7.16.
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are

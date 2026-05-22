@@ -1,7 +1,8 @@
 # Change Request: Tutorial Overlay — in-scenario coaching system
 
-From / To / Status: UX → Dev (Gameplay/Engine) / Proposal — awaiting
-cost/feasibility read
+From / To / Status: UX → Dev (Gameplay/Engine) / **RESOLVED** —
+accepted, spec promoted to `docs/ui-tutorial-overlay-spec.md`. This §5
+entry is canonical; the routing doc is retained as the request record.
 Blocking: Non-blocking, batched. No engine work is expected; this asks
 dev to confirm two client-capability assumptions and ratify the spec.
 
