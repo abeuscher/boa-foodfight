@@ -15,9 +15,10 @@ import {
 } from '../../../engine/world-organize.ts';
 import type { WorldPartyAssignment, WorldState } from '../../../engine/world-state.ts';
 
-import { ITEMS, TEMPLATES } from '../fixture.ts';
+import { TEMPLATES } from '../fixture.ts';
 import {
   barracksOf,
+  inventoryEntries,
   isLeaderEligible,
   itemName,
   slotsFor,
@@ -150,11 +151,14 @@ export function OrganizeArmy({ state, apply }: Props): JSX.Element {
                           }}
                         >
                           <option value="">no item</option>
-                          {ITEMS.map((it) => (
-                            <option key={it.id} value={it.id}>
-                              {it.name}
-                            </option>
-                          ))}
+                          {u.item && <option value={u.item}>{itemName(u.item)} (equipped)</option>}
+                          {inventoryEntries(roster).map(([itemId, count]) =>
+                            itemId === u.item ? null : (
+                              <option key={itemId} value={itemId}>
+                                {itemName(itemId)} (×{count})
+                              </option>
+                            ),
+                          )}
                         </select>
                         <button
                           onClick={() =>

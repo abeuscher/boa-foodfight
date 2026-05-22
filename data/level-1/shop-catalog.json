@@ -1,8 +1,8 @@
 {
   "version": 1,
   "items": [
-    { "itemId": "leather-pad", "cost": 40 },
-    { "itemId": "brass-knuckles", "cost": 50 },
-    { "itemId": "boots", "cost": 45 }
+    { "itemId": "leather-pad", "cost": 40, "stock": 100 },
+    { "itemId": "brass-knuckles", "cost": 50, "stock": 100 },
+    { "itemId": "boots", "cost": 45, "stock": 100 }
   ]
 }

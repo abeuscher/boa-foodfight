@@ -20,6 +20,7 @@ import { recruitsFileSchema } from '../../engine/schemas/recruits.ts';
 import { loadScenarioData } from '../../engine/state.ts';
 import type {
   AbilityId,
+  ItemId,
   PartyId,
   UnitId,
   UnitTemplate,
@@ -78,7 +79,13 @@ for (const party of antRoster.parties) {
   });
 }
 
-const roster: WorldRoster = { faction: 'ant', units, partyAssignments };
+const items = data.items.templates.filter((t) => t.kind === 'persistent');
+
+// Seed a small owned-items pool so the Organize Army equip picker has
+// stock to draw from before the Shop view exists to fill it (dev seed).
+const inventory = items.map((i) => i.id as ItemId);
+
+const roster: WorldRoster = { faction: 'ant', units, partyAssignments, inventory };
 
 const state: WorldState = {
   campaignId: 'l1-dev',
@@ -93,8 +100,6 @@ const state: WorldState = {
 const recruits = recruitsFileSchema.parse(
   JSON.parse(readFileSync(path.join('data', 'level-1', 'recruits.json'), 'utf8')),
 );
-
-const items = data.items.templates.filter((t) => t.kind === 'persistent');
 
 const outDir = path.join('client', 'src', 'fixtures');
 mkdirSync(outDir, { recursive: true });

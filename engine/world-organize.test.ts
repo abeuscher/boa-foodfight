@@ -83,6 +83,7 @@ const mkRoster = (): WorldRoster => ({
     { partyId: p('alpha'), unitIds: [u('a1'), u('a2')], leaderId: u('a1') },
     { partyId: p('bravo'), unitIds: [u('b1')], leaderId: u('b1') },
   ],
+  inventory: ['sword' as ItemId],
 });
 
 describe('read accessors', () => {
@@ -326,12 +327,20 @@ describe('swapLeader', () => {
 });
 
 describe('equipItem', () => {
-  it('equips and clears an item', () => {
+  it('draws an item from inventory to equip, and returns it on unequip', () => {
     const eq = equipItem(mkRoster(), u('a1'), 'sword' as ItemId);
     expect(eq.ok).toBe(true);
     expect(eq.roster.units.find((unit) => unit.id === u('a1'))?.item).toBe('sword');
+    expect(eq.roster.inventory).toEqual([]); // consumed from the pool
     const cleared = equipItem(eq.roster, u('a1'), null);
     expect(cleared.roster.units.find((unit) => unit.id === u('a1'))?.item).toBeNull();
+    expect(cleared.roster.inventory).toEqual(['sword']); // returned to the pool
+  });
+
+  it('rejects equipping an item that is not in the inventory', () => {
+    const r = equipItem(mkRoster(), u('a1'), 'shield' as ItemId);
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('not in the inventory');
   });
 
   it('rejects an unknown unit', () => {

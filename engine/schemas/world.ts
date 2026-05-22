@@ -65,6 +65,9 @@ const worldRosterSchema = z.object({
   faction: z.literal('ant'),
   units: z.array(worldUnitSchema),
   partyAssignments: z.array(partyAssignmentSchema),
+  /** Owned-but-unequipped persistent items (counted multiset). Optional;
+   * omitted on pre-inventory saves ⇒ read as empty. */
+  inventory: z.array(idSchema).optional(),
 });
 
 export const worldStateSchema = z.object({

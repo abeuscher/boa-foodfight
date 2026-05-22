@@ -314,8 +314,8 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
   const xpBefore = totalXp(postS0.roster);
   const promotedBefore = promotedCount(postS0.roster);
 
-  // Shop smoke-test: buy the cheapest catalogued persistent item onto a
-  // unit with an empty item slot, if the campaign can afford it.
+  // Shop smoke-test: buy the cheapest catalogued persistent item into
+  // the colony inventory pool, if the campaign can afford it.
   const catalogRaw: unknown = JSON.parse(
     fs.readFileSync(path.join(args.dataDir, 'shop-catalog.json'), 'utf8'),
   );
@@ -325,11 +325,9 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
   );
   const shopItems = itemsFileSchema.parse(itemsRaw).templates;
   const cheapest = [...shopCatalog.items].sort((a, b) => a.cost - b.cost)[0];
-  const buyTarget = postS0.roster.units.find((u) => u.item === null);
-  const shop: ShopResult =
-    cheapest && buyTarget
-      ? buyItem(postS0, cheapest.itemId as ItemId, buyTarget.id, shopCatalog, shopItems)
-      : { state: postS0, ok: false };
+  const shop: ShopResult = cheapest
+    ? buyItem(postS0, cheapest.itemId as ItemId, shopCatalog, shopItems)
+    : { state: postS0, ok: false };
 
   // Scenario 1 — real L2 (the Pipe, escort Aunt Ant) with the carried
   // roster injected. The L2-provided escort-column (Aunt Ant + her

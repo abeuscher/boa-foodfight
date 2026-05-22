@@ -3,7 +3,14 @@
  * `WorldState` through the engine's documented accessors — no engine
  * internals.
  */
-import type { PartyId, Stats, UnitId, UnitTemplate, UnitTemplateId } from '../../engine/types.ts';
+import type {
+  ItemId,
+  PartyId,
+  Stats,
+  UnitId,
+  UnitTemplate,
+  UnitTemplateId,
+} from '../../engine/types.ts';
 import { barracksUnits, partySlotUsage, unitEffectiveStats } from '../../engine/world-organize.ts';
 import type { WorldRoster, WorldState, WorldUnit } from '../../engine/world-state.ts';
 
@@ -35,6 +42,14 @@ export const unitById = (roster: WorldRoster, id: UnitId): WorldUnit | undefined
   roster.units.find((u) => u.id === id);
 
 export const itemName = (id: string): string => itemNameById.get(id) ?? id;
+
+/** Distinct owned-but-unequipped items with their counts, for the
+ * Organize Army equip picker (the pool the shop fills). */
+export const inventoryEntries = (roster: WorldRoster): readonly (readonly [ItemId, number])[] => {
+  const counts = new Map<ItemId, number>();
+  for (const id of roster.inventory ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return [...counts.entries()];
+};
 
 export interface Notice {
   readonly kind: 'ok' | 'error';

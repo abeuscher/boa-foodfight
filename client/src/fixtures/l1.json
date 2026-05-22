@@ -339,6 +339,12 @@
           ],
           "leaderId": "pathfinders-ant-mage-0"
         }
+      ],
+      "inventory": [
+        "leather-pad",
+        "brass-knuckles",
+        "boots",
+        "scout-lens"
       ]
     },
     "gold": 120,
