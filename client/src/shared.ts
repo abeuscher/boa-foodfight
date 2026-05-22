@@ -38,6 +38,11 @@ export const slotsFor = (roster: WorldRoster, partyId: PartyId) =>
 
 export const barracksOf = (roster: WorldRoster): readonly WorldUnit[] => barracksUnits(roster);
 
+/** Total ant count across the colony (deployed + barracks) — a
+ * resource-strip readout. (Jelly has no between-scenario persisted
+ * source in `WorldState`, so the strip omits it; see report note.) */
+export const antCount = (roster: WorldRoster): number => roster.units.length;
+
 export const unitById = (roster: WorldRoster, id: UnitId): WorldUnit | undefined =>
   roster.units.find((u) => u.id === id);
 
@@ -68,3 +73,6 @@ export type Apply = (
   result: { ok: boolean; error?: string },
   okText: string,
 ) => void;
+
+/** The hub's sub-views, reached from the Hill verb rail. */
+export type SubView = 'organize' | 'recruit' | 'shop' | 'system';

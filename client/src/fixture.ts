@@ -6,6 +6,7 @@
  */
 import type { ItemTemplate } from '../../engine/schemas/items.ts';
 import type { RecruitsFile } from '../../engine/schemas/recruits.ts';
+import type { ShopCatalogFile } from '../../engine/schemas/shop-catalog.ts';
 import type { UnitTemplate } from '../../engine/types.ts';
 import type { WorldState } from '../../engine/world-state.ts';
 
@@ -16,6 +17,7 @@ interface Fixture {
   readonly templates: readonly UnitTemplate[];
   readonly recruits: RecruitsFile;
   readonly items: readonly ItemTemplate[];
+  readonly shopCatalog: ShopCatalogFile;
 }
 
 const fx = raw as unknown as Fixture;
@@ -24,3 +26,4 @@ export const INITIAL_STATE: WorldState = fx.state;
 export const TEMPLATES: readonly UnitTemplate[] = fx.templates;
 export const RECRUITS: RecruitsFile = fx.recruits;
 export const ITEMS: readonly ItemTemplate[] = fx.items;
+export const SHOP_CATALOG: ShopCatalogFile = fx.shopCatalog;

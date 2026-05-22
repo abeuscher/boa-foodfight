@@ -17,6 +17,7 @@ import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { recruitsFileSchema } from '../../engine/schemas/recruits.ts';
+import { shopCatalogFileSchema } from '../../engine/schemas/shop-catalog.ts';
 import { loadScenarioData } from '../../engine/state.ts';
 import type {
   AbilityId,
@@ -101,16 +102,21 @@ const recruits = recruitsFileSchema.parse(
   JSON.parse(readFileSync(path.join('data', 'level-1', 'recruits.json'), 'utf8')),
 );
 
+const shopCatalog = shopCatalogFileSchema.parse(
+  JSON.parse(readFileSync(path.join('data', 'level-1', 'shop-catalog.json'), 'utf8')),
+);
+
 const outDir = path.join('client', 'src', 'fixtures');
 mkdirSync(outDir, { recursive: true });
 writeFileSync(
   path.join(outDir, 'l1.json'),
-  `${JSON.stringify({ state, templates, recruits, items }, null, 2)}\n`,
+  `${JSON.stringify({ state, templates, recruits, items, shopCatalog }, null, 2)}\n`,
   'utf8',
 );
 
 console.log(
   `l1.json: ${String(units.length)} units, ${String(partyAssignments.length)} parties, ` +
     `${String(templates.length)} templates, ${String(recruits.recruits.length)} recruits, ` +
-    `${String(items.length)} items, ${String(DEV_GOLD)} gold`,
+    `${String(items.length)} items, ${String(shopCatalog.items.length)} shop entries, ` +
+    `${String(DEV_GOLD)} gold`,
 );

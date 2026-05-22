@@ -25,6 +25,10 @@ export default tseslint.config(
       'client/src/**',
       'client/dist/**',
       'client/vite.config.ts',
+      // Playwright spec + config use @playwright/test; same handling as
+      // viewer's spec/config (out of the typed TS project).
+      'client/playwright.config.ts',
+      'client/client.spec.ts',
     ],
   },
   ...tseslint.configs.recommendedTypeChecked,
