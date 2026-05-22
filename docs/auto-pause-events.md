@@ -1,12 +1,13 @@
 # Auto-pause event-set — UI-binding contract
 
-**Intended location:** `docs/drafts/auto-pause-events.md`
-**Status:** Forward spec, not built. Small companion to the UI shell
-integration-layer doc; promoted out of the L0 beat-outline working
-draft (`docs/drafts/L0-beat-outline.md`) as the stable contract dev
-binds the real-time clock layer against. **Revision 2** —
-corrections-pass against engine source per Exchange #10 dev reply
-(§3a–§3d, §4).
+**Location:** `docs/auto-pause-events.md`
+**Status:** RECORDED (Exchange #10) — ratified as the stable UI-binding
+contract; the feature itself is forward (not built). The real-time
+clock layer binds against this contract when it lands. Small companion
+to the UI shell integration-layer doc; promoted out of the L0
+beat-outline working draft (`docs/drafts/L0-beat-outline.md`).
+**Revision 2** — corrections-pass against engine source per Exchange
+#10 dev reply (§3a–§3d, §4).
 **Owner:** UX track.
 **Companions:** `docs/ui-main-screen-spec.md` (notification strip
 copy and HUD-pod speed-control state), `docs/ui-battle-mode-spec.md`

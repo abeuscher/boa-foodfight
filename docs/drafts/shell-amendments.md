@@ -1,17 +1,19 @@
 # Reciprocal amendments — UI shell integration layer
 
 **Intended location:** `docs/drafts/shell-amendments.md` (drafts
-bundle; each amendment will land in its target spec when
-ratified)
-**Status:** Drafted, awaiting ratification. **Revision 2** —
-amendment 1 (`ui-main-screen-spec.md` save-touchpoint binding)
-removed per Exchange #10 dev reply (§3c); the auto-pause
-companion demoted `save-touchpoint` to forward-dep, so there is
-no current event to bind. The remaining four amendments are
+bundle; each amendment lands in its target spec on ratification)
+**Status:** RATIFIED (Exchange #10) — all four amendments folded
+into their target specs (`ui-hill-hub`, `ui-briefing`,
+`ui-end-of-scenario`, `ui-battle-mode`); this bundle is now spent
+and kept only as the routing record. **Revision 2** — amendment 1
+(`ui-main-screen-spec.md` save-touchpoint binding) was removed per
+Exchange #10 dev reply (§3c); the auto-pause companion demoted
+`save-touchpoint` to forward-dep, so there is no current event to
+bind. The remaining **four** amendments (the ones folded in) are
 unchanged from revision 1. Companion to
-`docs/ui-shell-integration-spec.md` (this session). Each
-amendment follows the §A.4 precedent — RECORDED status,
-reciprocal cross-reference back to the shell spec.
+`docs/ui-shell-integration-spec.md`. Each amendment followed the
+§A.4 precedent — RECORDED status, reciprocal cross-reference back
+to the shell spec.
 
 This bundle contains four small amendments to per-view specs
 that the shell integration layer touches. They are batched here

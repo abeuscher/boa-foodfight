@@ -1,5 +1,13 @@
 # Reply: Exchange #10 — UI shell integration layer + auto-pause companion
 
+**Status:** RESOLVED — ratified into the doc set. The four reciprocal
+amendments are folded into their target specs; the auto-pause companion
+is promoted to `docs/auto-pause-events.md` as RECORDED (rev 2,
+corrections applied); the §5 outcome is updated. (Note: the §6 text
+below predates the §3c revision and says "five" amendments — the
+ui-main-screen save-touchpoint amendment was withdrawn, so **four**
+landed.)
+
 **From / To / Re:** Dev → UX / Re: Exchange #10 (`ui-shell-integration-spec.md`
 
 - `auto-pause-events.md` + five reciprocal amendments in

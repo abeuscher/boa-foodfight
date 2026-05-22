@@ -367,12 +367,16 @@ in, including L1).
 ## Forward dependencies (not silent gaps)
 
 - **Stalemate variant** — pacing §D OPEN. See above.
-- **Post-scenario destination** — **now specified** by
-  `docs/ui-hill-hub-spec.md`: Continue returns to the Hill hub
-  (reciprocal of that spec's "End-of-scenario Continue destination"
-  resolution). This spec still does not own the world-loop screen
-  (§0); it hands control to the Hill hub as the named destination,
-  and the Hill spec carries the world-loop gameplay-review deps.
+- **Post-scenario destination** — **resolved** by
+  `docs/ui-hill-hub-spec.md` and recorded in
+  `docs/ui-shell-integration-spec.md`: Continue returns to
+  the Hill hub. This spec still does not own the world-loop
+  screen (§0); it hands control to the Hill hub as the named
+  destination, and the Hill spec carries the world-loop
+  gameplay-review deps. The shell layer's "Mode transitions"
+  section records the Continue→Hill transition as a brief
+  fade-out / fade-in following the shell's stylized-transition
+  default.
 - **Per-scenario graphic library** — whether each scenario has its
   own win/defeat graphic or there is a shared library is a build
   decision and depends on art-direction work that is §D deferred.
@@ -414,3 +418,8 @@ in, including L1).
    that re-running it isn't a burden, and "this run resolved in 3
    seconds of animation" is consistent. Click-to-skip is always
    available.
+
+## Cross-references
+
+- `docs/ui-shell-integration-spec.md` — shell layer that records the takeover chrome pattern this spec implements (no top bar, no rails, no HUD pod, no notification strip) and the Continue→Hill transition treatment.
+- `docs/ui-hill-hub-spec.md` — Continue's destination; the reciprocal "End-of-scenario Continue destination" resolution.

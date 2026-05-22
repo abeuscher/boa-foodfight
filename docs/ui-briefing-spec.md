@@ -93,6 +93,12 @@ This is intentional: the player reads the briefing while _already looking at_ th
 
 The Tropico tp4 reference uses the same convention: world visible behind the briefing panel, slightly desaturated, the player oriented before they dismiss.
 
+## Cancelling out of Briefing
+
+The Briefing panel includes a back-to-Hill affordance for cancelling out without deploying. The affordance is the shell's standard chrome-band back control (top-band corner, consistent with sub-views per `docs/ui-shell-integration-spec.md` "The back-to-Hill affordance"). Clicking it returns the player to the Hill without starting the scenario.
+
+The OK button remains the primary forward action. Back is a secondary affordance for players who clicked Deploy and want to make further preparations (visit a sub-view, save, etc.) before committing.
+
 ## Behavior — the orientation moment
 
 **Triggered when the player clicks OK on the Briefing panel.**
@@ -171,6 +177,7 @@ This handling depends on the scenario's victory kind being legible to the orient
 - `docs/design-memo-pacing-and-turn-cap.md` §A.1 (default paused on scenario start).
 - `docs/level-progression-plan.md` §4g — recruit-count engine reality (informs the recruit-count variant).
 - `docs/ui-hill-hub-spec.md` — Deploy verb leads here.
+- `docs/ui-shell-integration-spec.md` — shell layer that records the between-scenario chrome pattern this spec participates in (resource strip continuity from Hill; chrome-band back-to-Hill affordance for Briefing cancellation).
 - `docs/ui-main-screen-spec.md` — the cube view the orientation moment hands off to.
 - `docs/playability-critic-rubric.md` criterion 7 — partially unblocked by this spec.
 - Project assets:

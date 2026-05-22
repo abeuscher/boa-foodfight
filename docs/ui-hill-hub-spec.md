@@ -141,7 +141,7 @@ Antonio is the game's recurring narrator/companion-character.
 
 - **Click a verb-rail button** → transition to that sub-view. Each sub-view has its own back-to-Hill affordance.
 - **Click Deploy** → transition to the Briefing view. Antonio speaks. From Briefing, the player advances into the scenario (cube view).
-- **Return to Hill** from any sub-view, and from End-of-Scenario via Continue.
+- **Return to Hill** from any sub-view, and from End-of-Scenario via Continue. The sub-view back-to-Hill affordance is a **chrome-band affordance, not a content affordance** — sub-views render the back control as part of the persistent shell chrome (top-band corner or fixed frame element), not as a button inside the sub-view's own content area. This keeps every sub-view's back affordance in the same screen location across the family. See `docs/ui-shell-integration-spec.md` "The back-to-Hill affordance."
 - **No state confirmation modals** on the hub itself. Sub-views handle their own confirms where needed (e.g., spending currency in Shop).
 
 ## Forward dependencies surfaced by this spec
@@ -180,6 +180,7 @@ Antonio is the game's recurring narrator/companion-character.
 - `docs/design-memo-pacing-and-turn-cap.md` §D #3 — campaign/world-loop stalemate semantics (open).
 - `docs/ui-end-of-scenario-spec.md` — Continue button destination is this hub.
 - `docs/ui-main-screen-spec.md` — the scenario view this hub deploys into.
+- `docs/ui-shell-integration-spec.md` — shell layer that records the between-scenario chrome pattern this spec implements (resource strip persistence across sub-views; three-band layout; chrome-band back-to-Hill affordance).
 - `docs/ui-briefing-spec.md` — Deploy leads here; resolves the Briefing forward dep above (reciprocal).
 - `docs/playability-critic-rubric.md` criterion 7 — naive-player loop, gated on the tutorial-design surface the Briefing spec begins.
 - `docs/roadmap-tier-1.md` §6.4–6.5 — **gameplay-review dependency** (shop schedule incompatible with persistent hub).

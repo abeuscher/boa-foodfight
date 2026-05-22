@@ -114,6 +114,22 @@ and the cube state isn't actionable during the fight. This is a
 deliberate departure from the Tropico "menu doesn't blot out the
 world" pattern, because here the world _is_ the panel.
 
+The other in-scenario chrome elements — left rail party roster,
+right rail contextual actions, HUD pod, and notification strip —
+are also hidden during the battle panel. The panel reads as the
+full attention focus that the design calls for; partial chrome
+would dilute the focus and conflict with the panel's own
+scenario-context strip and matchup-context panel.
+
+When the panel auto-dismisses to the paused cube view, all hidden
+chrome resurfaces. The notification strip surfaces the combat recap
+at that moment (per "Auto-pause and resume," below). The HUD pod's
+speed control already shows paused, since combat-init triggered the
+auto-pause.
+
+See `docs/ui-shell-integration-spec.md` "In-scenario mode" for the
+shell ruling that governs this behavior.
+
 ## What's on screen
 
 ### The stage
@@ -421,3 +437,8 @@ gives them time to think, not the panel itself.
    the top-edge-of-affected-side approach so the player's eye is
    already in roughly the right place to track damage flashes; flag
    for revisit if combo legibility findings suggest otherwise.
+
+## Cross-references
+
+- `docs/ui-shell-integration-spec.md` — shell layer that rules on chrome behavior during the battle panel (rails, HUD pod, notification strip hidden; resurface on dismissal) and binds the combat-init auto-pause event to this panel.
+- `docs/auto-pause-events.md` — the `combat-init` event (keyed off `battle-resolved` in the turn stream) that fires this panel.

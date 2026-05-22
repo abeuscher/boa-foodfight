@@ -529,19 +529,21 @@ Recorded `roadmap-tier-1.md` §7.13.
 
 **Request (UX):** ratify `ui-shell-integration-spec.md` (four rulings —
 Escape behavior, chrome-band back-to-Hill, battle-panel chrome hiding,
-save→notification-strip), five reciprocal per-view amendments
-(`ui-main-screen`, `ui-hill-hub`, `ui-briefing`, `ui-end-of-scenario`,
-`ui-battle-mode`), and the `auto-pause-events.md` companion event
-contract.
+save→notification-strip), the reciprocal per-view amendments, and the
+`auto-pause-events.md` companion event contract.
 
 **Reply (Dev) — Disposition: Accepted (companion needs a correction pass).**
 
-- Shell spec + five amendments concur-clean; no engine surface touched;
+- Shell spec + amendments concur-clean; no engine surface touched;
   ratify as RECORDED. Two of the shell spec's "engine-truth confirmations"
   (Escape key-event hook, mode-transition timing) are client-runtime, not
   engine — dropped; resource-strip contents is the one real engine item
   (gold ← `WorldState.gold`, jelly ← `Party.jellyDoses`, ant-count from
   the roster/parties).
+- Amendment count: the dev reply's §6 said five (incl. `ui-main-screen`),
+  but §3c demoted `save-touchpoint` to forward-dep — so the `ui-main-screen`
+  save-touchpoint amendment was **withdrawn**, leaving **four** (`ui-hill-hub`,
+  `ui-briefing`, `ui-end-of-scenario`, `ui-battle-mode`).
 - Auto-pause companion corrected against source before lock:
   `post-captured` carries no `prevOwner`; `reinforcement-spawned` is
   `{postId, arrivalPostId, newPartyIds}`; binding model reframed from
@@ -553,10 +555,16 @@ contract.
 - No gate-29 / balance-curve impact; no engine work.
 - **Decision record:** roadmap §7 (mirror pending).
 
-**Outcome:** Resolved (doc-only). Shell spec + five amendments RECORDED;
-auto-pause companion RECORDED after the dev-verified correction pass.
-Drafts in `docs/drafts/` (`exchange-10-dev-reply.md`, `shell-amendments.md`,
-`auto-pause-events.md`).
+**Outcome:** Resolved + ratified (doc-only). The four reciprocal
+amendments are folded into their target specs (`ui-hill-hub` back-affordance
+constraint + xref; `ui-briefing` cancel-out section + xref; `ui-end-of-scenario`
+Continue→Hill bullet + new xref section; `ui-battle-mode` chrome-hiding
+paragraph + new xref section). `auto-pause-events.md` (rev 2, corrections
+applied) promoted to `docs/auto-pause-events.md` as RECORDED — matching the
+links already in `ui-shell-integration-spec.md`. `shell-amendments.md` and
+`exchange-10-dev-reply.md` retained in `docs/drafts/` as spent routing
+records. No gate-29 / balance-curve impact; no engine work. Roadmap §7
+mirror still pending (left to dev/PM per the #11 precedent).
 
 ### Exchange #11 — Organize Army spec back-fill + Shop spec engine re-ratification
 
