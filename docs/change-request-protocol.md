@@ -525,6 +525,75 @@ clones, typecheck clean; no existing test moved (not sim-path). L0
 beat 7 unblocked; L0 still gated on its own Exchange #7 / §7.11.
 Recorded `roadmap-tier-1.md` §7.13.
 
+### Exchange #10 — UI shell integration layer + auto-pause companion
+
+**Request (UX):** ratify `ui-shell-integration-spec.md` (four rulings —
+Escape behavior, chrome-band back-to-Hill, battle-panel chrome hiding,
+save→notification-strip), five reciprocal per-view amendments
+(`ui-main-screen`, `ui-hill-hub`, `ui-briefing`, `ui-end-of-scenario`,
+`ui-battle-mode`), and the `auto-pause-events.md` companion event
+contract.
+
+**Reply (Dev) — Disposition: Accepted (companion needs a correction pass).**
+
+- Shell spec + five amendments concur-clean; no engine surface touched;
+  ratify as RECORDED. Two of the shell spec's "engine-truth confirmations"
+  (Escape key-event hook, mode-transition timing) are client-runtime, not
+  engine — dropped; resource-strip contents is the one real engine item
+  (gold ← `WorldState.gold`, jelly ← `Party.jellyDoses`, ant-count from
+  the roster/parties).
+- Auto-pause companion corrected against source before lock:
+  `post-captured` carries no `prevOwner`; `reinforcement-spawned` is
+  `{postId, arrivalPostId, newPartyIds}`; binding model reframed from
+  live-subscription to completed-turn event-stream animation (no sub-turn
+  engine API — the clock pauses playback, not the sim); `combat-init`
+  keys off `battle-resolved`; `save-touchpoint` demoted to forward-dep
+  (§7.13 has no authored save-point marker); `newly-visible-enemy`
+  ant-visibility added to confirmations.
+- No gate-29 / balance-curve impact; no engine work.
+- **Decision record:** roadmap §7 (mirror pending).
+
+**Outcome:** Resolved (doc-only). Shell spec + five amendments RECORDED;
+auto-pause companion RECORDED after the dev-verified correction pass.
+Drafts in `docs/drafts/` (`exchange-10-dev-reply.md`, `shell-amendments.md`,
+`auto-pause-events.md`).
+
+### Exchange #11 — Organize Army spec back-fill + Shop spec engine re-ratification
+
+**Request (UX):** ratify two between-scenario sub-view specs as one
+package — a new `ui-organize-army-subview-spec.md` (two-layer army-overview
+/ party-detail target + an as-built v0 record of the shipped composite
+view) and `ui-shop-subview-spec.md` revision 3 (engine binding rewritten
+against the landed `world-shop.ts` rework). No engine work requested; the
+operators/schema are shipped (`dd75621`).
+
+**Reply (Dev) — Disposition: Confirmed against shipped `main`.**
+
+- `reorderParties` confirmed absent — "Reorder Squads" correctly recorded
+  as a forward-dep verb (party order is just `roster.partyAssignments`
+  array order; a future op is a small pure `WorldRoster → WorldRoster`).
+- All recorded signatures match `main`: `equipItem(roster, unitId,
+  itemId|null)` 3-arg inventory-consuming; `buyItem(state, itemId,
+  catalog, items)` no stock decrement; `setUnitRank` rank ∈
+  `{front, back, reserve}` (no `middle`); plus `moveUnit`, `createParty`,
+  `disbandParty`, `swapLeader`, `removeUnit`, `dismissUnit`, and reads
+  `partySlotUsage` / `unitEffectiveStats` / `barracksUnits`.
+- Numbering corrected: this bundle is **#11** (committed log was #1–#9;
+  #10 is the UI-shell exchange above; no prior shop exchange ever existed
+  — the shop work shipped as dev follow-ups, not a numbered CR).
+- Stale-assumption corrections ratified: no L2 formation gate (engine +
+  UI ungated — the player gets formation control whenever OA is
+  reachable); 9/12 slot-cost-weighted caps canon (Exchange #1;
+  party-cap-8 retired); barracks a derived view + persistent surface
+  (Exchange #4).
+- **Decision record:** roadmap §7 (mirror pending).
+
+**Outcome:** In progress — specs drafted in `docs/drafts/`
+(`ui-organize-army-subview-spec.md`, `ui-shop-subview-spec.md`,
+`exchange-11-organize-army.md`); awaiting final design ratification and
+promotion to `docs/`. Signatures dev-verified; `reorderParties`
+forward-dep'd; engine cost zero (all bindings shipped).
+
 ---
 
 _New exchanges append a `### Exchange #N` block here. Decisions are

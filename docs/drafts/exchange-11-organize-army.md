@@ -5,13 +5,18 @@ Status: Proposal — awaiting cost/feasibility read
 Blocking: Non-blocking, batched. The engine work it binds to is already
 shipped (`dd75621`); this exchange ratifies the design record against it.
 
-**Exchange number note (post-migration drift).** The committed
-`change-request-protocol.md` §7 log ends at **Exchange #9**. Recruit
-(#10) and Shop (#11) were transacted but live only as drafts
-(`docs/drafts/exchange-10-dev-reply.md`; the Shop spec itself was never
-committed). Per the user's ruling, this entry takes the **next free
-number, #12**, leaving #10/#11 to be reconciled into the protocol log
-separately. If the reconciliation renumbers, this entry moves with it.
+**Exchange number (corrected against committed log; dev-verified).** The
+committed `change-request-protocol.md` §5 log holds **#1 through #9**
+(Recruit is the committed **#6**, not #10). **#10 is the UI-shell +
+auto-pause exchange** — drafted in `docs/drafts/` but not yet written
+into §5. **There was never a #11**: the shop work shipped as dev
+follow-ups to the shop spec, never as a numbered Template-A CR. So the
+next free number is **#11**, which this bundle takes (OA spec + Shop spec
+rev 3, formalizing the shop as a numbered exchange for the first time).
+
+Outstanding bookkeeping (tracked, not blocking this entry): the **#10
+(UI-shell) §5 entry still needs writing**. Once #10 lands in §5, the log
+reads #1–#9, #10 (UI shell), #11 (this bundle).
 
 ## Solving for
 
