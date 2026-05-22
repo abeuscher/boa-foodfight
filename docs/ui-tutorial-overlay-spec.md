@@ -345,6 +345,48 @@ and client UI state; it produces nothing the sim path sees, so no
 gate-29 / balance-curve impact (confirmed read-only, same posture as the
 auto-pause layer).
 
+## Appendix — Observable signals (dev-verified, Exchange #12)
+
+The canonical signal inventory the gates, nudges, and stall timer bind
+to. Gates (type 3) advance on **client UI events**; nudges (type 4) fire
+on **event-stream signals**; stall is a **client idle timer**.
+Availability splits by what is built today vs. what arrives with a
+future surface.
+
+**A. Client UI events** — the client is the source; the headless engine
+never emits these, so they are observable by construction once the
+surface exists.
+
+| Signal                                                             | Source surface               | Available                                    |
+| ------------------------------------------------------------------ | ---------------------------- | -------------------------------------------- |
+| speed / pause / play / step changed                                | clock layer (`useClock`)     | **today**                                    |
+| sub-view opened / return-to-Hill nav                               | hub shell (`App` view state) | **today**                                    |
+| world-loop op applied (equip, buy, recruit, move/create/disband)   | between-scenario sub-views   | **today**                                    |
+| order issued — party selected → **destination click** (no Confirm) | live order/command UI        | **when built** (live engine-in-browser path) |
+| cube face selected / rotated                                       | cube view                    | **when built** (cube render, §D-deferred)    |
+
+**B. Event-stream signals** — read from `TurnOutcome.events[]`
+(`ReplayEvent[]`), the same stream auto-pause consumes; work in both
+replay playback and live play.
+
+| Signal                                                                                                                                                                   | Status                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `post-captured`, `battle-resolved`, `reinforcement-spawned`, + any raw `ReplayEvent` kind (`unit-died`, `party-moved`, `ability-used`, `jelly-applied`, `fog-revealed`…) | **observable today** (directly event-keyed)                                                                                   |
+| `party-idle`                                                                                                                                                             | **derived** — needs a per-turn order-queue diff (non-empty→empty), not a single event kind                                    |
+| `newly-visible-enemy`                                                                                                                                                    | **pending** — needs the ant-perspective fog-filtered visible-enemy projection (§3d, open; `fog-revealed` carries coords only) |
+
+**C. Stall** — "no player action for N seconds of live play" is a **pure
+client-side idle timer** (last-input timestamp; resets on any category-A
+event; accrues only while the clock is live/playing). No engine
+dependency; **distinct from** the engine `stalemate-approach` forward-dep
+(a sim-level inactivity terminal, pacing §D).
+
+**Cross-cutting.** The category-A "order issued" / "face" gates occur
+only in **live play** (replay playback has no player order issuance), so
+the action-gate half sequences after the live engine-in-browser path.
+Category-B signals and the acknowledge / highlight / free-play-nudge
+step-types work over playback today.
+
 ## Forward dependencies
 
 1. **Tutorial-step data schema.** The step-script is scenario-data;
