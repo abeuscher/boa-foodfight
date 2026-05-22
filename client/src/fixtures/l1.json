@@ -1370,5 +1370,25 @@
       "magnitude": 1,
       "description": "Party-wide +1 agility (initiative). Reserved for vision once the mechanic exists."
     }
-  ]
+  ],
+  "shopCatalog": {
+    "version": 1,
+    "items": [
+      {
+        "itemId": "leather-pad",
+        "cost": 40,
+        "stock": 100
+      },
+      {
+        "itemId": "brass-knuckles",
+        "cost": 50,
+        "stock": 100
+      },
+      {
+        "itemId": "boots",
+        "cost": 45,
+        "stock": 100
+      }
+    ]
+  }
 }

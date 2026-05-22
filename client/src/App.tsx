@@ -3,43 +3,42 @@ import { useState } from 'react';
 import type { WorldState } from '../../engine/world-state.ts';
 
 import { INITIAL_STATE } from './fixture.ts';
+import { Hill } from './hill/Hill.tsx';
 import { OrganizeArmy } from './organize/OrganizeArmy.tsx';
 import { Recruit } from './recruit/Recruit.tsx';
-import { noticeOf, type Apply, type Notice } from './shared.ts';
+import { Shop } from './shop/Shop.tsx';
+import { System } from './system/System.tsx';
+import { antCount, noticeOf, type Apply, type Notice, type SubView } from './shared.ts';
 
-type View = 'organize' | 'recruit';
+type View = 'hill' | SubView;
 
 export function App(): JSX.Element {
   const [state, setState] = useState<WorldState>(INITIAL_STATE);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [view, setView] = useState<View>('organize');
+  const [view, setView] = useState<View>('hill');
 
   const apply: Apply = (next, result, okText) => {
     setState(next);
     setNotice(noticeOf(result, okText));
   };
 
+  const goHill = (): void => {
+    setView('hill');
+    setNotice(null);
+  };
+
   return (
-    <div className="oa">
-      <header>
-        <h1>Back on the Hill</h1>
-        <p className="sub">
-          Between-scenario world-loop harness · binds to <code>engine/world-organize</code> +{' '}
-          <code>engine/world-recruit</code> (troop-reference §10). Formation-rank editing is a
-          dev-exposed operator here; its player-facing debut is L2.
-        </p>
-        <nav className="views">
-          <button
-            className={view === 'organize' ? 'active' : ''}
-            onClick={() => setView('organize')}
-          >
-            Organize Army
+    <div className="oa hill-shell">
+      <header className="topband">
+        {view !== 'hill' && (
+          <button className="back" onClick={goHill}>
+            ← Back to Hill
           </button>
-          <button className={view === 'recruit' ? 'active' : ''} onClick={() => setView('recruit')}>
-            Recruit (Anthill)
-          </button>
-          <span className="gold">{state.gold} gold</span>
-        </nav>
+        )}
+        <span className="resource-strip">
+          <span className="res">{state.gold} buttons</span>
+          <span className="res">{antCount(state.roster)} ants</span>
+        </span>
       </header>
 
       {notice && (
@@ -48,11 +47,11 @@ export function App(): JSX.Element {
         </div>
       )}
 
-      {view === 'organize' ? (
-        <OrganizeArmy state={state} apply={apply} />
-      ) : (
-        <Recruit state={state} apply={apply} />
-      )}
+      {view === 'hill' && <Hill state={state} onOpen={setView} />}
+      {view === 'organize' && <OrganizeArmy state={state} apply={apply} />}
+      {view === 'recruit' && <Recruit state={state} apply={apply} />}
+      {view === 'shop' && <Shop state={state} apply={apply} />}
+      {view === 'system' && <System />}
     </div>
   );
 }

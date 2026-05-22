@@ -14,6 +14,98 @@ body {
   padding: 1.5rem;
 }
 
+/* --- Hill hub shell --- */
+
+.topband {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid #d8d0c2;
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.topband .back {
+  background: #efe7d6;
+  font-weight: 600;
+}
+
+.resource-strip {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.resource-strip .res {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #8a6d1d;
+}
+
+.hill-mid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.verb-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.verb {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid #c7bda9;
+  border-radius: 6px;
+  background: #f0ebe0;
+}
+
+.verb.deploy {
+  font-weight: 700;
+  background: #e7d9b8;
+  border-color: #b9a06a;
+}
+
+.hill-scene {
+  border: 1px dashed #c7bda9;
+  border-radius: 8px;
+  background: #fbf6ea;
+  min-height: 220px;
+  padding: 1rem;
+}
+
+.scene-note {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.scene-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b6258;
+}
+
+.scenario-context {
+  margin-top: 1rem;
+  border-top: 1px solid #d8d0c2;
+  padding-top: 0.75rem;
+}
+
+.ctx-title {
+  font-weight: 700;
+}
+
+.ctx-framing {
+  font-size: 0.85rem;
+  color: #6b6258;
+}
+
 .oa header h1 {
   margin: 0;
 }
