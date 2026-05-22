@@ -1006,6 +1006,71 @@ unbuilt real-time UI L0 depends on wholesale, so it adds no marginal
 L0 slip risk. L0 beat 7 consumes this; L0 cannot ship until §7.13
 has landed (it now has).
 
+### 7.14 UI shell integration layer + auto-pause companion
+
+Cross-track change request (UX→Dev, exchange #10; full prose in
+`docs/change-request-protocol.md` §5), disposition **accepted**
+(companion required a correction pass). Doc-only; **no engine work, no
+gate-29 / balance-curve impact** — the shell layer, the per-view
+amendments, and the auto-pause event-set are all UI-binding records
+against already-shipped engine surfaces.
+
+`docs/ui-shell-integration-spec.md`'s four rulings (Escape behavior,
+chrome-band back-to-Hill, battle-panel chrome hiding,
+save→notification-strip) recorded as written. Two of the shell spec's
+"engine-truth confirmations" (Escape key-event hook, mode-transition
+timing) were dropped as client-runtime, not engine; resource-strip
+contents is the one real engine item (gold ← `WorldState.gold`, jelly
+← `Party.jellyDoses`, ant-count from the roster). **Four** reciprocal
+per-view amendments folded into their target specs (`ui-hill-hub`,
+`ui-briefing`, `ui-end-of-scenario`, `ui-battle-mode`); the fifth
+(`ui-main-screen` save-touchpoint binding) was **withdrawn** because
+the companion's §3c demoted `save-touchpoint` to a forward dependency,
+leaving nothing to bind.
+
+The auto-pause companion (`docs/auto-pause-events.md`, RECORDED) is the
+stable UI-binding contract the real-time clock layer binds against when
+it lands. Corrected against engine source before lock: `post-captured`
+carries no `prevOwner`; `reinforcement-spawned` is `{turn, tick,
+postId, arrivalPostId, newPartyIds}`; the binding model is
+completed-turn event-stream animation, **not** a live sub-turn bus
+(there is no sub-turn stepping API — the clock pauses _playback_, not
+the sim); `combat-init` keys off the `battle-resolved` playback
+position and is deliberately **not** promoted to an engine event
+(every shipped scenario battles, so a `battle-started` event would
+re-baseline gate-29); `save-touchpoint` and `stalemate-approach` are
+forward-deps; one open confirmation remains (`newly-visible-enemy`
+needs an ant-perspective fog-filtered visibility projection,
+client-side, not engine).
+
+### 7.15 Organize Army spec back-fill + Shop spec engine re-ratification
+
+Cross-track change request (UX→Dev, exchange #11; full prose in
+`docs/change-request-protocol.md` §5), disposition **confirmed against
+shipped `main`**. Doc-only; **engine cost zero** — the operators and
+schema this binds to all shipped (`dd75621`). Squares two
+between-scenario sub-view specs with engine truth so the client track
+can build against a ratified sub-view family.
+
+`docs/ui-organize-army-subview-spec.md` (new) records the shipped
+engine bindings as design truth — an as-built v0 of the shipped
+composite Squads+Barracks view plus the two-layer (army overview /
+party detail) target the client is reworked toward.
+`docs/ui-shop-subview-spec.md` revision 3 rewrites the engine binding
+against the shipped `world-shop.ts` rework. Signatures dev-verified:
+`equipItem(roster, unitId, itemId|null)` 3-arg inventory-consuming;
+`buyItem(state, itemId, catalog, items)` 4-arg with no stock
+decrement; `setUnitRank` rank ∈ `{front, back, reserve}` (no
+`'middle'`). `reorderParties` confirmed **absent** — "Reorder Squads"
+is a forward-dep verb (party order is just `roster.partyAssignments`
+array order). Three stale assumptions corrected against engine truth:
+**no L2 formation gate** (engine + UI ungated — the player gets
+formation control whenever Organize Army is reachable; §7.9); **slot
+caps are 9 / 12** slot-cost-weighted, canon (§7.5; "party-cap-8"
+retired); **barracks is a derived view + persistent surface** (§7.8),
+`barracksUnits` = `units` minus assigned, no separate collection.
+Operator contracts live in `docs/troop-reference.md` §10.
+
 ---
 
 ## 8. Open questions

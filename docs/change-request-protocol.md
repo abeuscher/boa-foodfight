@@ -553,7 +553,7 @@ save→notification-strip), the reciprocal per-view amendments, and the
   (§7.13 has no authored save-point marker); `newly-visible-enemy`
   ant-visibility added to confirmations.
 - No gate-29 / balance-curve impact; no engine work.
-- **Decision record:** roadmap §7 (mirror pending).
+- **Decision record:** roadmap §7.14.
 
 **Outcome:** Resolved + ratified (doc-only). The four reciprocal
 amendments are folded into their target specs (`ui-hill-hub` back-affordance
@@ -563,8 +563,8 @@ paragraph + new xref section). `auto-pause-events.md` (rev 2, corrections
 applied) promoted to `docs/auto-pause-events.md` as RECORDED — matching the
 links already in `ui-shell-integration-spec.md`. `shell-amendments.md` and
 `exchange-10-dev-reply.md` retained in `docs/drafts/` as spent routing
-records. No gate-29 / balance-curve impact; no engine work. Roadmap §7
-mirror still pending (left to dev/PM per the #11 precedent).
+records. No gate-29 / balance-curve impact; no engine work. Recorded
+`roadmap-tier-1.md` §7.14.
 
 ### Exchange #11 — Organize Army spec back-fill + Shop spec engine re-ratification
 
@@ -594,14 +594,14 @@ catalog, items)` no stock decrement; `setUnitRank` rank ∈
   reachable); 9/12 slot-cost-weighted caps canon (Exchange #1;
   party-cap-8 retired); barracks a derived view + persistent surface
   (Exchange #4).
-- **Decision record:** roadmap §7 (mirror pending).
+- **Decision record:** roadmap §7.15; contracts in `troop-reference.md` §10.
 
 **Outcome:** Resolved. Both specs RECORDED and promoted
 `docs/drafts/` → `docs/ui-organize-army-subview-spec.md` /
 `docs/ui-shop-subview-spec.md`; the `exchange-11-organize-army.md`
 routing doc is marked RESOLVED (this §5 entry is canonical). Signatures
 dev-verified; `reorderParties` forward-dep'd; engine cost zero (all
-bindings shipped). Roadmap §7 mirror still pending (doc follow-up).
+bindings shipped). Recorded `roadmap-tier-1.md` §7.15.
 
 ---
 
