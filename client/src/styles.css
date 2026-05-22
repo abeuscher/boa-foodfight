@@ -106,6 +106,120 @@ body {
   color: #6b6258;
 }
 
+.watch-replay {
+  margin-top: 1rem;
+  background: #e7d9b8;
+  border-color: #b9a06a;
+}
+
+/* --- In-scenario playback (own chrome, not the resource-strip shell) --- */
+
+.scenario {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 90vh;
+}
+
+.scn-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.scn-title {
+  font-size: 0.85rem;
+  color: #6b6258;
+}
+
+.scn-world {
+  flex: 1;
+  border: 1px dashed #c7bda9;
+  border-radius: 8px;
+  background: #20242b;
+  color: #e8e2d4;
+  padding: 1.25rem;
+}
+
+.scn-world .scene-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: #9a958a;
+}
+
+.scn-now {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.scn-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: #b9b3a5;
+}
+
+.scn-log li {
+  padding: 0.1rem 0;
+}
+
+.scn-end {
+  margin-top: 1rem;
+  font-weight: 600;
+  color: #e7c97a;
+}
+
+.scn-hud {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.hud-pod {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hud-pod .speeds {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.hud-pod .active {
+  background: #d8cdb5;
+  font-weight: 700;
+}
+
+.hud-readout {
+  font-size: 0.8rem;
+  color: #6b6258;
+  margin-left: 0.5rem;
+}
+
+.scn-notif {
+  margin-left: auto;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  background: #eef2ee;
+  border: 1px solid #cdd6cd;
+  font-size: 0.85rem;
+  min-width: 14rem;
+  text-align: right;
+}
+
+.scn-notif.paused {
+  background: #f6efda;
+  border-color: #cbb46a;
+  font-weight: 600;
+}
+
 .oa header h1 {
   margin: 0;
 }

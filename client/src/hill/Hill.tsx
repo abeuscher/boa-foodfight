@@ -5,6 +5,7 @@ import { type SubView } from '../shared.ts';
 interface Props {
   readonly state: WorldState;
   readonly onOpen: (view: SubView) => void;
+  readonly onWatchReplay: () => void;
 }
 
 /**
@@ -13,7 +14,7 @@ interface Props {
  * (cube memo §D) — this is the structural frame. Deploy leads to the
  * Briefing, which isn't built yet, so it's disabled here.
  */
-export function Hill({ state, onOpen }: Props): JSX.Element {
+export function Hill({ state, onOpen, onWatchReplay }: Props): JSX.Element {
   return (
     <div className="hill">
       <div className="hill-mid">
@@ -40,6 +41,9 @@ export function Hill({ state, onOpen }: Props): JSX.Element {
             Scene art deferred (cube memo §D); structural frame only. The anthill (Recruit), the
             Grasshopper (Shop), the staging ground (Organize Army), and Antonio would render here.
           </p>
+          <button className="watch-replay" onClick={onWatchReplay}>
+            ▶ Watch L1 replay (dev) — in-scenario playback
+          </button>
         </div>
       </div>
       <footer className="scenario-context">

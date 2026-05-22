@@ -6,11 +6,12 @@ import { INITIAL_STATE } from './fixture.ts';
 import { Hill } from './hill/Hill.tsx';
 import { OrganizeArmy } from './organize/OrganizeArmy.tsx';
 import { Recruit } from './recruit/Recruit.tsx';
+import { Scenario } from './scenario/Scenario.tsx';
 import { Shop } from './shop/Shop.tsx';
 import { System } from './system/System.tsx';
 import { antCount, noticeOf, type Apply, type Notice, type SubView } from './shared.ts';
 
-type View = 'hill' | SubView;
+type View = 'hill' | SubView | 'scenario';
 
 export function App(): JSX.Element {
   const [state, setState] = useState<WorldState>(INITIAL_STATE);
@@ -26,6 +27,12 @@ export function App(): JSX.Element {
     setView('hill');
     setNotice(null);
   };
+
+  // In-scenario mode uses its own chrome (HUD pod + notification strip),
+  // not the between-scenario shell — so it renders standalone.
+  if (view === 'scenario') {
+    return <Scenario onExit={goHill} />;
+  }
 
   return (
     <div className="oa hill-shell">
@@ -47,7 +54,9 @@ export function App(): JSX.Element {
         </div>
       )}
 
-      {view === 'hill' && <Hill state={state} onOpen={setView} />}
+      {view === 'hill' && (
+        <Hill state={state} onOpen={setView} onWatchReplay={() => setView('scenario')} />
+      )}
       {view === 'organize' && <OrganizeArmy state={state} apply={apply} />}
       {view === 'recruit' && <Recruit state={state} apply={apply} />}
       {view === 'shop' && <Shop state={state} apply={apply} />}
