@@ -1,5 +1,9 @@
 # QA / visual review — PR #44: live engine-in-browser + ant fog-of-war
 
+> **Dev response / ratification (2026-05-22) — see the section appended at the
+> bottom of this doc** for the decisions on the four design-judgment items and
+> the loud-flag behavior, what was actioned in code, and what's deferred.
+
 **Reviewer:** local browser/QA agent (real Chromium + Playwright/DevTools)
 **Date:** 2026-05-22
 **Branch reviewed:** `main` — PR #44 is **already merged** (merge commit `f3f5f4c`).
@@ -232,3 +236,55 @@ is a **test-harness artifact, not a product bug**:
   don't reach the floor queen within 100 turns). Order vanguard parties onto the
   **ceiling** (4-spider cluster, bottom-right) — select party → Move → switch to the
   ceiling plane → click a tile there. Combat resolves within a few turns.
+
+---
+
+## Dev response / ratification (2026-05-22)
+
+Verdict accepted — **clean PASS, no blocking bugs**. The build-sandbox gates
+(typecheck / typecheck:client / lint / vitest / jscpd / reconcile / build:client)
+are all green here too; the `format:check` failure is the same pre-existing
+working-tree CRLF artifact (none of the live files are flagged), not a
+regression — matching the QA diagnosis.
+
+### Product calls (decided with the PM)
+
+1. **Vision radius → 2 (Chebyshev, 5×5).** Took QA's lean. `ANT_VISION_RADIUS`
+   is now `2` for real fog tension on a 10×10 plane; metric stays Chebyshev.
+   Revisit per plane size later. (`visibility.ts`.)
+2. **`newly-visible-enemy` → first-sighting-only.** Switched the trigger basis
+   from a per-turn `visible` delta to an accumulated ever-`seenEnemies` set: an
+   enemy that leaves vision and re-enters no longer re-pauses; only the first
+   time an enemy is ever seen pauses. Enemies on screen at scenario start seed
+   the set (no turn-1 pause). (`useLiveScenario.ts`.)
+
+### Legibility nits (actioned)
+
+3. **Destination marker (non-selected party)** — brightened to `#9bb8ee` +
+   bold + slightly larger so a non-mine `×` is no longer easy to miss (the
+   selected party's gold marker is unchanged).
+4. **Seen vs unseen contrast** — widened the boundary: `fog-seen` brightness
+   `.55 → .62` plus a mid-tone border; `fog-unseen` darkened to `#0e1013`. The
+   explored frontier now reads at a glance.
+5. **Capture pip** — bumped `0.55rem → 0.62rem` for readability.
+
+### Deferred (product / forward-dep, not actioned)
+
+- **"Seen" POST owner freshness** — the explored-but-unseen POST cheat (shows
+  live owner with no vision there). Left as-is: helpful for the all-cues-on L1
+  tutorial. If fog fidelity matters later, snapshot POST owner at last-seen
+  time — a deliberate enhancement, tracked here.
+- **Auto-plane-switch on select** — QA's "keep" confirmed; no change.
+
+### Scope note — what this review did NOT cover
+
+This pass reviewed PR #44 at its merged tip (live engine + orders + board + fog).
+Two later additions are on `claude/phase4-rebalance` and **not yet visually
+reviewed**: the **read-only party-detail panel** (`PartyDetail.tsx`,
+ui-party-detail-spec) and the **combat panel** (`CombatPanel.tsx`,
+ui-battle-mode-spec). They ship together in the next PR and need their own
+visual pass — see the combat/inspect addendum handed to the review agent. The
+combat panel surfaced two engine-truth forward-deps for design: the per-battle
+**modifier stack** is not carried on `battle-resolved` (combat-math input, not
+result), and `BattleParticipant` carries no front/back **rank** — both flagged
+in-panel rather than invented.

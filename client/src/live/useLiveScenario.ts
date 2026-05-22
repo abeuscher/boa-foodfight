@@ -11,7 +11,20 @@ import { computeVisibleTiles, visibleNonAntPartyIds } from './visibility.ts';
 
 import { createRng } from '../../../engine/rng.ts';
 import type { ScenarioData } from '../../../engine/state.ts';
-import type { Faction, GameState, PartyId, ReplayEvent, TileCoord } from '../../../engine/types.ts';
+import type {
+  BattleResult,
+  Faction,
+  GameState,
+  PartyId,
+  ReplayEvent,
+  TileCoord,
+} from '../../../engine/types.ts';
+
+const battlesFrom = (events: readonly ReplayEvent[]): readonly BattleResult[] => {
+  const out: BattleResult[] = [];
+  for (const e of events) if (e.kind === 'battle-resolved') out.push(e.result);
+  return out;
+};
 
 const SEED = 1;
 
@@ -20,7 +33,7 @@ export const MS_PER_TURN = 700;
 
 const DATA = scenarioData as unknown as ScenarioData;
 
-const union = (a: ReadonlySet<string>, b: ReadonlySet<string>): Set<string> => {
+const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => {
   const out = new Set(a);
   for (const k of b) out.add(k);
   return out;
@@ -37,12 +50,30 @@ interface Snapshot {
   readonly visible: ReadonlySet<string>;
   /** Tiles ever seen — explored terrain stays dimly rendered. */
   readonly seen: ReadonlySet<string>;
+  /** Non-ant party ids ever sighted — the basis for first-sighting-only
+   * `newly-visible-enemy` pauses (ratified over per-turn re-fire in the
+   * PR #44 QA pass: an enemy hovering at the vision edge shouldn't pause
+   * every re-entry). */
+  readonly seenEnemies: ReadonlySet<PartyId>;
+  /** Battles resolved on the most recent turn (for the combat panel). */
+  readonly battles: readonly BattleResult[];
 }
 
 const initialSnapshot = (): Snapshot => {
   const state = createInitialState(DATA, SEED);
   const visible = computeVisibleTiles(state);
-  return { state, turnsPlayed: 0, recentEvents: [], pauseReason: null, visible, seen: visible };
+  return {
+    state,
+    turnsPlayed: 0,
+    recentEvents: [],
+    pauseReason: null,
+    visible,
+    seen: visible,
+    // Enemies already on screen at scenario start count as "already
+    // sighted" — they don't trigger a sighting pause on turn 1.
+    seenEnemies: visibleNonAntPartyIds(state, visible),
+    battles: [],
+  };
 };
 
 export interface LiveScenarioClock {
@@ -57,6 +88,7 @@ export interface LiveScenarioClock {
   readonly fogEnabled: boolean;
   readonly visible: ReadonlySet<string>;
   readonly seen: ReadonlySet<string>;
+  readonly battles: readonly BattleResult[];
   /** Player move intents (destination tile, `null` = hold, absent = no opinion). */
   readonly orders: ReadonlyMap<PartyId, TileCoord | null>;
   readonly play: () => void;
@@ -121,17 +153,19 @@ export function useLiveScenario(): LiveScenarioClock {
 
     const trigger = result.events.find((e) => DEFAULT_AUTO_PAUSE_KINDS.has(e.kind)) ?? null;
     // `newly-visible-enemy` (state-derived; on only when fog is on).
+    // First-sighting-only: pause when an enemy is sighted that has never
+    // been seen before, not on every re-entry into vision.
+    const visibleEnemies = visibleNonAntPartyIds(result.state, visible);
     let sighted = false;
     if (fogRef.current) {
-      const before = visibleNonAntPartyIds(cur.state, cur.visible);
-      const after = visibleNonAntPartyIds(result.state, visible);
-      for (const id of after) {
-        if (!before.has(id)) {
+      for (const id of visibleEnemies) {
+        if (!cur.seenEnemies.has(id)) {
           sighted = true;
           break;
         }
       }
     }
+    const seenEnemies = union(cur.seenEnemies, visibleEnemies);
     const pauseReason = trigger ? pauseReasonLabel(trigger) : sighted ? 'Enemy sighted' : null;
     const ended = result.state.winner !== null || cur.turnsPlayed + 1 >= MAX_TURNS;
 
@@ -142,6 +176,8 @@ export function useLiveScenario(): LiveScenarioClock {
       pauseReason,
       visible,
       seen,
+      seenEnemies,
+      battles: battlesFrom(result.events),
     };
     snapRef.current = next;
     setSnap(next);
@@ -203,6 +239,7 @@ export function useLiveScenario(): LiveScenarioClock {
     fogEnabled,
     visible: snap.visible,
     seen: snap.seen,
+    battles: snap.battles,
     orders,
     play,
     pause,
