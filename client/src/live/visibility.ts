@@ -20,8 +20,10 @@ import { coordKey, distance } from '../../../engine/coord.ts';
 import type { GameState, Party, PartyId, TileCoord } from '../../../engine/types.ts';
 
 /** Chebyshev tiles a living ant party reveals around itself, on its own
- * plane. PLACEHOLDER pending ratification (see module note). */
-export const ANT_VISION_RADIUS = 3;
+ * plane. Ratified at 2 (5×5 disk) per the PR #44 QA pass — tighter than
+ * the initial 3 for real fog tension on a 10×10 plane; revisit per plane
+ * size. The projection shape is the reviewable part; this is the knob. */
+export const ANT_VISION_RADIUS = 2;
 
 const alive = (party: Party): boolean => party.units.some((u) => u.currentHp > 0);
 

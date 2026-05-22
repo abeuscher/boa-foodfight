@@ -474,14 +474,17 @@ button:disabled {
   background: #5a3030;
 }
 
-/* Fog of war: explored-but-not-visible tiles dim; never-seen tiles dark. */
+/* Fog of war: explored-but-not-visible tiles dim; never-seen tiles dark.
+ * The seen/unseen boundary is widened (border + brightness gap) so the
+ * explored frontier reads at a glance (PR #44 QA nit). */
 .cell.fog-seen {
-  filter: brightness(0.55) saturate(0.6);
+  filter: brightness(0.62) saturate(0.6);
+  border-color: #2c323b;
 }
 
 .cell.fog-unseen {
-  background: #14161a;
-  border-color: #181b20;
+  background: #0e1013;
+  border-color: #121519;
 }
 
 .cell.targetable {
@@ -515,7 +518,7 @@ button:disabled {
 }
 
 .cell .post .pip {
-  font-size: 0.55rem;
+  font-size: 0.62rem;
   font-style: normal;
   color: #e8e2d4;
 }
@@ -555,8 +558,9 @@ button:disabled {
   position: absolute;
   right: 2px;
   bottom: 0;
-  color: #7aa0e0;
-  font-size: 0.8rem;
+  color: #9bb8ee;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .cell .dest.mine {
