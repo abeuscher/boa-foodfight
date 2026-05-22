@@ -4,9 +4,10 @@ import { SPEEDS } from '../clock/clock.ts';
 import { eventLabel } from '../scenario/eventLabel.ts';
 
 import { Board } from './Board.tsx';
+import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
 
-import type { Party, Plane, PartyId, TileCoord } from '../../../engine/types.ts';
+import type { Party, Plane, PartyId, TileCoord, UnitId } from '../../../engine/types.ts';
 
 interface Props {
   readonly onExit: () => void;
@@ -55,14 +56,19 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
 
   const [selectedId, setSelectedId] = useState<PartyId | null>(null);
   const [ordering, setOrdering] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [unitId, setUnitId] = useState<UnitId | null>(null);
   const [plane, setPlane] = useState<Plane>('floor');
 
   const selected = selectedId !== null ? (state.parties.get(selectedId) ?? null) : null;
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
+  // The inspected party fell out of state (shouldn't happen on L1) — close.
+  const inspectingOpen = inspecting && selected !== null;
 
   const selectParty = (id: PartyId): void => {
     setSelectedId(id);
     setOrdering(false);
+    setUnitId(null); // switching party clears unit drill-down
     const p = state.parties.get(id);
     if (p) setPlane(p.location.plane);
   };
@@ -81,7 +87,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
         p.location.y === coord.y,
     );
     setSelectedId(hit ? hit.id : null);
+    setUnitId(null);
     setOrdering(false);
+    if (!hit) setInspecting(false); // clicking empty space closes the panel
   };
 
   return (
@@ -153,47 +161,61 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
           )}
         </div>
 
-        <aside className="rail">
-          {selected === null && (
-            <p className="hint">Select a party (roster or board), then Move.</p>
-          )}
-          {selected !== null && !ordering && (
-            <>
-              <div className="rail-head">{selected.id}</div>
-              {selected.id === QUEEN_GUARD ? (
-                <p className="hint">The Queen holds the hill — immobile.</p>
-              ) : (
-                <>
-                  <button disabled={!canMove} onClick={() => setOrdering(true)}>
-                    Move
-                  </button>
-                  <button
-                    disabled={!canMove}
-                    onClick={() => {
-                      live.setOrder(selected.id, null);
-                    }}
-                  >
-                    Hold position
-                  </button>
-                  <button
-                    onClick={() => {
-                      live.setOrder(selected.id, undefined);
-                    }}
-                  >
-                    Clear order
-                  </button>
-                </>
-              )}
-            </>
-          )}
-          {ordering && (
-            <>
-              <div className="rail-head">Pick destination</div>
-              <p className="hint">Click a tile on the board.</p>
-              <button onClick={() => setOrdering(false)}>Cancel</button>
-            </>
-          )}
-        </aside>
+        {inspectingOpen ? (
+          <PartyDetail
+            state={state}
+            party={selected}
+            selectedUnitId={unitId}
+            onSelectUnit={setUnitId}
+            onClose={() => {
+              setInspecting(false);
+              setUnitId(null);
+            }}
+          />
+        ) : (
+          <aside className="rail">
+            {selected === null && (
+              <p className="hint">Select a party (roster or board), then Move.</p>
+            )}
+            {selected !== null && !ordering && (
+              <>
+                <div className="rail-head">{selected.id}</div>
+                {selected.id === QUEEN_GUARD ? (
+                  <p className="hint">The Queen holds the hill — immobile.</p>
+                ) : (
+                  <>
+                    <button disabled={!canMove} onClick={() => setOrdering(true)}>
+                      Move
+                    </button>
+                    <button
+                      disabled={!canMove}
+                      onClick={() => {
+                        live.setOrder(selected.id, null);
+                      }}
+                    >
+                      Hold position
+                    </button>
+                    <button
+                      onClick={() => {
+                        live.setOrder(selected.id, undefined);
+                      }}
+                    >
+                      Clear order
+                    </button>
+                  </>
+                )}
+                <button onClick={() => setInspecting(true)}>Inspect</button>
+              </>
+            )}
+            {ordering && (
+              <>
+                <div className="rail-head">Pick destination</div>
+                <p className="hint">Click a tile on the board.</p>
+                <button onClick={() => setOrdering(false)}>Cancel</button>
+              </>
+            )}
+          </aside>
+        )}
       </div>
 
       <div className="scn-world log-band">

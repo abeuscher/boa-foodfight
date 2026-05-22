@@ -569,3 +569,141 @@ button:disabled {
   margin-top: 0.75rem;
   min-height: auto;
 }
+
+/* --- Party-detail inspection panel (replaces the action rail) --- */
+
+.pdetail {
+  border: 1px solid #d8d0c2;
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.pd-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #efe9dc;
+  padding-bottom: 0.4rem;
+}
+
+.pd-name {
+  font-weight: 700;
+}
+
+.pd-leader {
+  font-size: 0.75rem;
+  color: #6b6258;
+}
+
+.pd-close {
+  padding: 0 0.4rem;
+  font-weight: 700;
+}
+
+.pd-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.pd-row-label {
+  width: 3.5rem;
+  font-size: 0.7rem;
+  color: #8a8170;
+  text-transform: uppercase;
+}
+
+.pd-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.pd-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.25rem 0.4rem;
+  min-width: 5.5rem;
+  text-align: left;
+}
+
+.pd-unit.sel {
+  border-color: #b9a06a;
+  background: #e7d9b8;
+}
+
+.pd-unit.leader {
+  border-color: #b5651d;
+}
+
+.pd-unit.down {
+  opacity: 0.4;
+}
+
+.pd-u-role {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pd-hpbar {
+  width: 100%;
+  height: 4px;
+  background: #e0d8c6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.pd-hpfill {
+  display: block;
+  height: 100%;
+  background: #6ba368;
+}
+
+.pd-u-hp {
+  font-size: 0.65rem;
+  color: #6b6258;
+}
+
+.pd-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  border-top: 1px solid #efe9dc;
+  padding-top: 0.4rem;
+}
+
+.pd-sub {
+  font-size: 0.7rem;
+  color: #8a8170;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+.pd-line {
+  font-size: 0.8rem;
+}
+
+.pd-mods {
+  list-style: none;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.pd-drill {
+  border-top: 1px solid #efe9dc;
+  padding-top: 0.4rem;
+}
+
+.pd-reserved {
+  min-height: 1.5rem;
+}
