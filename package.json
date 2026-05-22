@@ -11,7 +11,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:client": "tsc -p client/tsconfig.json",
-    "gen:fixture": "tsx client/scripts/gen-l1-roster.ts",
+    "gen:fixture": "tsx client/scripts/gen-l1-fixture.ts",
     "dev:client": "vite client",
     "build:client": "vite build client",
     "lint": "eslint .",
