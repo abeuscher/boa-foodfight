@@ -8,6 +8,11 @@ interface Props {
   readonly ordering: boolean;
   readonly destinations: ReadonlyMap<PartyId, TileCoord | null>;
   readonly onClickTile: (coord: TileCoord) => void;
+  readonly fogEnabled: boolean;
+  /** Currently-visible tile keys (coordKey). */
+  readonly visible: ReadonlySet<string>;
+  /** Ever-seen tile keys (coordKey) — explored terrain stays dim. */
+  readonly seen: ReadonlySet<string>;
 }
 
 const factionGlyph: Record<string, string> = { ant: 'A', spider: 'S', neutral: 'N' };
@@ -42,6 +47,9 @@ export function Board({
   ordering,
   destinations,
   onClickTile,
+  fogEnabled,
+  visible,
+  seen,
 }: Props): JSX.Element {
   const { w, h } = planeDims(state, plane);
 
@@ -72,15 +80,21 @@ export function Board({
     const cells: JSX.Element[] = [];
     for (let x = 0; x < w; x++) {
       const k = cellKey(x, y);
-      const tile = state.tiles.get(coordKey({ plane, x, y }));
+      const fullKey = coordKey({ plane, x, y });
+      const cellVisible = !fogEnabled || visible.has(fullKey);
+      const cellSeen = !fogEnabled || seen.has(fullKey);
+      const tile = state.tiles.get(fullKey);
       const terrain = tile?.terrain.kind ?? 'open';
       const isObstacle = terrain === 'obstacle';
-      const post = postByCell.get(k);
-      const parties = partyByCell.get(k) ?? [];
+      // Explored terrain/POSTs persist (dim); live actors only when visible.
+      const post = cellSeen ? postByCell.get(k) : undefined;
+      const parties = cellVisible ? (partyByCell.get(k) ?? []) : [];
       const lead = parties[0];
       const selectedHere = lead !== undefined && lead.id === selectedPartyId;
       const destHere = destByCell.has(k);
       const classes = ['cell', `t-${terrain}`];
+      if (!cellSeen) classes.push('fog-unseen');
+      else if (!cellVisible) classes.push('fog-seen');
       if (ordering && !isObstacle) classes.push('targetable');
       if (selectedHere) classes.push('sel');
       cells.push(
@@ -89,7 +103,7 @@ export function Board({
           type="button"
           className={classes.join(' ')}
           disabled={ordering && isObstacle}
-          title={post ? `${post.name} (${post.owner})` : (lead?.id ?? '')}
+          title={cellVisible && post ? `${post.name} (${post.owner})` : (lead?.id ?? '')}
           onClick={() => {
             onClickTile({ plane, x, y });
           }}

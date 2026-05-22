@@ -474,6 +474,16 @@ button:disabled {
   background: #5a3030;
 }
 
+/* Fog of war: explored-but-not-visible tiles dim; never-seen tiles dark. */
+.cell.fog-seen {
+  filter: brightness(0.55) saturate(0.6);
+}
+
+.cell.fog-unseen {
+  background: #14161a;
+  border-color: #181b20;
+}
+
 .cell.targetable {
   cursor: crosshair;
   border-color: #8a7a4a;

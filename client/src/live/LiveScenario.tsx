@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { SPEEDS } from '../clock/clock.ts';
-import { eventLabel, pauseReasonLabel } from '../scenario/eventLabel.ts';
+import { eventLabel } from '../scenario/eventLabel.ts';
 
 import { Board } from './Board.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
@@ -103,6 +103,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
               {pl}
             </button>
           ))}
+          <button className={live.fogEnabled ? 'active' : ''} onClick={live.toggleFog}>
+            Fog {live.fogEnabled ? 'on' : 'off'}
+          </button>
         </span>
       </header>
 
@@ -135,6 +138,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
             ordering={ordering}
             destinations={live.orders}
             onClickTile={handleTile}
+            fogEnabled={live.fogEnabled}
+            visible={live.visible}
+            seen={live.seen}
           />
           {live.atEnd && (
             <p className="scn-end">
@@ -226,9 +232,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
           </span>
           <span className="hud-readout">Turn {live.turnsPlayed}</span>
         </div>
-        <div className={`scn-notif ${live.pausedAt ? 'paused' : ''}`} role="status">
-          {live.pausedAt
-            ? `⏸ Paused — ${pauseReasonLabel(live.pausedAt)}`
+        <div className={`scn-notif ${live.pauseReason ? 'paused' : ''}`} role="status">
+          {live.pauseReason
+            ? `⏸ Paused — ${live.pauseReason}`
             : live.playing
               ? 'Playing…'
               : 'Paused'}
