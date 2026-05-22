@@ -11,7 +11,20 @@ import { computeVisibleTiles, visibleNonAntPartyIds } from './visibility.ts';
 
 import { createRng } from '../../../engine/rng.ts';
 import type { ScenarioData } from '../../../engine/state.ts';
-import type { Faction, GameState, PartyId, ReplayEvent, TileCoord } from '../../../engine/types.ts';
+import type {
+  BattleResult,
+  Faction,
+  GameState,
+  PartyId,
+  ReplayEvent,
+  TileCoord,
+} from '../../../engine/types.ts';
+
+const battlesFrom = (events: readonly ReplayEvent[]): readonly BattleResult[] => {
+  const out: BattleResult[] = [];
+  for (const e of events) if (e.kind === 'battle-resolved') out.push(e.result);
+  return out;
+};
 
 const SEED = 1;
 
@@ -37,12 +50,22 @@ interface Snapshot {
   readonly visible: ReadonlySet<string>;
   /** Tiles ever seen — explored terrain stays dimly rendered. */
   readonly seen: ReadonlySet<string>;
+  /** Battles resolved on the most recent turn (for the combat panel). */
+  readonly battles: readonly BattleResult[];
 }
 
 const initialSnapshot = (): Snapshot => {
   const state = createInitialState(DATA, SEED);
   const visible = computeVisibleTiles(state);
-  return { state, turnsPlayed: 0, recentEvents: [], pauseReason: null, visible, seen: visible };
+  return {
+    state,
+    turnsPlayed: 0,
+    recentEvents: [],
+    pauseReason: null,
+    visible,
+    seen: visible,
+    battles: [],
+  };
 };
 
 export interface LiveScenarioClock {
@@ -57,6 +80,7 @@ export interface LiveScenarioClock {
   readonly fogEnabled: boolean;
   readonly visible: ReadonlySet<string>;
   readonly seen: ReadonlySet<string>;
+  readonly battles: readonly BattleResult[];
   /** Player move intents (destination tile, `null` = hold, absent = no opinion). */
   readonly orders: ReadonlyMap<PartyId, TileCoord | null>;
   readonly play: () => void;
@@ -142,6 +166,7 @@ export function useLiveScenario(): LiveScenarioClock {
       pauseReason,
       visible,
       seen,
+      battles: battlesFrom(result.events),
     };
     snapRef.current = next;
     setSnap(next);
@@ -203,6 +228,7 @@ export function useLiveScenario(): LiveScenarioClock {
     fogEnabled,
     visible: snap.visible,
     seen: snap.seen,
+    battles: snap.battles,
     orders,
     play,
     pause,

@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { SPEEDS } from '../clock/clock.ts';
 import { eventLabel } from '../scenario/eventLabel.ts';
 
 import { Board } from './Board.tsx';
+import { CombatPanel } from './CombatPanel.tsx';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
 
-import type { Party, Plane, PartyId, TileCoord, UnitId } from '../../../engine/types.ts';
+import type {
+  BattleResult,
+  Party,
+  Plane,
+  PartyId,
+  TileCoord,
+  UnitId,
+} from '../../../engine/types.ts';
 
 interface Props {
   readonly onExit: () => void;
@@ -59,6 +67,17 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
   const [inspecting, setInspecting] = useState(false);
   const [unitId, setUnitId] = useState<UnitId | null>(null);
   const [plane, setPlane] = useState<Plane>('floor');
+  const [battleQueue, setBattleQueue] = useState<{
+    readonly battles: readonly BattleResult[];
+    readonly index: number;
+  } | null>(null);
+
+  // Open the combat panel when a resolved turn produced battles. The turn
+  // already auto-paused on `battle-resolved`, so playback is halted while
+  // the panel is up; dismissing returns to the (still paused) board.
+  useEffect(() => {
+    if (live.battles.length > 0) setBattleQueue({ battles: live.battles, index: 0 });
+  }, [live.turnsPlayed]);
 
   const selected = selectedId !== null ? (state.parties.get(selectedId) ?? null) : null;
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
@@ -262,6 +281,27 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
               : 'Paused'}
         </div>
       </footer>
+
+      {battleQueue && (
+        <div className="combat-overlay">
+          <CombatPanel
+            result={battleQueue.battles[battleQueue.index]!}
+            templates={state.unitTemplates}
+            index={battleQueue.index + 1}
+            total={battleQueue.battles.length}
+            onContinue={() => {
+              setBattleQueue((q) => {
+                if (!q) return null;
+                const next = q.index + 1;
+                return next >= q.battles.length ? null : { ...q, index: next };
+              });
+            }}
+            onSkipAll={() => {
+              setBattleQueue(null);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

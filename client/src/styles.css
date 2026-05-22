@@ -707,3 +707,144 @@ button:disabled {
 .pd-reserved {
   min-height: 1.5rem;
 }
+
+/* --- Combat panel (full-attention focus surface) --- */
+
+.combat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 18, 22, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.combat {
+  width: min(760px, 92vw);
+  background: #20242b;
+  color: #e8e2d4;
+  border: 1px solid #3a4049;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cb-strip {
+  font-size: 0.8rem;
+  color: #9a958a;
+}
+
+.cb-stage {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  min-height: 180px;
+  background: #2a2f37;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.cb-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cb-defender {
+  align-items: flex-end;
+}
+
+.cb-vs {
+  font-weight: 700;
+  text-align: center;
+  color: #e7c97a;
+  font-size: 0.9rem;
+}
+
+.cb-unit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 8rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #3a4049;
+  border-radius: 5px;
+  background: #333a44;
+}
+
+.cb-defender .cb-unit {
+  align-items: flex-end;
+}
+
+.cb-unit.acting {
+  border-color: #e7c97a;
+}
+
+.cb-unit.leader {
+  border-left: 3px solid #b5651d;
+}
+
+.cb-unit.down {
+  opacity: 0.4;
+}
+
+.cb-u-role {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cb-hpbar {
+  width: 100%;
+  height: 5px;
+  background: #1b1e23;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cb-hpfill {
+  display: block;
+  height: 100%;
+  background: #6ba368;
+}
+
+.cb-u-hp {
+  font-size: 0.7rem;
+  color: #b9b3a5;
+}
+
+.cb-dmg {
+  position: absolute;
+  top: -0.4rem;
+  right: 0.4rem;
+  color: #e88080;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.cb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cb-context {
+  font-size: 0.8rem;
+}
+
+.cb-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.cb-continue {
+  background: #e7d9b8;
+  border-color: #b9a06a;
+  color: #1a1a1a;
+  font-weight: 700;
+}
