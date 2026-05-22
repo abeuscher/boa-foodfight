@@ -33,16 +33,18 @@ import { fileURLToPath } from 'node:url';
 import { type AIPolicy, ENEMY_AIS, neutralPlayer, SCENARIO_PLAYER_AIS } from '../ai/index.ts';
 import { createFileSink, createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
+import { itemsFileSchema } from '../engine/schemas/items.ts';
+import { shopCatalogFileSchema } from '../engine/schemas/shop-catalog.ts';
 import { loadScenario } from '../engine/state.ts';
 import { runScenario } from '../engine/turn.ts';
-import type { Faction, GameState, PartyId, ReplayEvent } from '../engine/types.ts';
+import type { Faction, GameState, ItemId, PartyId, ReplayEvent } from '../engine/types.ts';
 import { extractGold, extractWorldRoster } from '../engine/world-extract.ts';
 import type { LeveledUnitSummary } from '../engine/world-inject.ts';
 import { injectWorldRoster, scaffoldFromState } from '../engine/world-inject.ts';
 import { applyRosterLevelUps } from '../engine/world-levelup.ts';
 import { barracksUnits } from '../engine/world-organize.ts';
 import { findLatestSave, loadWorldStateFile, saveWorldState } from '../engine/world-save.ts';
-import { applyShopPurchase, MOUSE_MERC_COST, MOUSE_MERC_TEMPLATE } from '../engine/world-shop.ts';
+import { buyItem, type ShopResult } from '../engine/world-shop.ts';
 import type { WorldRoster, WorldState } from '../engine/world-state.ts';
 
 export interface Args {
@@ -312,12 +314,22 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
   const xpBefore = totalXp(postS0.roster);
   const promotedBefore = promotedCount(postS0.roster);
 
-  // Shop smoke-test: recruit one mercenary if the campaign can afford it.
-  const shop = applyShopPurchase(postS0, {
-    kind: 'recruit',
-    templateId: MOUSE_MERC_TEMPLATE,
-    cost: MOUSE_MERC_COST,
-  });
+  // Shop smoke-test: buy the cheapest catalogued persistent item onto a
+  // unit with an empty item slot, if the campaign can afford it.
+  const catalogRaw: unknown = JSON.parse(
+    fs.readFileSync(path.join(args.dataDir, 'shop-catalog.json'), 'utf8'),
+  );
+  const shopCatalog = shopCatalogFileSchema.parse(catalogRaw);
+  const itemsRaw: unknown = JSON.parse(
+    fs.readFileSync(path.join(args.dataDir, 'items.json'), 'utf8'),
+  );
+  const shopItems = itemsFileSchema.parse(itemsRaw).templates;
+  const cheapest = [...shopCatalog.items].sort((a, b) => a.cost - b.cost)[0];
+  const buyTarget = postS0.roster.units.find((u) => u.item === null);
+  const shop: ShopResult =
+    cheapest && buyTarget
+      ? buyItem(postS0, cheapest.itemId as ItemId, buyTarget.id, shopCatalog, shopItems)
+      : { state: postS0, ok: false };
 
   // Scenario 1 — real L2 (the Pipe, escort Aunt Ant) with the carried
   // roster injected. The L2-provided escort-column (Aunt Ant + her
@@ -353,7 +365,7 @@ export const runWorldLoop = (args: Args): WorldLoopSummary => {
     levelsGainedThisBoundary: built1.totalLevelsGained,
     promotedBefore,
     promotedAfter: promotedCount(built1.state.roster),
-    shopApplied: shop.applied,
+    shopApplied: shop.ok,
     savesDir: path.join(args.outRoot, args.campaignId),
     postS0,
     postS1: built1.state,
@@ -396,7 +408,7 @@ const printSummary = (s: WorldLoopSummary): void => {
       s.promotedAfter,
     )} (post-S1)`,
   );
-  console.log(`Shop recruit:    ${s.shopApplied ? 'applied' : 'skipped (insufficient gold)'}`);
+  console.log(`Shop purchase:   ${s.shopApplied ? 'applied' : 'skipped'}`);
   console.log(`Saves written:   ${s.savesDir}`);
   console.log('============================================================');
 };

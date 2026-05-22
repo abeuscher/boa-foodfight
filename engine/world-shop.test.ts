@@ -1,15 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PartyId, UnitId, UnitTemplateId } from './types.ts';
-import {
-  applyShopPurchase,
-  MERC_PARTY_ID,
-  MOUSE_MERC_COST,
-  MOUSE_MERC_TEMPLATE,
-} from './world-shop.ts';
+import type { ItemTemplate } from './schemas/items.ts';
+import type { ShopCatalogFile } from './schemas/shop-catalog.ts';
+import type { ItemId, PartyId, UnitId, UnitTemplateId } from './types.ts';
+import { buyItem } from './world-shop.ts';
 import type { WorldState } from './world-state.ts';
 
-const mkState = (gold: number): WorldState => ({
+const PAD = 'leather-pad' as ItemId;
+const MEAD = 'mead' as ItemId;
+
+const catalog: ShopCatalogFile = {
+  version: 1,
+  items: [
+    { itemId: 'leather-pad', cost: 40 },
+    { itemId: 'mead', cost: 10 },
+  ],
+};
+
+const items: readonly ItemTemplate[] = [
+  {
+    id: 'leather-pad',
+    name: 'Leather Pad',
+    kind: 'persistent',
+    effect: 'armor',
+    magnitude: 1,
+    description: 'x',
+  },
+  { id: 'mead', name: 'Mead', kind: 'consumable', effect: 'heal', magnitude: 0, description: 'x' },
+];
+
+const mkState = (gold: number, item: ItemId | null = null): WorldState => ({
   campaignId: 'camp-shop',
   scenarioIndex: 1,
   roster: {
@@ -23,15 +43,11 @@ const mkState = (gold: number): WorldState => ({
         xp: 0,
         charisma: 50,
         promoted: false,
-        item: null,
+        item,
       },
     ],
     partyAssignments: [
-      {
-        partyId: 'vanguard-alpha' as PartyId,
-        unitIds: ['u1' as UnitId],
-        leaderId: 'u1' as UnitId,
-      },
+      { partyId: 'vanguard-alpha' as PartyId, unitIds: ['u1' as UnitId], leaderId: 'u1' as UnitId },
     ],
   },
   gold,
@@ -40,63 +56,51 @@ const mkState = (gold: number): WorldState => ({
   savedAt: '2026-05-16T00:00:00.000Z',
 });
 
-describe('engine/world-shop', () => {
-  it('recruits a mouse-merc when gold is sufficient', () => {
-    const ws = mkState(800);
-    const res = applyShopPurchase(ws, {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    expect(res.applied).toBe(true);
-    expect(res.state.gold).toBe(800 - MOUSE_MERC_COST);
-    expect(res.state.roster.units.length).toBe(2);
-    const merc = res.state.roster.units.find((u) => u.templateId === MOUSE_MERC_TEMPLATE);
-    expect(merc).toBeDefined();
-    expect(merc?.currentHp).toBe(25);
-    expect(merc?.charisma).toBe(0);
-    const mercParty = res.state.roster.partyAssignments.find((a) => a.partyId === MERC_PARTY_ID);
-    expect(mercParty?.unitIds).toContain(res.recruitedUnitId);
+describe('engine/world-shop buyItem', () => {
+  it('buys and equips a persistent item when affordable', () => {
+    const res = buyItem(mkState(100), PAD, 'u1' as UnitId, catalog, items);
+    expect(res.ok).toBe(true);
+    expect(res.state.gold).toBe(60);
+    expect(res.state.roster.units[0]?.item).toBe('leather-pad');
+    expect(res.equippedUnitId).toBe('u1');
   });
 
-  it('is a no-op when gold is insufficient', () => {
-    const ws = mkState(100);
-    const res = applyShopPurchase(ws, {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    expect(res.applied).toBe(false);
+  it('rejects insufficient gold (state unchanged)', () => {
+    const ws = mkState(20);
+    const res = buyItem(ws, PAD, 'u1' as UnitId, catalog, items);
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe('insufficient gold');
     expect(res.state).toEqual(ws);
   });
 
-  it('produces a deterministic recruit id from the campaign seed', () => {
-    const a = applyShopPurchase(mkState(800), {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    const b = applyShopPurchase(mkState(800), {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    expect(a.recruitedUnitId).toBe(b.recruitedUnitId);
+  it('rejects an item not in the catalog', () => {
+    const res = buyItem(mkState(100), 'boots' as ItemId, 'u1' as UnitId, catalog, items);
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('not for sale');
   });
 
-  it('appends to an existing mercenaries party on a second recruit', () => {
-    const first = applyShopPurchase(mkState(2000), {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    const second = applyShopPurchase(first.state, {
-      kind: 'recruit',
-      templateId: MOUSE_MERC_TEMPLATE,
-      cost: MOUSE_MERC_COST,
-    });
-    const mercParty = second.state.roster.partyAssignments.find((a) => a.partyId === MERC_PARTY_ID);
-    expect(mercParty?.unitIds.length).toBe(2);
-    expect(second.state.roster.units.length).toBe(3);
+  it('rejects a non-persistent item even if catalogued', () => {
+    const res = buyItem(mkState(100), MEAD, 'u1' as UnitId, catalog, items);
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('not a persistent item');
+  });
+
+  it('rejects an unknown target unit', () => {
+    const res = buyItem(mkState(100), PAD, 'nope' as UnitId, catalog, items);
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('unknown unit');
+  });
+
+  it('rejects buying onto an already-occupied slot', () => {
+    const res = buyItem(mkState(100, 'boots' as ItemId), PAD, 'u1' as UnitId, catalog, items);
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('already carries an item');
+  });
+
+  it('does not mutate the input state', () => {
+    const ws = mkState(100);
+    buyItem(ws, PAD, 'u1' as UnitId, catalog, items);
+    expect(ws.gold).toBe(100);
+    expect(ws.roster.units[0]?.item).toBeNull();
   });
 });

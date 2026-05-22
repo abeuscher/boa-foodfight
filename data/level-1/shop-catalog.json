@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "items": [
+    { "itemId": "leather-pad", "cost": 40 },
+    { "itemId": "brass-knuckles", "cost": 50 },
+    { "itemId": "boots", "cost": 45 }
+  ]
+}
