@@ -328,18 +328,34 @@ export const swapLeader = (
 };
 
 /**
- * Equip (or, with `null`, clear) a unit's persistent item. One item
- * per unit by construction (single field). Rejected only for an
- * unknown unit.
+ * Equip (or, with `null`, unequip) a unit's persistent item, drawing
+ * from `WorldRoster.inventory` (the owned-but-unequipped pool the
+ * Grasshopper shop fills). Equipping consumes one copy of `itemId` from
+ * the inventory and puts it in the unit's single item slot; any item
+ * the unit already held returns to the inventory (swap), and unequip
+ * (`null`) returns the held item to the inventory. Rejected for an
+ * unknown unit, or when `itemId` is not present in the inventory.
  */
 export const equipItem = (
   roster: WorldRoster,
   unitId: UnitId,
   itemId: ItemId | null,
 ): OrganizeResult => {
-  if (!unitById(roster, unitId)) return fail(roster, `unknown unit '${String(unitId)}'`);
+  const unit = unitById(roster, unitId);
+  if (!unit) return fail(roster, `unknown unit '${String(unitId)}'`);
+
+  const inventory = [...(roster.inventory ?? [])];
+  if (itemId !== null) {
+    const idx = inventory.indexOf(itemId);
+    if (idx === -1) return fail(roster, `'${String(itemId)}' is not in the inventory`);
+    inventory.splice(idx, 1); // consume the item being equipped
+  }
+  // Return the unit's previous item to the pool (swap or unequip).
+  if (unit.item !== null) inventory.push(unit.item);
+
   return done({
     ...roster,
+    inventory,
     units: roster.units.map((u) => (u.id === unitId ? { ...u, item: itemId } : u)),
   });
 };

@@ -254,6 +254,10 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
       partyAssignments: WorldPartyAssignment[] {
         partyId, unitIds[], leaderId
       }
+      inventory?: ItemId[]        // owned-but-unequipped persistent items
+                                  // (counted multiset; shop fills it,
+                                  // equipItem draws from it). Omitted
+                                  // when empty (byte-stable).
     }
     gold:       number            // carried verbatim
     cardsOwned: []                // empty — cards are per-scenario
@@ -296,7 +300,7 @@ actually edits. Authoritative: `engine/types.ts:177` (`Unit.level`,
   removeUnit(roster, unitId, templates)                 // → barracks; detach (leader auto-reassign); queen-pinned
   dismissUnit(roster, unitId, templates)                // → removed from roster; in-squad or barracks; queen-pinned
   setUnitRank(roster, unitId, rank, templates)          // §7.9 sparse front/back/reserve override; front≤3/back≤2; queen→front
-  equipItem(roster, unitId, itemId | null)              // set/clear the unit's persistent item
+  equipItem(roster, unitId, itemId | null)              // draw item from roster.inventory onto unit (or unequip → back to inventory); swaps held item back to pool
 
   // Read accessors:
   partySlotUsage(roster, partyId, templates) → { used, cap, free }
@@ -352,9 +356,16 @@ error?, recruitedUnitId? }`. Deducts the catalog cost from
   queen-pin; byte-identical when absent). (2) §7.8 extract
   carry-forward merge — **SHIPPED** (`ExtractInput.carryForward`;
   runner passes prior `barracksUnits`; appended verbatim, unassigned,
-  deduped; byte-identical when empty). **Remaining:** (3) multi-item
-  shop purchase (`engine/world-shop.ts` is still the single
-  `mouse-merc` smoke-test) — the last queued backend item.
+  deduped; byte-identical when empty). (3) multi-item Grasshopper shop
+  — **SHIPPED** (`engine/world-shop.ts` `buyItem(state, itemId,
+  catalog, items) → { state, ok, error?, purchasedItemId? }`;
+  items-only, deducts gold, appends to `WorldRoster.inventory`; catalog
+  `data/level-N/shop-catalog.json` / `engine/schemas/shop-catalog.ts`
+  with `{ itemId, cost, stock }`, stock a v1 soft-cap (no consumption
+  tracking — real depletion is a forward-dep for unique items). The
+  prior `mouse-merc` recruit was a placeholder, not a contract. Buying
+  fills the inventory pool; `equipItem` draws from it. All queued
+  world-loop backend items are now shipped.
 
 ---
 

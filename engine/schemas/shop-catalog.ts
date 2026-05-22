@@ -20,6 +20,10 @@ import { idSchema } from './common.ts';
 export const shopCatalogEntrySchema = z.object({
   itemId: idSchema,
   cost: z.number().int().nonnegative(),
+  /** Remaining count; `null` = uncapped. v1 is a soft cap — `buyItem`
+   * does not decrement it (no consumption tracking); real depletion is
+   * a forward-dep for genuine unique items. */
+  stock: z.number().int().nonnegative().nullable(),
 });
 
 export const shopCatalogFileSchema = z

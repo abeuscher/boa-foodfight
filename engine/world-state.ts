@@ -117,6 +117,15 @@ export interface WorldRoster {
   readonly units: readonly WorldUnit[];
   /** How the pool was last organized into parties (for re-form / inject). */
   readonly partyAssignments: readonly WorldPartyAssignment[];
+  /**
+   * Owned-but-unequipped persistent items (a counted multiset — items
+   * are fungible; a "leather-pad" is a "leather-pad", not a unique
+   * instance). The Grasshopper shop (`engine/world-shop.ts` `buyItem`)
+   * appends here; `equipItem` draws one out onto a unit and returns it
+   * on unequip. Optional / omitted-when-empty so pre-inventory saves
+   * stay byte-identical (same discipline as `levelUpBonus` / formation).
+   */
+  readonly inventory?: readonly ItemId[];
 }
 
 export interface WorldState {
@@ -153,7 +162,12 @@ export const pruneDeadWorldUnits = (roster: WorldRoster): WorldRoster => {
     if (leaderId === undefined) continue;
     assignments.push({ partyId: a.partyId, unitIds, leaderId });
   }
-  return { faction: roster.faction, units: living, partyAssignments: assignments };
+  return {
+    faction: roster.faction,
+    units: living,
+    partyAssignments: assignments,
+    ...(roster.inventory !== undefined ? { inventory: roster.inventory } : {}),
+  };
 };
 
 /**
@@ -199,6 +213,11 @@ export const serializeWorldState = (ws: WorldState): string =>
               }
             : {}),
         })),
+        // Only emit when non-empty so a roster with no purchased-and-
+        // unequipped items stays byte-identical to the pre-inventory format.
+        ...(ws.roster.inventory && ws.roster.inventory.length > 0
+          ? { inventory: [...ws.roster.inventory] }
+          : {}),
       },
       gold: ws.gold,
       cardsOwned: [],
@@ -248,6 +267,9 @@ export const deserializeWorldState = (str: string): WorldState => {
             }
           : {}),
       })),
+      ...(parsed.roster.inventory !== undefined
+        ? { inventory: parsed.roster.inventory.map((id) => id as ItemId) }
+        : {}),
     },
     gold: parsed.gold,
     cardsOwned: [],

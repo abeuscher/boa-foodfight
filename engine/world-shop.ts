@@ -12,21 +12,23 @@
  * `world-recruit`'s `{ state, ok, error? }` result so the UI can
  * surface a rejection reason instead of failing silently.
  *
- * Model: the persisted roster has one persistent-item slot per unit
- * (`WorldUnit.item`, which rides on the party leader at inject —
- * troop-reference §10) and no separate item inventory. A purchase is
- * therefore *buy-and-equip*: deduct gold and set the target unit's
- * item. Buying onto an already-occupied slot is rejected rather than
- * silently discarding the held item (there is no inventory to return
- * it to) — the player clears it first via `equipItem(.., null)`. This
- * "buy fills an empty slot; swapping is explicit" rule is a dev-minimal
- * default, open to a design ruling (mirrors recruit's arrival-level
- * human ruling).
+ * Model: a purchase appends the item to `WorldRoster.inventory` (the
+ * owned-but-unequipped pool) — it does NOT equip. Equipping is a
+ * separate step in the Organize Army sub-view (`world-organize`'s
+ * `equipItem`, which draws one out of the inventory onto a unit). This
+ * mirrors the Anthill precedent (recruits land in the barracks pool;
+ * deploying is separate) and keeps the Shop's job at "item is owned".
+ *
+ * Stock: catalog entries carry an optional `stock` (`null` = uncapped).
+ * v1 is a **soft cap** — `buyItem` does not decrement or enforce it (no
+ * consumption tracking); the field exists so data can express it and a
+ * later unique-item pass can add real consumption. The v1 stub is
+ * "100 of everything", so nothing depletes.
  */
 
 import type { ItemTemplate } from './schemas/items.ts';
 import type { ShopCatalogFile } from './schemas/shop-catalog.ts';
-import type { ItemId, UnitId } from './types.ts';
+import type { ItemId } from './types.ts';
 import type { WorldRoster, WorldState } from './world-state.ts';
 
 export interface ShopResult {
@@ -35,22 +37,21 @@ export interface ShopResult {
    * unchanged and `error` explains why (UI-surfaceable). */
   readonly ok: boolean;
   readonly error?: string;
-  /** The unit the bought item was equipped onto, when a buy applied. */
-  readonly equippedUnitId?: UnitId;
+  /** The item id added to the inventory, when a buy applied. */
+  readonly purchasedItemId?: ItemId;
 }
 
 /**
- * Buy a persistent item from the catalog and equip it onto `unitId`.
+ * Buy a persistent item from the catalog into `WorldRoster.inventory`.
  * Rejected if: the item isn't in the catalog, isn't a known template,
- * isn't a `persistent` item, the unit is unknown, the unit's item slot
- * is already occupied, or the campaign can't afford the cost. On
- * success: deducts the catalog cost from `WorldState.gold` and sets the
- * unit's `item`.
+ * isn't a `persistent` item, or the campaign can't afford the cost. On
+ * success: deducts the catalog cost from `WorldState.gold` and appends
+ * one copy of the item to the inventory pool (no equip — that's
+ * `equipItem` in the Organize Army layer).
  */
 export const buyItem = (
   state: WorldState,
   itemId: ItemId,
-  unitId: UnitId,
   catalog: ShopCatalogFile,
   items: readonly ItemTemplate[],
 ): ShopResult => {
@@ -65,24 +66,17 @@ export const buyItem = (
   if (tmpl.kind !== 'persistent') {
     return { state, ok: false, error: `'${String(itemId)}' is not a persistent item` };
   }
-  const unit = state.roster.units.find((u) => u.id === unitId);
-  if (!unit) {
-    return { state, ok: false, error: `unknown unit '${String(unitId)}'` };
-  }
-  if (unit.item !== null) {
-    return { state, ok: false, error: 'unit already carries an item (unequip first)' };
-  }
   if (state.gold < entry.cost) {
     return { state, ok: false, error: 'insufficient gold' };
   }
 
   const roster: WorldRoster = {
     ...state.roster,
-    units: state.roster.units.map((u) => (u.id === unitId ? { ...u, item: itemId } : u)),
+    inventory: [...(state.roster.inventory ?? []), itemId],
   };
   return {
     state: { ...state, gold: state.gold - entry.cost, roster },
     ok: true,
-    equippedUnitId: unitId,
+    purchasedItemId: itemId,
   };
 };

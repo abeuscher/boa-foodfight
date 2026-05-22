@@ -12,8 +12,8 @@ const MEAD = 'mead' as ItemId;
 const catalog: ShopCatalogFile = {
   version: 1,
   items: [
-    { itemId: 'leather-pad', cost: 40 },
-    { itemId: 'mead', cost: 10 },
+    { itemId: 'leather-pad', cost: 40, stock: 100 },
+    { itemId: 'mead', cost: 10, stock: 100 },
   ],
 };
 
@@ -29,7 +29,7 @@ const items: readonly ItemTemplate[] = [
   { id: 'mead', name: 'Mead', kind: 'consumable', effect: 'heal', magnitude: 0, description: 'x' },
 ];
 
-const mkState = (gold: number, item: ItemId | null = null): WorldState => ({
+const mkState = (gold: number): WorldState => ({
   campaignId: 'camp-shop',
   scenarioIndex: 1,
   roster: {
@@ -43,7 +43,7 @@ const mkState = (gold: number, item: ItemId | null = null): WorldState => ({
         xp: 0,
         charisma: 50,
         promoted: false,
-        item,
+        item: null,
       },
     ],
     partyAssignments: [
@@ -57,50 +57,47 @@ const mkState = (gold: number, item: ItemId | null = null): WorldState => ({
 });
 
 describe('engine/world-shop buyItem', () => {
-  it('buys and equips a persistent item when affordable', () => {
-    const res = buyItem(mkState(100), PAD, 'u1' as UnitId, catalog, items);
+  it('buys a persistent item into the inventory pool when affordable', () => {
+    const res = buyItem(mkState(100), PAD, catalog, items);
     expect(res.ok).toBe(true);
     expect(res.state.gold).toBe(60);
-    expect(res.state.roster.units[0]?.item).toBe('leather-pad');
-    expect(res.equippedUnitId).toBe('u1');
+    expect(res.state.roster.inventory).toEqual(['leather-pad']);
+    expect(res.purchasedItemId).toBe('leather-pad');
+    // It does not equip — the unit's slot is untouched.
+    expect(res.state.roster.units[0]?.item).toBeNull();
+  });
+
+  it('appends to an existing inventory on a second buy', () => {
+    const first = buyItem(mkState(200), PAD, catalog, items);
+    const second = buyItem(first.state, PAD, catalog, items);
+    expect(second.state.roster.inventory).toEqual(['leather-pad', 'leather-pad']);
+    expect(second.state.gold).toBe(120);
   });
 
   it('rejects insufficient gold (state unchanged)', () => {
     const ws = mkState(20);
-    const res = buyItem(ws, PAD, 'u1' as UnitId, catalog, items);
+    const res = buyItem(ws, PAD, catalog, items);
     expect(res.ok).toBe(false);
     expect(res.error).toBe('insufficient gold');
     expect(res.state).toEqual(ws);
   });
 
   it('rejects an item not in the catalog', () => {
-    const res = buyItem(mkState(100), 'boots' as ItemId, 'u1' as UnitId, catalog, items);
+    const res = buyItem(mkState(100), 'boots' as ItemId, catalog, items);
     expect(res.ok).toBe(false);
     expect(res.error).toContain('not for sale');
   });
 
   it('rejects a non-persistent item even if catalogued', () => {
-    const res = buyItem(mkState(100), MEAD, 'u1' as UnitId, catalog, items);
+    const res = buyItem(mkState(100), MEAD, catalog, items);
     expect(res.ok).toBe(false);
     expect(res.error).toContain('not a persistent item');
   });
 
-  it('rejects an unknown target unit', () => {
-    const res = buyItem(mkState(100), PAD, 'nope' as UnitId, catalog, items);
-    expect(res.ok).toBe(false);
-    expect(res.error).toContain('unknown unit');
-  });
-
-  it('rejects buying onto an already-occupied slot', () => {
-    const res = buyItem(mkState(100, 'boots' as ItemId), PAD, 'u1' as UnitId, catalog, items);
-    expect(res.ok).toBe(false);
-    expect(res.error).toContain('already carries an item');
-  });
-
   it('does not mutate the input state', () => {
     const ws = mkState(100);
-    buyItem(ws, PAD, 'u1' as UnitId, catalog, items);
+    buyItem(ws, PAD, catalog, items);
     expect(ws.gold).toBe(100);
-    expect(ws.roster.units[0]?.item).toBeNull();
+    expect(ws.roster.inventory).toBeUndefined();
   });
 });
