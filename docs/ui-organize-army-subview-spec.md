@@ -1,8 +1,9 @@
 # Organize Army — UX Spec (Between-Scenario Sub-View)
 
 **Intended location:** `docs/ui-organize-army-subview-spec.md`
-**Status:** DRAFT — awaiting ratification through the change-request
-protocol. Third and final member of the between-scenario sub-view
+**Status:** RECORDED — forward spec, not built. Ratified via
+change-request Exchange #11 (dev-verified against shipped `main`).
+Third and final member of the between-scenario sub-view
 family (siblings: `ui-shop-subview-spec.md`, and the queued Recruit /
 Anthill back-fill). Parents: `ui-hill-hub-spec.md` (verb-rail entry
 point + diegetic framing) and `ui-shell-integration-spec.md` (the
@@ -11,12 +12,12 @@ between-scenario three-band chrome the sub-view operates within).
 **Posture — target spec with an as-built baseline.** Unlike the Shop
 spec (greenfield: spec drove the build), Organize Army shipped ahead of
 any spec (coding-agent commits, ungated, merged to `main` via PR #41,
-most recent state post-`dd75621`). This document is therefore *both*:
+most recent state post-`dd75621`). This document is therefore _both_:
 
 - a **target spec** for the two-layer architecture the user's visual
   references confirm (army overview + party detail; see "Two-layer
   architecture" below), which the client is to be reworked toward; and
-- a **back-fill record** of what ships *today* — a single composite
+- a **back-fill record** of what ships _today_ — a single composite
   Squads + Barracks view — captured in "As-built today (v0)" so the
   gap between shipped and target is explicit, not lost.
 
@@ -68,7 +69,7 @@ change).
 The party detail's Back affordance returns to the **army overview**, not
 the Hill — a two-step back (detail → overview → Hill). The shell IA's
 back-to-Hill rule was written assuming one-layer sub-views; this is an
-*internal* navigation detail of one sub-view, not a shell-level pattern
+_internal_ navigation detail of one sub-view, not a shell-level pattern
 change, so it is recorded here without amending `ui-shell-integration-spec.md`.
 The two layers are **siblings** within Organize Army, not a
 shell-level parent/child; both render inside the between-scenario chrome
@@ -228,7 +229,7 @@ a held item swaps the old one back to the pool. Bound to the reworked
 ## Barracks (persistent surface + flows)
 
 **The barracks is a real, persistent surface — not flow-only.** Engine
-truth: `barracksUnits(roster)` is a *derived view* — `roster.units`
+truth: `barracksUnits(roster)` is a _derived view_ — `roster.units`
 minus every unit referenced by an assignment; there is **no separate
 barracks collection** on `WorldRoster`. Ratified via Exchange #4
 (barracks / unassigned-units pool). It is Disband's destination and Form
@@ -347,7 +348,7 @@ Notes binding the surface to truth:
 - **No `reorderParties` operator exists.** Reorder Squads is a target
   verb with no engine binding yet (display-order only when built; forward
   dep).
-- **`setUnitRank`** records a *sparse* formation override; ranks the
+- **`setUnitRank`** records a _sparse_ formation override; ranks the
   player never set are auto-assigned by `world-inject` at staging.
 - Templates flow in from the client fixture (`TEMPLATES`) so cost,
   leader-eligibility, queen tag, and slot cost are catalog-authoritative.
@@ -398,7 +399,7 @@ shared view helpers).
 
 1. **Per-unit progression (xp / leveling / class-change).** Gameplay-
    content, not UX. The spec describes the surface that renders a unit's
-   level/xp/class *when those exist in `WorldState`*; it does not specify
+   level/xp/class _when those exist in `WorldState`_; it does not specify
    rules. Change Class is recorded as a surface, not a mechanic; timing
    and gating live in the mechanic distribution plan. (Not in the shipped
    client today.)

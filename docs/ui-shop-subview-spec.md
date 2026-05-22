@@ -1,11 +1,12 @@
 # Grasshopper Shop — UX Spec (Between-Scenario Sub-View)
 
 **Intended location:** `docs/ui-shop-subview-spec.md`
-**Status:** DRAFT — first formal sub-view spec in the per-view UI spec
-family (parents: `ui-hill-hub-spec.md` for the verb-rail entry point and
-diegetic framing; `ui-shell-integration-spec.md` for the between-scenario
-chrome the sub-view operates within). Recording status will mirror the
-family once ratified through the change-request protocol.
+**Status:** RECORDED — forward spec, not built. Ratified via
+change-request Exchange #11 (engine binding dev-verified against the
+shipped `world-shop.ts` rework). First formal sub-view spec in the
+per-view UI spec family (parents: `ui-hill-hub-spec.md` for the
+verb-rail entry point and diegetic framing; `ui-shell-integration-spec.md`
+for the between-scenario chrome the sub-view operates within).
 
 **Revision 3** — the `world-shop.ts` rework revision 2 awaited has landed
 (merged `dd75621`). This revision rewrites the **Engine binding** section
@@ -363,7 +364,7 @@ equipItem(roster, unitId, itemId | null) → OrganizeResult
 - Path: `data/level-N/shop-catalog.json` (note: `shop.json` is the legacy
   in-scenario shop, so the filename differs).
 - Schema (`engine/schemas/shop-catalog.ts`): `version: 1`; `items: [{
-  itemId, cost (int ≥ 0), stock: number | null }]`. `null` = uncapped; a
+itemId, cost (int ≥ 0), stock: number | null }]`. `null` = uncapped; a
   number = soft cap (no consumption in v1).
 - v1 stub content: 100 of everything in level-N catalog data. Per-scenario
   item assortment is the deferred design pass (same shape as the Recruit

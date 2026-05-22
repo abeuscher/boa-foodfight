@@ -573,8 +573,8 @@ operators/schema are shipped (`dd75621`).
   as a forward-dep verb (party order is just `roster.partyAssignments`
   array order; a future op is a small pure `WorldRoster → WorldRoster`).
 - All recorded signatures match `main`: `equipItem(roster, unitId,
-  itemId|null)` 3-arg inventory-consuming; `buyItem(state, itemId,
-  catalog, items)` no stock decrement; `setUnitRank` rank ∈
+itemId|null)` 3-arg inventory-consuming; `buyItem(state, itemId,
+catalog, items)` no stock decrement; `setUnitRank` rank ∈
   `{front, back, reserve}` (no `middle`); plus `moveUnit`, `createParty`,
   `disbandParty`, `swapLeader`, `removeUnit`, `dismissUnit`, and reads
   `partySlotUsage` / `unitEffectiveStats` / `barracksUnits`.
@@ -588,11 +588,12 @@ operators/schema are shipped (`dd75621`).
   (Exchange #4).
 - **Decision record:** roadmap §7 (mirror pending).
 
-**Outcome:** In progress — specs drafted in `docs/drafts/`
-(`ui-organize-army-subview-spec.md`, `ui-shop-subview-spec.md`,
-`exchange-11-organize-army.md`); awaiting final design ratification and
-promotion to `docs/`. Signatures dev-verified; `reorderParties`
-forward-dep'd; engine cost zero (all bindings shipped).
+**Outcome:** Resolved. Both specs RECORDED and promoted
+`docs/drafts/` → `docs/ui-organize-army-subview-spec.md` /
+`docs/ui-shop-subview-spec.md`; the `exchange-11-organize-army.md`
+routing doc is marked RESOLVED (this §5 entry is canonical). Signatures
+dev-verified; `reorderParties` forward-dep'd; engine cost zero (all
+bindings shipped). Roadmap §7 mirror still pending (doc follow-up).
 
 ---
 

@@ -1,7 +1,9 @@
 # Change Request: Organize Army spec back-fill + Shop spec engine re-ratification
 
 From / To: UX → Dev (Gameplay/Engine)
-Status: Proposal — awaiting cost/feasibility read
+Status: RESOLVED — Accepted (dev-verified against shipped `main`). Canonical
+record: `change-request-protocol.md` §5 Exchange #11. Both specs promoted
+`docs/drafts/` → `docs/`.
 Blocking: Non-blocking, batched. The engine work it binds to is already
 shipped (`dd75621`); this exchange ratifies the design record against it.
 
@@ -54,7 +56,7 @@ Ratify two draft specs, bundled as one package:
 **What is NOT changing:** no engine work is requested — the operators and
 schema this binds to are already shipped. No client code (design track).
 No visual treatment (deferred, cube memo §D). No amendment to the shell
-IA, hub spec, or mechanic plan. The two-layer *layout* is a target for the
+IA, hub spec, or mechanic plan. The two-layer _layout_ is a target for the
 client track's later rework, not a request for engine change.
 
 ## Why
