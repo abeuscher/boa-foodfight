@@ -1,0 +1,5253 @@
+{
+  "units": {
+    "version": 1,
+    "templates": [
+      {
+        "id": "ant-queen",
+        "name": "Ant Queen",
+        "faction": "ant",
+        "size": "huge",
+        "slotCost": 4,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 60,
+          "attack": 20,
+          "agility": 3,
+          "armor": 5,
+          "intelligence": 8,
+          "constitution": 10
+        },
+        "abilities": [
+          "queen-ultimate"
+        ],
+        "tags": [
+          "queen",
+          "leader-eligible",
+          "immobile"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-footman",
+        "name": "Ant Footman",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 6,
+          "attack": 7,
+          "agility": 5,
+          "armor": 2,
+          "intelligence": 1,
+          "constitution": 7
+        },
+        "abilities": [
+          "brace"
+        ],
+        "tags": [
+          "melee",
+          "infantry"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-archer",
+        "name": "Ant Archer",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 5,
+          "attack": 5,
+          "agility": 7,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 6
+        },
+        "abilities": [
+          "volley"
+        ],
+        "tags": [
+          "ranged"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-worker",
+        "name": "Ant Worker",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 7,
+          "attack": 3,
+          "agility": 4,
+          "armor": 0,
+          "intelligence": 1,
+          "constitution": 8
+        },
+        "abilities": [
+          "boat-form",
+          "jelly-apply"
+        ],
+        "tags": [
+          "worker",
+          "support"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-scout",
+        "name": "Ant Scout",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 5,
+          "attack": 5,
+          "agility": 10,
+          "armor": 0,
+          "intelligence": 3,
+          "constitution": 6
+        },
+        "abilities": [
+          "pheroblast",
+          "scout-ping"
+        ],
+        "tags": [
+          "scout",
+          "leader-eligible"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-potato-bug",
+        "name": "Ant Potato Bug",
+        "faction": "ant",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 12,
+          "attack": 9,
+          "agility": 3,
+          "armor": 3,
+          "intelligence": 1,
+          "constitution": 9
+        },
+        "abilities": [
+          "brace"
+        ],
+        "tags": [
+          "melee",
+          "heavy"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-mage",
+        "name": "Ant Mage",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 6,
+          "attack": 6,
+          "agility": 5,
+          "armor": 1,
+          "intelligence": 8,
+          "constitution": 6
+        },
+        "abilities": [
+          "ant-plane-switch",
+          "mend",
+          "jelly-apply",
+          "recruit"
+        ],
+        "tags": [
+          "caster",
+          "leader-eligible",
+          "support"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-tank",
+        "name": "Ant Tank",
+        "faction": "ant",
+        "size": "large",
+        "slotCost": 3,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 22,
+          "attack": 8,
+          "agility": 2,
+          "armor": 4,
+          "intelligence": 1,
+          "constitution": 10
+        },
+        "abilities": [
+          "brace"
+        ],
+        "tags": [
+          "melee",
+          "heavy",
+          "no-fly"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-queen",
+        "name": "Spider Queen",
+        "faction": "spider",
+        "size": "huge",
+        "slotCost": 4,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 37,
+          "attack": 8,
+          "agility": 4,
+          "armor": 2,
+          "intelligence": 9,
+          "constitution": 6
+        },
+        "abilities": [
+          "web-tangle",
+          "web-mend",
+          "web-snare",
+          "spawn-spiderlings",
+          "venom-blast"
+        ],
+        "tags": [
+          "queen",
+          "leader-eligible"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-scout",
+        "name": "Spider Scout",
+        "faction": "spider",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 10,
+          "attack": 4,
+          "agility": 7,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 4
+        },
+        "abilities": [],
+        "tags": [
+          "scout"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-soldier",
+        "name": "Spider Soldier",
+        "faction": "spider",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 13,
+          "attack": 5,
+          "agility": 5,
+          "armor": 3,
+          "intelligence": 1,
+          "constitution": 4
+        },
+        "abilities": [],
+        "tags": [
+          "melee",
+          "infantry"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-spinner",
+        "name": "Spider Spinner",
+        "faction": "spider",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 14,
+          "attack": 6,
+          "agility": 4,
+          "armor": 2,
+          "intelligence": 5,
+          "constitution": 5
+        },
+        "abilities": [
+          "web-tangle",
+          "spin-web",
+          "venom-blast"
+        ],
+        "tags": [
+          "debuffer",
+          "support"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-elite",
+        "name": "Spider Elite",
+        "faction": "spider",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 14,
+          "attack": 4,
+          "agility": 5,
+          "armor": 1,
+          "intelligence": 3,
+          "constitution": 5
+        },
+        "abilities": [],
+        "tags": [
+          "melee",
+          "elite",
+          "queen-guard"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "mouse-merc",
+        "name": "Mouse Mercenary",
+        "faction": "neutral",
+        "size": "large",
+        "slotCost": 3,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 25,
+          "attack": 5,
+          "agility": 3,
+          "armor": 2,
+          "intelligence": 1,
+          "constitution": 8
+        },
+        "abilities": [],
+        "tags": [
+          "tank",
+          "mercenary"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 0,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spiderling",
+        "name": "Spiderling",
+        "faction": "spider",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 3,
+          "attack": 2,
+          "agility": 6,
+          "armor": 0,
+          "intelligence": 1,
+          "constitution": 2
+        },
+        "abilities": [],
+        "tags": [
+          "scout",
+          "swarm"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 0,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "mouse",
+        "name": "Mouse",
+        "faction": "neutral",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 14,
+          "attack": 5,
+          "agility": 4,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 7
+        },
+        "abilities": [],
+        "tags": [
+          "large",
+          "mercenary"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 0,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "cockroach",
+        "name": "Cockroach",
+        "faction": "neutral",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 6,
+          "attack": 6,
+          "agility": 7,
+          "armor": 0,
+          "intelligence": 1,
+          "constitution": 5
+        },
+        "abilities": [],
+        "tags": [
+          "swarm",
+          "ferocious"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 0,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "stinkbug",
+        "name": "Stinkbug",
+        "faction": "neutral",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 8,
+          "attack": 3,
+          "agility": 3,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 6
+        },
+        "abilities": [],
+        "tags": [
+          "damage-zone"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 0,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-veteran-footman",
+        "name": "Ant Veteran Footman",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 8,
+          "attack": 8,
+          "agility": 5,
+          "armor": 3,
+          "intelligence": 1,
+          "constitution": 7
+        },
+        "abilities": [
+          "brace"
+        ],
+        "tags": [
+          "melee",
+          "infantry",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-sharpshooter",
+        "name": "Ant Sharpshooter",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 7,
+          "attack": 7,
+          "agility": 7,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 6
+        },
+        "abilities": [
+          "volley"
+        ],
+        "tags": [
+          "ranged",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-archmage",
+        "name": "Ant Archmage",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 8,
+          "attack": 6,
+          "agility": 5,
+          "armor": 1,
+          "intelligence": 9,
+          "constitution": 6
+        },
+        "abilities": [
+          "ant-plane-switch",
+          "mend",
+          "jelly-apply",
+          "recruit"
+        ],
+        "tags": [
+          "caster",
+          "leader-eligible",
+          "support",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 1
+          },
+          "ceiling": {
+            "attack": -1,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "ant-scout-elite",
+        "name": "Ant Scout Elite",
+        "faction": "ant",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "ground",
+        "baseStats": {
+          "hp": 7,
+          "attack": 5,
+          "agility": 11,
+          "armor": 0,
+          "intelligence": 3,
+          "constitution": 6
+        },
+        "abilities": [
+          "pheroblast",
+          "scout-ping"
+        ],
+        "tags": [
+          "scout",
+          "leader-eligible",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": 1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 0,
+            "armor": 0
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-veteran-soldier",
+        "name": "Spider Veteran Soldier",
+        "faction": "spider",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 15,
+          "attack": 6,
+          "agility": 5,
+          "armor": 3,
+          "intelligence": 1,
+          "constitution": 4
+        },
+        "abilities": [],
+        "tags": [
+          "melee",
+          "infantry",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-knight",
+        "name": "Spider Knight",
+        "faction": "spider",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 16,
+          "attack": 5,
+          "agility": 5,
+          "armor": 2,
+          "intelligence": 3,
+          "constitution": 5
+        },
+        "abilities": [],
+        "tags": [
+          "melee",
+          "elite",
+          "queen-guard",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-weaver",
+        "name": "Spider Weaver",
+        "faction": "spider",
+        "size": "medium",
+        "slotCost": 2,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 16,
+          "attack": 6,
+          "agility": 4,
+          "armor": 2,
+          "intelligence": 6,
+          "constitution": 5
+        },
+        "abilities": [
+          "web-tangle",
+          "spin-web",
+          "venom-blast"
+        ],
+        "tags": [
+          "debuffer",
+          "support",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      },
+      {
+        "id": "spider-stalker",
+        "name": "Spider Stalker",
+        "faction": "spider",
+        "size": "small",
+        "slotCost": 1,
+        "movement": "climbing",
+        "baseStats": {
+          "hp": 12,
+          "attack": 4,
+          "agility": 8,
+          "armor": 1,
+          "intelligence": 2,
+          "constitution": 4
+        },
+        "abilities": [],
+        "tags": [
+          "scout",
+          "promoted"
+        ],
+        "planeAffinity": {
+          "floor": {
+            "attack": -1,
+            "armor": 0
+          },
+          "ceiling": {
+            "attack": 1,
+            "armor": 1
+          },
+          "wall": {
+            "attack": 0,
+            "armor": 0
+          }
+        }
+      }
+    ]
+  },
+  "abilities": {
+    "version": 1,
+    "abilities": [
+      {
+        "id": "pheroblast",
+        "name": "PheroBlast",
+        "category": "information",
+        "target": "area",
+        "uses": 2,
+        "cooldown": 0,
+        "params": {
+          "radius": 3
+        },
+        "tier": 2,
+        "description": "Scout ants release a concentrated phero-burst, blowing the fog off everything within smelling distance."
+      },
+      {
+        "id": "ant-plane-switch",
+        "name": "Ant Plane-Switch",
+        "category": "movement",
+        "target": "self",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {},
+        "tier": 3,
+        "description": "An ant-mage hauls the column up onto another plane via short-range pheromone-thread teleport. Once per scenario, consumes the party's order for that turn."
+      },
+      {
+        "id": "spider-corner-cross",
+        "name": "Spider Corner-Cross",
+        "category": "passive",
+        "target": "self",
+        "uses": null,
+        "cooldown": 0,
+        "params": {},
+        "tier": null,
+        "description": "Spiders are at home crawling around corners. When a spider party's move would land on a plane edge, the engine automatically follows the corner adjacency in the same step. Faction-wide passive; no order required."
+      },
+      {
+        "id": "boat-form",
+        "name": "Boat-Form",
+        "category": "movement",
+        "target": "party",
+        "uses": null,
+        "cooldown": 0,
+        "params": {
+          "minWorkers": 3
+        },
+        "tier": 1,
+        "description": "Worker ants link mandibles and legs into a buoyant raft. Stay low, stay dry, stay alive."
+      },
+      {
+        "id": "jelly-apply",
+        "name": "Apply Royal Jelly",
+        "category": "buff",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 2,
+        "params": {
+          "doses": 1,
+          "attackBonus": 1,
+          "armorBonus": 1,
+          "durationTurns": 2
+        },
+        "tier": 1,
+        "description": "A dose of the good stuff -- Her Majesty's blessing in jar form. Stiffens the carapace and sharpens the bite, briefly."
+      },
+      {
+        "id": "queen-ultimate",
+        "name": "Wrath of the Queen",
+        "category": "special-attack",
+        "target": "area",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "radius": 5,
+          "damage": 50
+        },
+        "tier": null,
+        "description": "The Queen unleashes the full fury of the colony. Everything in range is forcibly reminded who runs this bathroom."
+      },
+      {
+        "id": "volley",
+        "name": "Volley",
+        "category": "special-attack",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 1,
+        "params": {
+          "damage": 12,
+          "queenBonusDamage": 4
+        },
+        "tier": 2,
+        "description": "Archer ants loose a coordinated salvo of seed-tipped arrows. Pre-battle softening, the textbook way -- and a heavy chassis target like the Spider Queen catches the worst of it."
+      },
+      {
+        "id": "brace",
+        "name": "Brace",
+        "category": "buff",
+        "target": "self",
+        "uses": null,
+        "cooldown": 1,
+        "params": {
+          "armorBonus": 3,
+          "durationTurns": 1
+        },
+        "tier": 1,
+        "description": "Defenders lock shields and dig in. Nothing's getting through — not on their watch."
+      },
+      {
+        "id": "mend",
+        "name": "Mend",
+        "category": "buff",
+        "target": "party",
+        "uses": 3,
+        "cooldown": 1,
+        "params": {
+          "heal": 6
+        },
+        "tier": 2,
+        "description": "The medic patches up the squad with sap-salve and stern words. Walk it off, soldier."
+      },
+      {
+        "id": "scout-ping",
+        "name": "Scout Ping",
+        "category": "information",
+        "target": "party",
+        "uses": null,
+        "cooldown": 2,
+        "params": {
+          "radius": 1
+        },
+        "phaseRestriction": "day",
+        "tier": 1,
+        "description": "A quick antenna-twitch reveals what's hiding just past the next tile. Standard recon, on tap. (Suppressed at night.)"
+      },
+      {
+        "id": "web-tangle",
+        "name": "Web Tangle",
+        "category": "debuff",
+        "target": "party",
+        "uses": 2,
+        "cooldown": 1,
+        "params": {
+          "movementPenalty": 2,
+          "attackPenalty": 1,
+          "durationTurns": 2
+        },
+        "tier": 2,
+        "description": "Spiders fling a sticky line across the path. Whoever steps in is going nowhere fast — and swings half-mast while the silk drags on their joints."
+      },
+      {
+        "id": "web-mend",
+        "name": "Web-Mend",
+        "category": "passive",
+        "target": "self",
+        "uses": null,
+        "cooldown": 0,
+        "params": {
+          "heal": 1,
+          "hpThreshold": 0.5
+        },
+        "tier": 2,
+        "description": "The Spider Queen weaves silk into her wounds between exchanges. Slow bleeders close while she still has thread to spare."
+      },
+      {
+        "id": "web-snare",
+        "name": "Web-Snare",
+        "category": "debuff",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "hpThreshold": 0.33,
+          "immobilizeCount": 1,
+          "durationTurns": 1
+        },
+        "tier": 2,
+        "description": "When the silk runs thin and her wounds won't close, the Spider Queen flings the last strand as a snare. One attacker is bound for a single beat — long enough, if the timing is right."
+      },
+      {
+        "id": "spin-web",
+        "name": "Spin Web",
+        "category": "debuff",
+        "target": "tile",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "delayTurns": 1
+        },
+        "tier": 2,
+        "description": "The spinner spends a turn weaving silk across the current tile. Any ant party that steps on it must pause for a turn while it tears free; the web breaks afterward."
+      },
+      {
+        "id": "recruit",
+        "name": "Recruit",
+        "category": "special-attack",
+        "target": "party",
+        "uses": null,
+        "cooldown": 2,
+        "params": {
+          "successRate": 0.25
+        },
+        "tier": 2,
+        "description": "An ant mage attempts pheromone-mediated diplomacy on a single isolated foe. 25% of the time the target switches sides; otherwise nothing happens (mage doesn't attack this turn)."
+      },
+      {
+        "id": "spawn-spiderlings",
+        "name": "Spawn Spiderlings",
+        "category": "special-attack",
+        "target": "self",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "count": 5
+        },
+        "tier": 3,
+        "description": "Spider-queen disgorges a brood — 5 tiny spiderlings scatter from her tile as independent parties. Once per scenario; they're fragile but a real distraction."
+      },
+      {
+        "id": "magic-arrow",
+        "name": "Magic Arrow",
+        "category": "special-attack",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 1,
+        "params": {
+          "damage": 22,
+          "minMages": 1,
+          "minArchers": 1
+        },
+        "tier": 3,
+        "description": "A mage charges an arrow with phero-magic and an archer fires it. Single target, ranged, hits hard. Requires at least 1 mage and 1 archer in the party."
+      },
+      {
+        "id": "hypnotize",
+        "name": "Hypnotize",
+        "category": "special-attack",
+        "target": "party",
+        "uses": null,
+        "cooldown": 0,
+        "params": {
+          "successRate": 0.8,
+          "minControlTurns": 5,
+          "maxControlTurns": 10,
+          "reboundImmunityTurns": 10
+        },
+        "tier": 3,
+        "description": "Any spider unit may attempt to hypnotize a neutral party at the same tile. Costs the caster half its current HP (rounded down). 80% chance to seize control of the neutral party for 5-10 turns; on failure a stinkbug target leaves a damage zone."
+      },
+      {
+        "id": "phalanx-charge",
+        "name": "Phalanx Charge",
+        "category": "special-attack",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 1,
+        "params": {
+          "damage": 6,
+          "aoe": 1,
+          "minFootmen": 2
+        },
+        "tier": 3,
+        "description": "Two or more footmen lock shields and barrel forward as one. Hits every enemy in the target party for moderate damage."
+      },
+      {
+        "id": "venom-blast",
+        "name": "Venom Blast",
+        "category": "special-attack",
+        "target": "party",
+        "uses": 4,
+        "cooldown": 0,
+        "params": {
+          "damagePerUnit": 4,
+          "minSpinnersOrQueen": 1
+        },
+        "tier": 2,
+        "description": "A spider-spinner or spider-queen sprays a fan of venom across the enemy front rank — burning silk-soaked fangs and brittle armor. Hits every living unit in the targeted rank for heavy damage. Reserved for combos in later turns."
+      },
+      {
+        "id": "royal-onslaught",
+        "name": "Royal Onslaught",
+        "category": "special-attack-combo",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "damage": 18,
+          "componentAbilities": [
+            "magic-arrow",
+            "jelly-apply"
+          ],
+          "mpCostBySource": {
+            "magic-arrow": 3,
+            "jelly-apply": 1
+          }
+        },
+        "tier": null,
+        "description": "Mage and worker channel the Queen's blessing into a single thunderous strike. All enemy units in the target party take heavy damage."
+      },
+      {
+        "id": "venom-storm",
+        "name": "Venom Storm",
+        "category": "special-attack-combo",
+        "target": "party",
+        "uses": 1,
+        "cooldown": 0,
+        "params": {
+          "damage": 3,
+          "movementPenalty": 2,
+          "attackPenalty": 1,
+          "durationTurns": 2,
+          "componentAbilities": [
+            "venom-blast",
+            "web-tangle"
+          ],
+          "mpCostBySource": {
+            "venom-blast": 2,
+            "web-tangle": 2
+          }
+        },
+        "tier": null,
+        "description": "Spinner and queen weave venom and silk into a saturating cloud — every unit in the target party is poisoned and bound at once."
+      }
+    ]
+  },
+  "leaders": {
+    "version": 1,
+    "classes": [
+      {
+        "id": "queen",
+        "name": "Ant Queen",
+        "description": "The colony's monarch — her presence galvanizes every soldier within earshot.",
+        "modifiers": [
+          {
+            "stat": "attack",
+            "delta": 5,
+            "appliesTo": "leader-and-party"
+          },
+          {
+            "stat": "armor",
+            "delta": 3,
+            "appliesTo": "leader-and-party"
+          },
+          {
+            "stat": "morale",
+            "delta": 4,
+            "appliesTo": "party"
+          }
+        ]
+      },
+      {
+        "id": "spider-queen",
+        "name": "Spider Queen",
+        "description": "Eight-legged matriarch whose web-borne wrath terrifies trespassers.",
+        "modifiers": [
+          {
+            "stat": "attack",
+            "delta": 5,
+            "appliesTo": "leader-and-party"
+          },
+          {
+            "stat": "agility",
+            "delta": 3,
+            "appliesTo": "leader-and-party"
+          },
+          {
+            "stat": "armor",
+            "delta": 2,
+            "appliesTo": "leader"
+          }
+        ]
+      },
+      {
+        "id": "sergeant",
+        "name": "Sergeant",
+        "description": "Veteran field commander who keeps the line steady and the orders loud.",
+        "modifiers": [
+          {
+            "stat": "attack",
+            "delta": 1,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "morale",
+            "delta": 2,
+            "appliesTo": "party"
+          }
+        ]
+      },
+      {
+        "id": "scout-captain",
+        "name": "Scout Captain",
+        "description": "Forward-deployed pathfinder who reads the battlefield before it reads her.",
+        "modifiers": [
+          {
+            "stat": "agility",
+            "delta": 2,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "movement",
+            "delta": 1,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "armor",
+            "delta": -1,
+            "appliesTo": "party"
+          }
+        ],
+        "grantsAbility": "pheroblast"
+      },
+      {
+        "id": "war-chief",
+        "name": "War Chief",
+        "description": "All-out aggressor who trades caution for crushing offense.",
+        "modifiers": [
+          {
+            "stat": "attack",
+            "delta": 2,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "attack",
+            "delta": 1,
+            "appliesTo": "leader"
+          },
+          {
+            "stat": "armor",
+            "delta": -1,
+            "appliesTo": "party"
+          }
+        ]
+      },
+      {
+        "id": "quartermaster",
+        "name": "Quartermaster",
+        "description": "Logistics specialist who keeps the party fed, jellied, and patched up.",
+        "modifiers": [
+          {
+            "stat": "armor",
+            "delta": 1,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "healing",
+            "delta": 2,
+            "appliesTo": "party"
+          },
+          {
+            "stat": "attack",
+            "delta": -1,
+            "appliesTo": "party"
+          }
+        ]
+      }
+    ]
+  },
+  "map": {
+    "version": 1,
+    "name": "The Bathroom",
+    "planes": [
+      {
+        "plane": "floor",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "path",
+              "movementCost": 1,
+              "defenseModifier": 1,
+              "groundPathBonus": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "wet",
+              "movementCost": 2,
+              "defenseModifier": -1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      },
+      {
+        "plane": "north-wall",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      },
+      {
+        "plane": "ceiling",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 99,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      },
+      {
+        "plane": "south-wall",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "hazard",
+              "movementCost": 2,
+              "defenseModifier": -1,
+              "hazardDamage": 1
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      },
+      {
+        "plane": "east-wall",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      },
+      {
+        "plane": "west-wall",
+        "width": 10,
+        "height": 10,
+        "tiles": [
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "obstacle",
+              "movementCost": 999,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ],
+          [
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            },
+            {
+              "kind": "open",
+              "movementCost": 1,
+              "defenseModifier": 0
+            }
+          ]
+        ]
+      }
+    ],
+    "posts": [
+      {
+        "id": "storm-drain",
+        "name": "The Storm Drain",
+        "location": {
+          "plane": "floor",
+          "x": 0,
+          "y": 0
+        },
+        "owner": "ant",
+        "defensiveBonus": 4,
+        "healingRate": 3,
+        "tags": [
+          "home-base"
+        ]
+      },
+      {
+        "id": "soap-dish",
+        "name": "The Soap Dish",
+        "location": {
+          "plane": "floor",
+          "x": 5,
+          "y": 5
+        },
+        "owner": "neutral",
+        "defensiveBonus": 2,
+        "healingRate": 1,
+        "tags": []
+      },
+      {
+        "id": "towel-rack",
+        "name": "The Towel Rack",
+        "location": {
+          "plane": "floor",
+          "x": 8,
+          "y": 2
+        },
+        "owner": "neutral",
+        "defensiveBonus": 2,
+        "healingRate": 1,
+        "pairedWith": "wall-crack",
+        "tags": [
+          "plane-transition"
+        ]
+      },
+      {
+        "id": "wall-crack",
+        "name": "The Wall Crack",
+        "location": {
+          "plane": "north-wall",
+          "x": 8,
+          "y": 5
+        },
+        "owner": "neutral",
+        "defensiveBonus": 2,
+        "healingRate": 1,
+        "pairedWith": "towel-rack",
+        "tags": [
+          "plane-transition"
+        ]
+      },
+      {
+        "id": "spider-web",
+        "name": "The Spider Web",
+        "location": {
+          "plane": "ceiling",
+          "x": 9,
+          "y": 9
+        },
+        "owner": "spider",
+        "defensiveBonus": 2,
+        "healingRate": 3,
+        "tags": [
+          "web"
+        ]
+      }
+    ]
+  },
+  "queen": {
+    "version": 1,
+    "proximity": {
+      "radius": 2,
+      "attackMultiplier": 1.2,
+      "resilienceMultiplier": 1.15
+    },
+    "ultimate": {
+      "chargeMax": 100,
+      "chargePerTurn": 5,
+      "chargeOnHomeAttack": 15,
+      "radius": 5,
+      "damage": 60,
+      "usesPerScenario": 1
+    },
+    "production": {
+      "turnsPerUnit": 4,
+      "producedTemplateId": "ant-footman"
+    }
+  },
+  "jelly": {
+    "version": 1,
+    "productionPerTurn": 1,
+    "capacityPerParty": 3,
+    "dosesPerApplication": 1,
+    "durationTurns": 2,
+    "attackMultiplier": 1.1,
+    "resilienceMultiplier": 1.05
+  },
+  "formations": {
+    "version": 1,
+    "formations": [
+      {
+        "id": "phalanx",
+        "name": "Phalanx",
+        "minUnits": 3,
+        "attackMultiplier": 1,
+        "defenseMultiplier": 1.25,
+        "description": "Three or more ants lock mandibles and shields into a tight wedge. No extra punch, but a hell of a wall — fragile ants survive longer when shoulder to shoulder."
+      },
+      {
+        "id": "swarm",
+        "name": "Swarm",
+        "minUnits": 4,
+        "attackMultiplier": 1.2,
+        "defenseMultiplier": 1,
+        "description": "Four or more ants pile onto a single target in a coordinated rush. Maximum bite, minimum caution — the textbook ant glass-cannon play."
+      },
+      {
+        "id": "lift",
+        "name": "Lift",
+        "minUnits": 5,
+        "requiresTag": "worker",
+        "attackMultiplier": 1,
+        "defenseMultiplier": 1.1,
+        "description": "Five or more workers hoist something heavy together — a crumb, a pebble, a wounded comrade. Slight defensive boost while the load is shared, and a hook for future cargo and rescue mechanics."
+      },
+      {
+        "id": "skirmish-line",
+        "name": "Skirmish Line",
+        "minUnits": 3,
+        "requiresTag": "ranged",
+        "attackMultiplier": 1.15,
+        "defenseMultiplier": 1,
+        "description": "Three or more archers space out and stagger their volleys. Sustained ranged pressure rewards parties that lean into Volley spam."
+      }
+    ]
+  },
+  "shop": {
+    "version": 1,
+    "shopId": "shoebox",
+    "shopName": "The Forgotten Shoebox",
+    "proprietor": "Mr. Gristle, Itinerant Grasshopper",
+    "inventory": [
+      {
+        "id": "mouse-merc",
+        "name": "Whiskers the Mouse Mercenary",
+        "kind": "mercenary",
+        "price": 500,
+        "stock": 1,
+        "effect": {
+          "templateId": "mouse-merc",
+          "contractTurns": 0
+        },
+        "description": "A grumpy, scarred house-mouse for hire. Confirmed F.N.G. (Friendly New Giant). Restricted to the floor plane and demands payment up front. One-time hire only — Mr. Gristle insists he 'knows a guy.'"
+      },
+      {
+        "id": "sugar-poultice-small",
+        "name": "Sugar Poultice (Field Pack)",
+        "kind": "healing",
+        "price": 35,
+        "stock": 6,
+        "effect": {
+          "healAmount": 6,
+          "target": "unit"
+        },
+        "description": "A crumb of damp sugar wrapped in spider-silk gauze. Restores minor HP to a single unit. Standard issue M.R.E. (Medical Restorative Edible)."
+      },
+      {
+        "id": "sugar-poultice-big",
+        "name": "Sugar Poultice (Care Package)",
+        "kind": "healing",
+        "price": 90,
+        "stock": 3,
+        "effect": {
+          "healAmount": 18,
+          "target": "unit"
+        },
+        "description": "A whole sugar grain. Heavily restores HP to a single unit. Grasshopper guarantees 'pre-licked, ant-grade, hospital-clean.'"
+      },
+      {
+        "id": "honeydew-tincture",
+        "name": "Honeydew Tincture",
+        "kind": "healing",
+        "price": 120,
+        "stock": 2,
+        "effect": {
+          "healAmount": 8,
+          "target": "party"
+        },
+        "description": "A field-applied party-wide pick-me-up brewed from aphid honeydew. Restores HP across the whole party. Smells faintly of regret."
+      },
+      {
+        "id": "caffeine-crystal",
+        "name": "Caffeine Crystal",
+        "kind": "stat-boost",
+        "price": 75,
+        "stock": 4,
+        "effect": {
+          "stat": "agility",
+          "delta": 2,
+          "durationTurns": 3
+        },
+        "description": "Scraped from beneath the coffee mug ring. Temporarily boosts a unit's Agility. Side effects include the jitters and bad decisions."
+      },
+      {
+        "id": "capsaicin-dram",
+        "name": "Capsaicin Dram",
+        "kind": "stat-boost",
+        "price": 110,
+        "stock": 2,
+        "effect": {
+          "stat": "attack",
+          "delta": 3,
+          "durationTurns": 2
+        },
+        "description": "A drop of hot-sauce off the kitchen tile. Temporarily boosts a unit's Attack. Mr. Gristle warns: 'Do not, repeat, DO NOT touch your antennae after handling.'"
+      },
+      {
+        "id": "thimble-helmet",
+        "name": "Thimble Helmet",
+        "kind": "equipment",
+        "price": 160,
+        "stock": 1,
+        "effect": {
+          "stat": "armor",
+          "delta": 2,
+          "slot": "head"
+        },
+        "description": "A genuine sewing-room thimble, refitted for ant-skull anatomy. Permanently raises Armor on the equipped unit. Mr. Gristle calls it 'P.P.E. — Personal Protective Exoskeleton.'"
+      }
+    ]
+  },
+  "dialogue": {
+    "version": 1,
+    "lines": [
+      {
+        "id": "antonio-briefing",
+        "speaker": "Sgt. Antonio",
+        "trigger": "scenario-start",
+        "text": "Listen up, soldiers — eyes front, mandibles shut. Theater of operations: one (1) bathroom, three (3) planes, five (5) P.O.S.T.s — that's Position Of Strategic interesT, and yes, we will be saying it like that. The Queen holds at the Storm Drain; lose her, lose the war, end of S.O.P. Tangoes — that's our spiders — are dug in at the Web on the ceiling and they will not, repeat WILL NOT, leave it without a reason. Expect scout elements probing toward the S.O.A.P. — Salient Objective: Anchor Point — that's the soap dish, people, keep up. Hostile response packages will rally on plane transitions, so the Towel Rack and Wall Crack are the choke we own or the choke we die on. Move with purpose, capture with prejudice, and remember: in this army we don't retreat, we conduct R.A.A.E. — Rapid Antward Adjustment of Engagement. HOO-RAH.",
+        "weight": 1
+      },
+      {
+        "id": "antonio-victory",
+        "speaker": "Sgt. Antonio",
+        "trigger": "scenario-end-victory",
+        "text": "Web is down, Queen — I say again, web is DOWN. Spider Queen has bent the knee and is, as we speak, signing a non-aggression-stroke-fealty pact in eight-legged cursive. We took the bathroom, ma'am. We TOOK the bathroom. Mark this date on the colony calendar: Day One of Operation Whole Damn House. Stand down, drink your honeydew, and write your larvae. HOO-RAH.",
+        "weight": 1
+      },
+      {
+        "id": "antonio-defeat",
+        "speaker": "Sgt. Antonio",
+        "trigger": "scenario-end-defeat",
+        "text": "...Queen is down. Queen is down. Storm Drain has fallen. All units, sound off where you can — the rest, lay your antennae and rest easy. We were ants. We were ARMY. The bathroom remembers. Antonio, out.",
+        "weight": 1
+      },
+      {
+        "id": "first-contact",
+        "speaker": "Cpl. Bicep",
+        "trigger": "first-battle",
+        "text": "First contact, first contact! Tangoes on the tile, formation up — for the Queen, for the colony, for the GODDAMN crumb!",
+        "weight": 1
+      },
+      {
+        "id": "first-capture",
+        "speaker": "Sgt. Antonio",
+        "trigger": "first-post-captured",
+        "text": "P.O.S.T. secured! That's one for the colony, zero for the eight-leggers. Plant the pheromone, garrison up, and start the H.A.R. — Healing And Recovery — clock. Outstanding work, soldier. Outstanding.",
+        "weight": 1
+      },
+      {
+        "id": "ultimate-ready",
+        "speaker": "Sgt. Antonio",
+        "trigger": "queen-ultimate-ready",
+        "text": "Queen's ultimate is GREEN, repeat, GREEN. C.A.N. — Charge At Nominal — full bar, ma'am. Permission to suggest, with all due respect, that you absolutely positively melt somebody with it. At your discretion, my Queen.",
+        "weight": 1
+      },
+      {
+        "id": "ultimate-fired",
+        "speaker": "Sgt. Antonio",
+        "trigger": "queen-ultimate-fired",
+        "text": "MOTHER OF MANDIBLES — you SEEING this?! Battlefield is CLEAR, ma'am, the tangoes are jelly, the JELLY is jelly. That is what we in the corps call a Queen-Level Event, and I am writing a song about it tonight.",
+        "weight": 1
+      },
+      {
+        "id": "leader-down",
+        "speaker": "Sgt. Antonio",
+        "trigger": "leader-died",
+        "text": "Leader down, leader DOWN — party is L.O.B., Leaderless On Battlefield. They're falling back to base on autopilot, rate-of-march reduced, and they will NOT take new orders until command is restored at the Storm Drain. We do not abandon ours. Get them home.",
+        "weight": 1
+      },
+      {
+        "id": "jelly-low",
+        "speaker": "Sgt. Antonio",
+        "trigger": "low-jelly",
+        "text": "Logistics check, my Queen — R.J.S. is in the red. That's Royal Jelly Supply, and forward elements are running on fumes and patriotism. Recommend we run a J.U.G. — Jelly Update Gallop — back to the Drain before our buff bar goes flatline.",
+        "weight": 1
+      },
+      {
+        "id": "idle-bicep",
+        "speaker": "Cpl. Bicep",
+        "trigger": "idle",
+        "text": "When I get home, I'm gonna eat a whole sugar grain. Whole. Grain. By myself. That's a promise to me from me.",
+        "weight": 1
+      },
+      {
+        "id": "idle-snitz",
+        "speaker": "Pvt. Snitz",
+        "trigger": "idle",
+        "text": "Sarge says the floor is called the A.O. — Area of Operations. I asked what the ceiling's called. He said 'the ceiling.' I do not understand this army.",
+        "weight": 1
+      },
+      {
+        "id": "idle-grub",
+        "speaker": "Pvt. Grub",
+        "trigger": "idle",
+        "text": "I joined up for the dental. Turns out we don't have teeth. Turns out we don't have dental. Outstanding.",
+        "weight": 1
+      },
+      {
+        "id": "idle-antonio",
+        "speaker": "Sgt. Antonio",
+        "trigger": "idle",
+        "text": "Steady on the line, ladies. We hold what we hold, we take what we take, and we do NOT, repeat NOT, stare at the soap dish too long — it's slippery and it's a metaphor.",
+        "weight": 1
+      }
+    ]
+  },
+  "rosters": [
+    {
+      "version": 1,
+      "faction": "ant",
+      "parties": [
+        {
+          "id": "queen-guard",
+          "leaderClass": "queen",
+          "leaderIndex": 0,
+          "slotCapacity": 12,
+          "units": [
+            {
+              "templateId": "ant-queen",
+              "count": 1
+            },
+            {
+              "templateId": "ant-footman",
+              "count": 4
+            },
+            {
+              "templateId": "ant-archer",
+              "count": 2
+            },
+            {
+              "templateId": "ant-worker",
+              "count": 2
+            }
+          ],
+          "startingLocation": {
+            "plane": "floor",
+            "x": 0,
+            "y": 0
+          },
+          "posture": "defend"
+        },
+        {
+          "id": "vanguard-alpha",
+          "leaderClass": "sergeant",
+          "leaderIndex": 2,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "ant-footman",
+              "count": 4
+            },
+            {
+              "templateId": "ant-archer",
+              "count": 2
+            },
+            {
+              "templateId": "ant-scout",
+              "count": 1
+            }
+          ],
+          "startingLocation": {
+            "plane": "floor",
+            "x": 1,
+            "y": 0
+          },
+          "posture": "fight"
+        },
+        {
+          "id": "vanguard-bravo",
+          "leaderClass": "sergeant",
+          "leaderIndex": 0,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "ant-footman",
+              "count": 3
+            },
+            {
+              "templateId": "ant-potato-bug",
+              "count": 1
+            },
+            {
+              "templateId": "ant-archer",
+              "count": 1
+            },
+            {
+              "templateId": "ant-mage",
+              "count": 1
+            }
+          ],
+          "startingLocation": {
+            "plane": "floor",
+            "x": 0,
+            "y": 1
+          },
+          "posture": "fight"
+        },
+        {
+          "id": "pathfinders",
+          "leaderClass": "scout-captain",
+          "leaderIndex": 0,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "ant-mage",
+              "count": 1
+            },
+            {
+              "templateId": "ant-scout",
+              "count": 2
+            },
+            {
+              "templateId": "ant-archer",
+              "count": 3
+            }
+          ],
+          "startingLocation": {
+            "plane": "floor",
+            "x": 1,
+            "y": 1
+          },
+          "posture": "fight"
+        }
+      ]
+    },
+    {
+      "version": 1,
+      "faction": "spider",
+      "parties": [
+        {
+          "id": "web-guard",
+          "leaderClass": "spider-queen",
+          "leaderIndex": 0,
+          "slotCapacity": 12,
+          "units": [
+            {
+              "templateId": "spider-queen",
+              "count": 1
+            },
+            {
+              "templateId": "spider-elite",
+              "count": 4
+            }
+          ],
+          "startingLocation": {
+            "plane": "ceiling",
+            "x": 9,
+            "y": 9
+          },
+          "posture": "defend"
+        },
+        {
+          "id": "web-watch",
+          "leaderClass": "scout-captain",
+          "leaderIndex": 1,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "spider-soldier",
+              "count": 4
+            },
+            {
+              "templateId": "spider-scout",
+              "count": 2
+            }
+          ],
+          "startingLocation": {
+            "plane": "ceiling",
+            "x": 8,
+            "y": 9
+          },
+          "posture": "defend"
+        },
+        {
+          "id": "silk-line",
+          "leaderClass": "war-chief",
+          "leaderIndex": 0,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "spider-spinner",
+              "count": 2
+            },
+            {
+              "templateId": "spider-soldier",
+              "count": 2
+            },
+            {
+              "templateId": "spider-scout",
+              "count": 1
+            }
+          ],
+          "startingLocation": {
+            "plane": "ceiling",
+            "x": 9,
+            "y": 8
+          },
+          "posture": "fight"
+        },
+        {
+          "id": "advance-scout",
+          "leaderClass": "scout-captain",
+          "leaderIndex": 0,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "spider-scout",
+              "count": 3
+            },
+            {
+              "templateId": "spider-soldier",
+              "count": 1
+            }
+          ],
+          "startingLocation": {
+            "plane": "ceiling",
+            "x": 7,
+            "y": 8
+          },
+          "posture": "fight"
+        },
+        {
+          "id": "deep-raider",
+          "leaderClass": "war-chief",
+          "leaderIndex": 0,
+          "slotCapacity": 8,
+          "units": [
+            {
+              "templateId": "spider-elite",
+              "count": 2
+            },
+            {
+              "templateId": "spider-soldier",
+              "count": 2
+            },
+            {
+              "templateId": "spider-spinner",
+              "count": 1
+            }
+          ],
+          "startingLocation": {
+            "plane": "east-wall",
+            "x": 5,
+            "y": 5
+          },
+          "posture": "fight"
+        }
+      ]
+    }
+  ],
+  "items": {
+    "version": 1,
+    "templates": [
+      {
+        "id": "leather-pad",
+        "name": "Leather Pad",
+        "kind": "persistent",
+        "effect": "armor",
+        "magnitude": 1,
+        "description": "Party-wide +1 armor while equipped."
+      },
+      {
+        "id": "brass-knuckles",
+        "name": "Brass Knuckles",
+        "kind": "persistent",
+        "effect": "attack",
+        "magnitude": 1,
+        "description": "Party-wide +1 attack while equipped."
+      },
+      {
+        "id": "boots",
+        "name": "Boots",
+        "kind": "persistent",
+        "effect": "movement",
+        "magnitude": 1,
+        "description": "Party-wide +1 movement allowance (capped at 4 tiles)."
+      },
+      {
+        "id": "mead",
+        "name": "Mead",
+        "kind": "consumable",
+        "effect": "heal",
+        "magnitude": 0,
+        "description": "Heals every unit in the party to full HP. Single use."
+      },
+      {
+        "id": "scout-lens",
+        "name": "Scout Lens",
+        "kind": "persistent",
+        "effect": "agility",
+        "magnitude": 1,
+        "description": "Party-wide +1 agility (initiative). Reserved for vision once the mechanic exists."
+      },
+      {
+        "id": "royal-jelly-vial",
+        "name": "Royal Jelly Vial",
+        "kind": "consumable",
+        "effect": "jelly",
+        "magnitude": 2,
+        "description": "Adds +2 jelly doses to the picking-up party (capped at jelly capacity)."
+      }
+    ]
+  }
+}

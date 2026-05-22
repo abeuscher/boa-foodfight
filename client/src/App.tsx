@@ -4,6 +4,7 @@ import type { WorldState } from '../../engine/world-state.ts';
 
 import { INITIAL_STATE } from './fixture.ts';
 import { Hill } from './hill/Hill.tsx';
+import { LiveScenario } from './live/LiveScenario.tsx';
 import { OrganizeArmy } from './organize/OrganizeArmy.tsx';
 import { Recruit } from './recruit/Recruit.tsx';
 import { Scenario } from './scenario/Scenario.tsx';
@@ -11,7 +12,7 @@ import { Shop } from './shop/Shop.tsx';
 import { System } from './system/System.tsx';
 import { antCount, noticeOf, type Apply, type Notice, type SubView } from './shared.ts';
 
-type View = 'hill' | SubView | 'scenario';
+type View = 'hill' | SubView | 'scenario' | 'live';
 
 export function App(): JSX.Element {
   const [state, setState] = useState<WorldState>(INITIAL_STATE);
@@ -32,6 +33,9 @@ export function App(): JSX.Element {
   // not the between-scenario shell — so it renders standalone.
   if (view === 'scenario') {
     return <Scenario onExit={goHill} />;
+  }
+  if (view === 'live') {
+    return <LiveScenario onExit={goHill} />;
   }
 
   return (
@@ -55,7 +59,12 @@ export function App(): JSX.Element {
       )}
 
       {view === 'hill' && (
-        <Hill state={state} onOpen={setView} onWatchReplay={() => setView('scenario')} />
+        <Hill
+          state={state}
+          onOpen={setView}
+          onWatchReplay={() => setView('scenario')}
+          onPlayLive={() => setView('live')}
+        />
       )}
       {view === 'organize' && <OrganizeArmy state={state} apply={apply} />}
       {view === 'recruit' && <Recruit state={state} apply={apply} />}

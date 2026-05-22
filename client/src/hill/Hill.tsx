@@ -6,6 +6,7 @@ interface Props {
   readonly state: WorldState;
   readonly onOpen: (view: SubView) => void;
   readonly onWatchReplay: () => void;
+  readonly onPlayLive: () => void;
 }
 
 /**
@@ -14,7 +15,7 @@ interface Props {
  * (cube memo §D) — this is the structural frame. Deploy leads to the
  * Briefing, which isn't built yet, so it's disabled here.
  */
-export function Hill({ state, onOpen, onWatchReplay }: Props): JSX.Element {
+export function Hill({ state, onOpen, onWatchReplay, onPlayLive }: Props): JSX.Element {
   return (
     <div className="hill">
       <div className="hill-mid">
@@ -43,6 +44,9 @@ export function Hill({ state, onOpen, onWatchReplay }: Props): JSX.Element {
           </p>
           <button className="watch-replay" onClick={onWatchReplay}>
             ▶ Watch L1 replay (dev) — in-scenario playback
+          </button>
+          <button className="watch-replay" onClick={onPlayLive}>
+            ▶ Play L1 live (dev) — engine in browser
           </button>
         </div>
       </div>
