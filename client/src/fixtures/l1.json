@@ -1,342 +1,350 @@
 {
-  "roster": {
-    "faction": "ant",
-    "units": [
-      {
-        "id": "queen-guard-ant-queen-0",
-        "templateId": "ant-queen",
-        "currentHp": 60,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-footman-0",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-footman-1",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-footman-2",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-footman-3",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-archer-0",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-archer-1",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-worker-0",
-        "templateId": "ant-worker",
-        "currentHp": 7,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "queen-guard-ant-worker-1",
-        "templateId": "ant-worker",
-        "currentHp": 7,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-footman-0",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-footman-1",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-footman-2",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-footman-3",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-archer-0",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-archer-1",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-alpha-ant-scout-0",
-        "templateId": "ant-scout",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-footman-0",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-footman-1",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-footman-2",
-        "templateId": "ant-footman",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-potato-bug-0",
-        "templateId": "ant-potato-bug",
-        "currentHp": 12,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-archer-0",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "vanguard-bravo-ant-mage-0",
-        "templateId": "ant-mage",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-mage-0",
-        "templateId": "ant-mage",
-        "currentHp": 6,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-scout-0",
-        "templateId": "ant-scout",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-scout-1",
-        "templateId": "ant-scout",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-archer-0",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-archer-1",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      },
-      {
-        "id": "pathfinders-ant-archer-2",
-        "templateId": "ant-archer",
-        "currentHp": 5,
-        "level": 1,
-        "xp": 0,
-        "charisma": 50,
-        "promoted": false,
-        "item": null
-      }
-    ],
-    "partyAssignments": [
-      {
-        "partyId": "queen-guard",
-        "unitIds": [
-          "queen-guard-ant-queen-0",
-          "queen-guard-ant-footman-0",
-          "queen-guard-ant-footman-1",
-          "queen-guard-ant-footman-2",
-          "queen-guard-ant-footman-3",
-          "queen-guard-ant-archer-0",
-          "queen-guard-ant-archer-1",
-          "queen-guard-ant-worker-0",
-          "queen-guard-ant-worker-1"
-        ],
-        "leaderId": "queen-guard-ant-queen-0"
-      },
-      {
-        "partyId": "vanguard-alpha",
-        "unitIds": [
-          "vanguard-alpha-ant-footman-0",
-          "vanguard-alpha-ant-footman-1",
-          "vanguard-alpha-ant-footman-2",
-          "vanguard-alpha-ant-footman-3",
-          "vanguard-alpha-ant-archer-0",
-          "vanguard-alpha-ant-archer-1",
-          "vanguard-alpha-ant-scout-0"
-        ],
-        "leaderId": "vanguard-alpha-ant-scout-0"
-      },
-      {
-        "partyId": "vanguard-bravo",
-        "unitIds": [
-          "vanguard-bravo-ant-footman-0",
-          "vanguard-bravo-ant-footman-1",
-          "vanguard-bravo-ant-footman-2",
-          "vanguard-bravo-ant-potato-bug-0",
-          "vanguard-bravo-ant-archer-0",
-          "vanguard-bravo-ant-mage-0"
-        ],
-        "leaderId": "vanguard-bravo-ant-footman-0"
-      },
-      {
-        "partyId": "pathfinders",
-        "unitIds": [
-          "pathfinders-ant-mage-0",
-          "pathfinders-ant-scout-0",
-          "pathfinders-ant-scout-1",
-          "pathfinders-ant-archer-0",
-          "pathfinders-ant-archer-1",
-          "pathfinders-ant-archer-2"
-        ],
-        "leaderId": "pathfinders-ant-mage-0"
-      }
-    ]
+  "state": {
+    "campaignId": "l1-dev",
+    "scenarioIndex": 0,
+    "roster": {
+      "faction": "ant",
+      "units": [
+        {
+          "id": "queen-guard-ant-queen-0",
+          "templateId": "ant-queen",
+          "currentHp": 60,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-footman-0",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-footman-1",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-footman-2",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-footman-3",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-archer-0",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-archer-1",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-worker-0",
+          "templateId": "ant-worker",
+          "currentHp": 7,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "queen-guard-ant-worker-1",
+          "templateId": "ant-worker",
+          "currentHp": 7,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-footman-0",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-footman-1",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-footman-2",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-footman-3",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-archer-0",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-archer-1",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-alpha-ant-scout-0",
+          "templateId": "ant-scout",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-footman-0",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-footman-1",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-footman-2",
+          "templateId": "ant-footman",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-potato-bug-0",
+          "templateId": "ant-potato-bug",
+          "currentHp": 12,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-archer-0",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "vanguard-bravo-ant-mage-0",
+          "templateId": "ant-mage",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-mage-0",
+          "templateId": "ant-mage",
+          "currentHp": 6,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-scout-0",
+          "templateId": "ant-scout",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-scout-1",
+          "templateId": "ant-scout",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-archer-0",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-archer-1",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        },
+        {
+          "id": "pathfinders-ant-archer-2",
+          "templateId": "ant-archer",
+          "currentHp": 5,
+          "level": 1,
+          "xp": 0,
+          "charisma": 50,
+          "promoted": false,
+          "item": null
+        }
+      ],
+      "partyAssignments": [
+        {
+          "partyId": "queen-guard",
+          "unitIds": [
+            "queen-guard-ant-queen-0",
+            "queen-guard-ant-footman-0",
+            "queen-guard-ant-footman-1",
+            "queen-guard-ant-footman-2",
+            "queen-guard-ant-footman-3",
+            "queen-guard-ant-archer-0",
+            "queen-guard-ant-archer-1",
+            "queen-guard-ant-worker-0",
+            "queen-guard-ant-worker-1"
+          ],
+          "leaderId": "queen-guard-ant-queen-0"
+        },
+        {
+          "partyId": "vanguard-alpha",
+          "unitIds": [
+            "vanguard-alpha-ant-footman-0",
+            "vanguard-alpha-ant-footman-1",
+            "vanguard-alpha-ant-footman-2",
+            "vanguard-alpha-ant-footman-3",
+            "vanguard-alpha-ant-archer-0",
+            "vanguard-alpha-ant-archer-1",
+            "vanguard-alpha-ant-scout-0"
+          ],
+          "leaderId": "vanguard-alpha-ant-scout-0"
+        },
+        {
+          "partyId": "vanguard-bravo",
+          "unitIds": [
+            "vanguard-bravo-ant-footman-0",
+            "vanguard-bravo-ant-footman-1",
+            "vanguard-bravo-ant-footman-2",
+            "vanguard-bravo-ant-potato-bug-0",
+            "vanguard-bravo-ant-archer-0",
+            "vanguard-bravo-ant-mage-0"
+          ],
+          "leaderId": "vanguard-bravo-ant-footman-0"
+        },
+        {
+          "partyId": "pathfinders",
+          "unitIds": [
+            "pathfinders-ant-mage-0",
+            "pathfinders-ant-scout-0",
+            "pathfinders-ant-scout-1",
+            "pathfinders-ant-archer-0",
+            "pathfinders-ant-archer-1",
+            "pathfinders-ant-archer-2"
+          ],
+          "leaderId": "pathfinders-ant-mage-0"
+        }
+      ]
+    },
+    "gold": 120,
+    "cardsOwned": [],
+    "rngSeed": 12345,
+    "savedAt": "2026-01-01T00:00:00.000Z"
   },
   "templates": [
     {
@@ -1304,6 +1312,57 @@
           "armor": 0
         }
       }
+    }
+  ],
+  "recruits": {
+    "version": 1,
+    "recruits": [
+      {
+        "templateId": "ant-footman",
+        "cost": 30
+      },
+      {
+        "templateId": "ant-scout",
+        "cost": 30
+      },
+      {
+        "templateId": "cockroach",
+        "cost": 40
+      }
+    ]
+  },
+  "items": [
+    {
+      "id": "leather-pad",
+      "name": "Leather Pad",
+      "kind": "persistent",
+      "effect": "armor",
+      "magnitude": 1,
+      "description": "Party-wide +1 armor while equipped."
+    },
+    {
+      "id": "brass-knuckles",
+      "name": "Brass Knuckles",
+      "kind": "persistent",
+      "effect": "attack",
+      "magnitude": 1,
+      "description": "Party-wide +1 attack while equipped."
+    },
+    {
+      "id": "boots",
+      "name": "Boots",
+      "kind": "persistent",
+      "effect": "movement",
+      "magnitude": 1,
+      "description": "Party-wide +1 movement allowance (capped at 4 tiles)."
+    },
+    {
+      "id": "scout-lens",
+      "name": "Scout Lens",
+      "kind": "persistent",
+      "effect": "agility",
+      "magnitude": 1,
+      "description": "Party-wide +1 agility (initiative). Reserved for vision once the mechanic exists."
     }
   ]
 }
