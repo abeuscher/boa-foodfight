@@ -175,3 +175,46 @@ Low-priority / for-awareness only:
   **vanguard-bravo vs web-watch** battle (≈turn 6 with all three vanguards ordered
   to the ceiling) is the one that actually animates — pause just before it and
   **Step** to catch it from the first beat.
+
+---
+
+## Design observation — map size as a balance / playability parameter
+
+_Out-of-band from the PR #46 checks; surfaced from playing the live view across
+both review sessions. Not a defect — a suggestion for future balance work._
+
+**Premise: the 10×10 face feels cramped.** Four ant parties + spiders + neutrals
+on 100 tiles per face means actors collide almost immediately — the vanguards
+reach the ceiling spider cluster by ~turn 5–6, and most engagements are forced
+rather than chosen. There's little room for scouting, flanking, splitting forces,
+or positional play; the opening-volley combat math then tends to make those forced
+encounters feel deterministic. The board reads as tight rather than strategic.
+
+**Suggestion: treat map size as a tunable parameter in balance/playability
+testing** — not a fixed 10×10. A _modest_ enlargement (e.g. ~16–24 per face) could
+add the maneuvering room that makes outcomes more varied and decisions more
+meaningful.
+
+**Important caveats (so the knob isn't mis-set):**
+
+- Map size is really a **pacing / density / encounter-frequency** lever, not a
+  direct balance lever — who wins a given fight is set by unit stats, the
+  opening-volley math, spawns, POST values, the turn cap, movement speed, and
+  vision. Enlarging the map changes _how often and where_ fights happen, not their
+  result.
+- It must be **co-scaled** with movement speed, `MAX_TURNS` (currently 100),
+  vision radius (currently 2), and POST/party density. A naïve large jump (e.g.
+  100×100 = 100× the area per face, ×6 faces) with everything else fixed would be
+  **degenerate**: units would march through empty space and rarely meet, fog would
+  be near-total, and the 100-turn **stalemate** already observed in a passive run
+  would become the default outcome — i.e. _less_ balanced, not more.
+- Expect an **inverted-U**: too small = solved/cramped; too big = empty/stalemate;
+  the sweet spot is likely only modestly above today's 10×10.
+
+**This is measurable, not guesswork.** The existing harness can quantify it —
+`harness/run-batch`, `tune`, `diversity`, and the `critic:interest` / `critic:metrics`
+critics, anchored on the gate-29 win-rate. A batch sweep across a few face sizes
+(constants co-scaled) reading **win-rate split, median game length, stalemate/draw
+rate, and the interest critic** would locate the peak empirically. Recommend
+making face size a per-scenario field so tutorial/skirmish scenarios can stay
+tight while strategic scenarios open up.
