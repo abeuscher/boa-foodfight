@@ -1,7 +1,19 @@
 # Change Request: Start Screen (title / main menu)
 
-From / To / Status: UX → Dev (Gameplay/Engine) / Proposal — awaiting
-cost/feasibility read
+From / To / Status: UX → Dev (Gameplay/Engine) / **RESOLVED — ratified,
+route A.** Canonical record: `change-request-protocol.md` §5 Exchange
+#13; decision record `roadmap-tier-1.md` §7.17; spec promoted to
+`docs/ui-start-screen-spec.md`.
+
+> **Resolution (for dev's build):** ratified. **Route A** — New Game
+> routes straight into the live L1 scenario (skip both Briefing and
+> Hill) as the interim, converging to `New Game → Briefing → scenario`
+> once the Briefing is built; route B (→ Hill) declined. **Skip-Hill
+> recorded** as a conscious ruling (no pre-L1 army management). Build
+> the four-item menu + route A; this supersedes the current Start stub.
+> Both New-Game confirmations and the Continue/Load/Options save-layer
+> surprises are folded into the promoted spec.
+
 Blocking: Non-blocking, batched. One item (New Game) needs wiring this
 pass; the rest are stubbed. The substantive ask is what New Game
 constructs and whether its route exists.
