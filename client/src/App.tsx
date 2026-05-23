@@ -1,23 +1,32 @@
 import { useState } from 'react';
 
+import { extractWorldRoster } from '../../engine/world-extract.ts';
+import { applyRosterLevelUps } from '../../engine/world-levelup.ts';
+import { barracksUnits } from '../../engine/world-organize.ts';
 import type { WorldState } from '../../engine/world-state.ts';
 
 import { INITIAL_STATE } from './fixture.ts';
 import { Hill } from './hill/Hill.tsx';
+import { EndScreen } from './live/EndScreen.tsx';
+import { computeEndStats } from './live/endStats.ts';
 import { LiveScenario } from './live/LiveScenario.tsx';
+import type { LiveOutcome } from './live/liveScenario.ts';
+import { scenarioReward } from './live/reward.ts';
 import { OrganizeArmy } from './organize/OrganizeArmy.tsx';
 import { Recruit } from './recruit/Recruit.tsx';
 import { Scenario } from './scenario/Scenario.tsx';
 import { Shop } from './shop/Shop.tsx';
+import { StartScreen } from './start/StartScreen.tsx';
 import { System } from './system/System.tsx';
 import { antCount, noticeOf, type Apply, type Notice, type SubView } from './shared.ts';
 
-type View = 'hill' | SubView | 'scenario' | 'live';
+type View = 'start' | 'hill' | SubView | 'scenario' | 'live' | 'end';
 
 export function App(): JSX.Element {
   const [state, setState] = useState<WorldState>(INITIAL_STATE);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [view, setView] = useState<View>('hill');
+  const [view, setView] = useState<View>('start');
+  const [outcome, setOutcome] = useState<LiveOutcome | null>(null);
 
   const apply: Apply = (next, result, okText) => {
     setState(next);
@@ -29,13 +38,67 @@ export function App(): JSX.Element {
     setNotice(null);
   };
 
-  // In-scenario mode uses its own chrome (HUD pod + notification strip),
-  // not the between-scenario shell — so it renders standalone.
+  // Continue from the end-of-scenario screen runs the world loop: a win
+  // extracts the surviving/leveled roster, awards buttons, and advances
+  // the scenario index back at the Hill; a loss resets to a new game
+  // (no client-side save yet to honor — clean seam for when it lands).
+  const onContinue = (): void => {
+    if (!outcome) return;
+    if (outcome.terminal.winner === 'ant') {
+      const reward = scenarioReward(outcome.finalState, outcome.turnsPlayed);
+      const extracted = extractWorldRoster({
+        finalState: outcome.finalState,
+        winner: 'ant',
+        carryForward: barracksUnits(state.roster),
+      });
+      const leveled = applyRosterLevelUps(extracted, outcome.finalState.unitTemplates).roster;
+      setState({
+        ...state,
+        roster: leveled,
+        gold: state.gold + reward.total,
+        scenarioIndex: state.scenarioIndex + 1,
+        savedAt: new Date().toISOString(),
+      });
+      setNotice({ kind: 'ok', text: `Victory — +${String(reward.total)} buttons` });
+      setOutcome(null);
+      setView('hill');
+    } else {
+      setState(INITIAL_STATE);
+      setOutcome(null);
+      setView('start');
+    }
+  };
+
+  if (view === 'start') {
+    return <StartScreen onStart={() => setView('hill')} />;
+  }
+  // In-scenario / takeover modes use their own chrome (not the
+  // between-scenario shell) — they render standalone.
   if (view === 'scenario') {
     return <Scenario onExit={goHill} />;
   }
   if (view === 'live') {
-    return <LiveScenario onExit={goHill} />;
+    return (
+      <LiveScenario
+        roster={state.roster}
+        onExit={goHill}
+        onEnd={(o) => {
+          setOutcome(o);
+          setView('end');
+        }}
+      />
+    );
+  }
+  if (view === 'end' && outcome) {
+    const win = outcome.terminal.winner === 'ant';
+    return (
+      <EndScreen
+        stats={computeEndStats(outcome.finalState, outcome.terminal, outcome.turnsPlayed)}
+        reward={win ? scenarioReward(outcome.finalState, outcome.turnsPlayed) : null}
+        continueLabel={win ? 'Continue' : 'Back to start'}
+        onContinue={onContinue}
+      />
+    );
   }
 
   return (
@@ -62,8 +125,8 @@ export function App(): JSX.Element {
         <Hill
           state={state}
           onOpen={setView}
+          onDeploy={() => setView('live')}
           onWatchReplay={() => setView('scenario')}
-          onPlayLive={() => setView('live')}
         />
       )}
       {view === 'organize' && <OrganizeArmy state={state} apply={apply} />}

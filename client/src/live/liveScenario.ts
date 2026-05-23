@@ -25,9 +25,13 @@ import { neutralPlayer } from '../../../ai/neutral.ts';
 import { spiderL1 } from '../../../ai/spider-l1.ts';
 import type { AIPolicy } from '../../../ai/types.ts';
 
+import { scoreScenario, winnerFromScore, type ScoreBreakdown } from '../../../engine/score.ts';
 import { buildInitialStateWithEvents, type ScenarioData } from '../../../engine/state.ts';
 import { runTurn } from '../../../engine/turn.ts';
-import type { GameState, ReplayEvent, Rng } from '../../../engine/types.ts';
+import { DEFAULT_VICTORY_CONDITION } from '../../../engine/types.ts';
+import type { Faction, GameState, ReplayEvent, Rng } from '../../../engine/types.ts';
+import { injectWorldRoster, scaffoldFromState } from '../../../engine/world-inject.ts';
+import type { WorldRoster } from '../../../engine/world-state.ts';
 
 /** Turn cap, matching the L1 reference run (`gen-l1-replay`). */
 export const MAX_TURNS = 100;
@@ -36,13 +40,54 @@ export const MAX_TURNS = 100;
 const ENEMY: AIPolicy = spiderL1;
 const NEUTRAL: AIPolicy = neutralPlayer;
 
-export interface InitialBuild {
-  readonly state: GameState;
+/**
+ * Build the initial L1 `GameState` from bundled scenario data. When a
+ * carried `roster` is supplied (the Hill's `WorldState.roster`), the
+ * player's organized army is injected over the scaffold ant parties —
+ * the same `injectWorldRoster` path `harness/world-loop.ts` uses — so
+ * recruits / formation / equipped items carry into the fight. Without a
+ * roster, the scenario's own `roster-ants` placement is used (sandbox).
+ */
+export const createInitialState = (
+  scenario: ScenarioData,
+  seed: number,
+  roster?: WorldRoster,
+): GameState => {
+  const base = buildInitialStateWithEvents(scenario, seed).state;
+  if (!roster) return base;
+  return injectWorldRoster(base, roster, scaffoldFromState(base)).state;
+};
+
+export interface Terminal {
+  readonly winner: Faction;
+  /** Present only when the scenario resolved by score (cap hit). */
+  readonly scoreBreakdown?: ScoreBreakdown;
 }
 
-/** Build the initial L1 `GameState` from bundled scenario data. */
-export const createInitialState = (scenario: ScenarioData, seed: number): GameState =>
-  buildInitialStateWithEvents(scenario, seed).state;
+/** What a finished scenario hands up to the world loop. */
+export interface LiveOutcome {
+  readonly finalState: GameState;
+  readonly terminal: Terminal;
+  readonly turnsPlayed: number;
+}
+
+/**
+ * Decide the final winner, mirroring `runScenario`'s epilogue (which the
+ * live driver doesn't run, since it calls `runTurn` directly): a decisive
+ * `state.winner` wins outright; otherwise a cap-hit on the capture-post /
+ * default path resolves by score (L1's path per pacing §A.3), and the
+ * mission victory kinds resolve to spider. Without this, an L1 game that
+ * reaches the turn cap would end with `winner = null`.
+ */
+export const resolveTerminal = (state: GameState): Terminal => {
+  if (state.winner !== null) return { winner: state.winner };
+  const vc = state.victoryCondition ?? DEFAULT_VICTORY_CONDITION;
+  if (vc.kind === 'escort' || vc.kind === 'eradicate' || vc.kind === 'recruit-count') {
+    return { winner: 'spider' };
+  }
+  const scoreBreakdown = scoreScenario(state);
+  return { winner: winnerFromScore(scoreBreakdown), scoreBreakdown };
+};
 
 export interface TurnResult {
   readonly state: GameState;
