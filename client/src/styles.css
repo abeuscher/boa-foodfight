@@ -197,6 +197,10 @@ body {
   color: #e8e2d4;
 }
 
+.start-logo {
+  text-align: center;
+}
+
 .start-title {
   margin: 0;
   font-size: 3rem;
@@ -204,17 +208,70 @@ body {
 }
 
 .start-sub {
-  margin: 0 0 1.5rem;
+  margin: 0.25rem 0 1.75rem;
   color: #9a958a;
 }
 
-.start-go {
-  font-size: 1.1rem;
-  padding: 0.6rem 2.5rem;
-  background: #e7d9b8;
-  border-color: #b9a06a;
-  color: #1a1a1a;
-  font-weight: 700;
+.start-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 16rem;
+}
+
+.start-item {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #e8e2d4;
+  font-size: 1.15rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.start-item.sel {
+  background: #2f3742;
+  color: #e7c97a;
+}
+
+.start-item:disabled {
+  color: #6f6a60;
+  cursor: default;
+}
+
+.start-item.sel:disabled {
+  color: #8a8170;
+}
+
+.start-item .si-cursor {
+  width: 1rem;
+  color: #e7c97a;
+}
+
+.start-item .si-label {
+  flex: 1;
+  text-align: left;
+}
+
+.start-item .si-soon {
+  font-size: 0.7rem;
+  color: #6f6a60;
+  font-style: italic;
+}
+
+.start-version {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  font-size: 0.75rem;
+  color: #6f6a60;
 }
 
 /* --- End-of-scenario takeover --- */

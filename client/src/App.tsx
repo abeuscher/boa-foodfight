@@ -70,7 +70,18 @@ export function App(): JSX.Element {
   };
 
   if (view === 'start') {
-    return <StartScreen onStart={() => setView('hill')} />;
+    return (
+      <StartScreen
+        onNewGame={() => {
+          // Route A (Exchange #13 §7.17): fresh campaign → straight into
+          // live L1, skipping the Hill. Briefing slots in ahead of the
+          // scenario when it's built.
+          setState(INITIAL_STATE);
+          setOutcome(null);
+          setView('live');
+        }}
+      />
+    );
   }
   // In-scenario / takeover modes use their own chrome (not the
   // between-scenario shell) — they render standalone.
