@@ -218,3 +218,48 @@ critics, anchored on the gate-29 win-rate. A batch sweep across a few face sizes
 rate, and the interest critic** would locate the peak empirically. Recommend
 making face size a per-scenario field so tutorial/skirmish scenarios can stay
 tight while strategic scenarios open up.
+
+---
+
+## Dev response / ratification (2026-05-22)
+
+Verdict accepted — **clean PASS**. Acted on the three low-priority items;
+surfaced the two genuine product/engine calls for the PM/design rather than
+inventing data.
+
+### Actioned (this follow-up)
+
+- **1-frame stale-"done" flash on Continue** — fixed. Dropped the
+  `[result]`-reset effect in `CombatPanel.tsx` and gave the panel a `key`
+  (`attacker-defender-index`) in `LiveScenario.tsx`, so a queue advance
+  **remounts** the panel with fresh `beat = 0` state — no frame can render the
+  next battle with the prior beat. (Removes QA's belt-and-suspenders concern.)
+- **Opening-volley instant resolution — clarity, no invented data.** When a
+  battle arrives with `rounds: []` (decided in the opening volley), the panel now
+  labels the summary **"Decided in the opening volley · …"** so the instant
+  resolution is legible as intentional rather than a skipped animation. This does
+  NOT fabricate an opening-volley beat (that needs engine data we don't have — see
+  product call below); it just states the truth.
+- **Party-detail 9-unit scroll** — compacted unit cells (`min-width 5.5 → 4.25rem`,
+  `flex: 1 1`) so the queen's full roster packs into fewer rows and the unit
+  drill-down sits closer to the fold. Mitigation, not a full redesign.
+
+### Product / engine calls (NOT actioned — need a decision)
+
+1. **Real opening-volley animation.** To actually animate 1-shot kills as a
+   "round 0" beat, the engine would need to surface the pre-opening HP + opening
+   damage on `BattleResult` (today `participants[].hp` is the _post-opening_
+   snapshot and `rounds` is the round-loop only). That's a gate-sensitive engine
+   change. Options: (a) accept instant resolution + the new label, (b) engine
+   surfaces an opening-volley round so the panel animates it. Recommend (a) for
+   now; (b) is a real enhancement if the play-by-play is meant to be the headline.
+2. **`BattleParticipant.hp` doc says "battle start" but is post-opening** —
+   engine-side naming/fidelity mismatch QA spotted. Worth an engine doc-comment
+   fix; flagged to the engine owner (not touched here — engine is gate-locked).
+3. **Map size as a balance/playability parameter** (QA's design observation) —
+   PM/design + harness territory, not a client change. Captured as a future
+   balance-sweep task: make face size per-scenario and co-scale movement /
+   MAX_TURNS / vision / density, measured via `run-batch` / `tune` / `diversity` /
+   `critic:interest` against the gate-29 win-rate. No dev action this pass.
+
+Deferred-as-agreed items unchanged: "seen" POST owner freshness; auto-plane-switch.

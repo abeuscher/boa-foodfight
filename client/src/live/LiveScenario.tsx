@@ -285,6 +285,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
       {battleQueue && (
         <div className="combat-overlay">
           <CombatPanel
+            key={`${String(battleQueue.battles[battleQueue.index]!.attackerPartyId)}-${String(
+              battleQueue.battles[battleQueue.index]!.defenderPartyId,
+            )}-${String(battleQueue.index)}`}
             result={battleQueue.battles[battleQueue.index]!}
             templates={state.unitTemplates}
             index={battleQueue.index + 1}
