@@ -5,6 +5,7 @@ import { eventLabel } from '../scenario/eventLabel.ts';
 
 import { Board } from './Board.tsx';
 import { CombatPanel } from './CombatPanel.tsx';
+import type { LiveOutcome } from './liveScenario.ts';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
 
@@ -16,9 +17,15 @@ import type {
   TileCoord,
   UnitId,
 } from '../../../engine/types.ts';
+import type { WorldRoster } from '../../../engine/world-state.ts';
 
 interface Props {
+  /** The Hill roster to field; injected over the scenario scaffold. */
+  readonly roster?: WorldRoster;
+  /** Abandon mid-scenario back to the Hill (no outcome applied). */
   readonly onExit: () => void;
+  /** Scenario resolved and the player pressed Continue → run the world loop. */
+  readonly onEnd: (outcome: LiveOutcome) => void;
 }
 
 const PLANES: readonly Plane[] = [
@@ -54,8 +61,8 @@ const statusWord = (
  * pod + notification strip. The cinematic cube render is design-gated
  * (cube memo §D); the board is the functional structural grid.
  */
-export function LiveScenario({ onExit }: Props): JSX.Element {
-  const live = useLiveScenario();
+export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
+  const live = useLiveScenario(roster);
   const { state } = live;
 
   const antParties = [...state.parties.values()]
@@ -169,14 +176,26 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
             visible={live.visible}
             seen={live.seen}
           />
-          {live.atEnd && (
-            <p className="scn-end">
-              {live.winner === 'ant'
-                ? 'Victory — the ants take the web.'
-                : live.winner === 'spider'
-                  ? 'Defeat — the spiders hold.'
-                  : 'Scenario over.'}
-            </p>
+          {live.atEnd && live.terminal && (
+            <div className="scn-end">
+              <span>
+                {live.terminal.winner === 'ant'
+                  ? 'Victory — the ants take the web.'
+                  : 'Defeat — the spiders hold.'}
+              </span>
+              <button
+                className="scn-end-go"
+                onClick={() => {
+                  onEnd({
+                    finalState: state,
+                    terminal: live.terminal!,
+                    turnsPlayed: live.turnsPlayed,
+                  });
+                }}
+              >
+                Continue →
+              </button>
+            </div>
           )}
         </div>
 
@@ -285,6 +304,9 @@ export function LiveScenario({ onExit }: Props): JSX.Element {
       {battleQueue && (
         <div className="combat-overlay">
           <CombatPanel
+            key={`${String(battleQueue.battles[battleQueue.index]!.attackerPartyId)}-${String(
+              battleQueue.battles[battleQueue.index]!.defenderPartyId,
+            )}-${String(battleQueue.index)}`}
             result={battleQueue.battles[battleQueue.index]!}
             templates={state.unitTemplates}
             index={battleQueue.index + 1}

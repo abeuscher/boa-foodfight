@@ -53,11 +53,6 @@ export function CombatPanel({
     };
   }, [beat, done]);
 
-  // Reset when a new battle is shown (queue advance reuses this component).
-  useEffect(() => {
-    setBeat(0);
-  }, [result]);
-
   // Running HP = start snapshot − cumulative damage through `beat` rounds.
   const damage = new Map<UnitId, number>();
   for (let r = 0; r < beat && r < lastBeat; r++) {
@@ -131,6 +126,7 @@ export function CombatPanel({
         <div className="cb-context">
           {done ? (
             <span>
+              {lastBeat === 0 ? 'Decided in the opening volley · ' : ''}
               Casualties — {String(result.attackerPartyId)}:{' '}
               {String(result.attackerCasualties.length)} · {String(result.defenderPartyId)}:{' '}
               {String(result.defenderCasualties.length)}

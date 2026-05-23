@@ -6,7 +6,13 @@ import { DEFAULT_AUTO_PAUSE_KINDS, type Speed } from '../clock/clock.ts';
 import { pauseReasonLabel } from '../scenario/eventLabel.ts';
 
 import { buildHumanPolicy } from './humanPolicy.ts';
-import { MAX_TURNS, advanceOneTurn, createInitialState } from './liveScenario.ts';
+import {
+  MAX_TURNS,
+  advanceOneTurn,
+  createInitialState,
+  resolveTerminal,
+  type Terminal,
+} from './liveScenario.ts';
 import { computeVisibleTiles, visibleNonAntPartyIds } from './visibility.ts';
 
 import { createRng } from '../../../engine/rng.ts';
@@ -19,6 +25,7 @@ import type {
   ReplayEvent,
   TileCoord,
 } from '../../../engine/types.ts';
+import type { WorldRoster } from '../../../engine/world-state.ts';
 
 const battlesFrom = (events: readonly ReplayEvent[]): readonly BattleResult[] => {
   const out: BattleResult[] = [];
@@ -59,8 +66,8 @@ interface Snapshot {
   readonly battles: readonly BattleResult[];
 }
 
-const initialSnapshot = (): Snapshot => {
-  const state = createInitialState(DATA, SEED);
+const initialSnapshot = (roster?: WorldRoster): Snapshot => {
+  const state = createInitialState(DATA, SEED, roster);
   const visible = computeVisibleTiles(state);
   return {
     state,
@@ -80,6 +87,8 @@ export interface LiveScenarioClock {
   readonly state: GameState;
   readonly turnsPlayed: number;
   readonly winner: Faction | null;
+  /** Resolved terminal (score-aware) once the scenario has ended, else null. */
+  readonly terminal: Terminal | null;
   readonly recentEvents: readonly ReplayEvent[];
   readonly pauseReason: string | null;
   readonly playing: boolean;
@@ -111,8 +120,8 @@ export interface LiveScenarioClock {
  * event-keyed trigger (`post-captured` / `battle-resolved` / …) or — when
  * fog is on — surfaces a `newly-visible-enemy` (auto-pause draft §3d).
  */
-export function useLiveScenario(): LiveScenarioClock {
-  const [snap, setSnap] = useState<Snapshot>(initialSnapshot);
+export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
+  const [snap, setSnap] = useState<Snapshot>(() => initialSnapshot(roster));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(1);
   const [fogEnabled, setFogEnabled] = useState(true);
@@ -131,6 +140,7 @@ export function useLiveScenario(): LiveScenarioClock {
 
   const winner = snap.state.winner;
   const atEnd = winner !== null || snap.turnsPlayed >= MAX_TURNS;
+  const terminal = atEnd ? resolveTerminal(snap.state) : null;
 
   const advance = useCallback(() => {
     const cur = snapRef.current;
@@ -231,6 +241,7 @@ export function useLiveScenario(): LiveScenarioClock {
     state: snap.state,
     turnsPlayed: snap.turnsPlayed,
     winner,
+    terminal,
     recentEvents: snap.recentEvents,
     pauseReason: snap.pauseReason,
     playing,

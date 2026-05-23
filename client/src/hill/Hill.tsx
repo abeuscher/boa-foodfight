@@ -5,22 +5,22 @@ import { type SubView } from '../shared.ts';
 interface Props {
   readonly state: WorldState;
   readonly onOpen: (view: SubView) => void;
+  readonly onDeploy: () => void;
   readonly onWatchReplay: () => void;
-  readonly onPlayLive: () => void;
 }
 
 /**
  * The Hill hub landing (ui-hill-hub-spec): verb rail (left) + Hill
  * scene (right) + scenario-context band (bottom). Scene art is deferred
- * (cube memo §D) — this is the structural frame. Deploy leads to the
- * Briefing, which isn't built yet, so it's disabled here.
+ * (cube memo §D) — this is the structural frame. Deploy launches the
+ * live scenario (the Briefing is implied-skipped for now).
  */
-export function Hill({ state, onOpen, onWatchReplay, onPlayLive }: Props): JSX.Element {
+export function Hill({ state, onOpen, onDeploy, onWatchReplay }: Props): JSX.Element {
   return (
     <div className="hill">
       <div className="hill-mid">
         <nav className="verb-rail">
-          <button className="verb deploy" disabled title="Briefing + scenario not built yet">
+          <button className="verb deploy" onClick={onDeploy}>
             Deploy
           </button>
           <button className="verb" onClick={() => onOpen('organize')}>
@@ -44,9 +44,6 @@ export function Hill({ state, onOpen, onWatchReplay, onPlayLive }: Props): JSX.E
           </p>
           <button className="watch-replay" onClick={onWatchReplay}>
             ▶ Watch L1 replay (dev) — in-scenario playback
-          </button>
-          <button className="watch-replay" onClick={onPlayLive}>
-            ▶ Play L1 live (dev) — engine in browser
           </button>
         </div>
       </div>
