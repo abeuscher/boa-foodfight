@@ -13,6 +13,8 @@ interface Props {
   readonly visible: ReadonlySet<string>;
   /** Ever-seen tile keys (coordKey) — explored terrain stays dim. */
   readonly seen: ReadonlySet<string>;
+  /** Orientation markers (briefing): START / GOAL pulses on the active plane. */
+  readonly marks?: readonly { readonly coord: TileCoord; readonly kind: 'start' | 'goal' }[];
 }
 
 const factionGlyph: Record<string, string> = { ant: 'A', spider: 'S', neutral: 'N' };
@@ -50,6 +52,7 @@ export function Board({
   fogEnabled,
   visible,
   seen,
+  marks,
 }: Props): JSX.Element {
   const { w, h } = planeDims(state, plane);
 
@@ -73,6 +76,10 @@ export function Board({
     if (dest === null || dest.plane !== plane) continue;
     const k = cellKey(dest.x, dest.y);
     destByCell.set(k, destByCell.get(k) === true || pid === selectedPartyId);
+  }
+  const markByCell = new Map<string, 'start' | 'goal'>();
+  for (const m of marks ?? []) {
+    if (m.coord.plane === plane) markByCell.set(cellKey(m.coord.x, m.coord.y), m.kind);
   }
 
   const rows: JSX.Element[] = [];
@@ -125,6 +132,11 @@ export function Board({
             </span>
           )}
           {destHere && <span className={`dest ${destByCell.get(k) ? 'mine' : ''}`}>×</span>}
+          {markByCell.has(k) && (
+            <span className={`mark mark-${String(markByCell.get(k))}`}>
+              {markByCell.get(k) === 'start' ? 'S' : 'G'}
+            </span>
+          )}
         </button>,
       );
     }
