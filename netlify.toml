@@ -1,28 +1,31 @@
-# Netlify config for the Food Fight replay viewer.
+# Netlify config for the Food Fight game client.
 #
-# Strategy: pure-static deploy. The build step runs the harness for each
-# variant AI (small seed range, deterministic), bundles the resulting
-# JSONL replays under viewer/dist/replays/, and writes a manifest.json
-# the in-browser viewer reads. No runtime server, no functions.
+# Strategy: pure-static SPA deploy. `build:client` (Vite) bundles the
+# React client — start menu, Hill hub, the live engine-in-browser
+# scenario, and the world loop — to `client/dist`. The committed
+# fixtures under `client/src/fixtures/` (the baked L1 scenario data +
+# world state) ship in the bundle, so no harness/gen step runs at build
+# time. No runtime server, no functions.
 #
-# To preview locally: `pnpm build:viewer && npx serve viewer/dist`
+# The client has no URL routing (views are internal React state), so a
+# single index.html at the root is all that's served — no SPA-fallback
+# redirect needed.
+#
+# The replay viewer (`viewer/`) is no longer auto-deployed to production;
+# run it locally with `pnpm viewer` / `pnpm build:viewer`.
+#
+# To preview the production build locally: `pnpm build:client && npx serve client/dist`
 
 [build]
-  command = "pnpm install --frozen-lockfile && pnpm build:viewer --seeds 1..100"
-  publish = "viewer/dist"
+  command = "pnpm install --frozen-lockfile && pnpm build:client"
+  publish = "client/dist"
 
 [build.environment]
   NODE_VERSION = "20"
   PNPM_VERSION = "10"
 
-# Replays are small JSONL files; let the CDN cache them aggressively.
+# Vite emits content-hashed asset filenames — safe to cache forever.
 [[headers]]
-  for = "/replays/*"
+  for = "/assets/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
-
-# The manifest is small but should always be fresh-on-deploy.
-[[headers]]
-  for = "/replays/manifest.json"
-  [headers.values]
-    Cache-Control = "public, max-age=60"
+    Cache-Control = "public, max-age=31536000, immutable"
