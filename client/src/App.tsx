@@ -5,6 +5,7 @@ import { applyRosterLevelUps } from '../../engine/world-levelup.ts';
 import { barracksUnits } from '../../engine/world-organize.ts';
 import type { WorldState } from '../../engine/world-state.ts';
 
+import { Briefing } from './briefing/Briefing.tsx';
 import { INITIAL_STATE } from './fixture.ts';
 import { Hill } from './hill/Hill.tsx';
 import { EndScreen } from './live/EndScreen.tsx';
@@ -20,7 +21,7 @@ import { StartScreen } from './start/StartScreen.tsx';
 import { System } from './system/System.tsx';
 import { antCount, noticeOf, type Apply, type Notice, type SubView } from './shared.ts';
 
-type View = 'start' | 'hill' | SubView | 'scenario' | 'live' | 'end';
+type View = 'start' | 'hill' | SubView | 'briefing' | 'scenario' | 'live' | 'end';
 
 export function App(): JSX.Element {
   const [state, setState] = useState<WorldState>(INITIAL_STATE);
@@ -73,12 +74,11 @@ export function App(): JSX.Element {
     return (
       <StartScreen
         onNewGame={() => {
-          // Route A (Exchange #13 §7.17): fresh campaign → straight into
-          // live L1, skipping the Hill. Briefing slots in ahead of the
-          // scenario when it's built.
+          // Route A (Exchange #13 §7.17): fresh campaign → Briefing →
+          // scenario, skipping the Hill.
           setState(INITIAL_STATE);
           setOutcome(null);
-          setView('live');
+          setView('briefing');
         }}
       />
     );
@@ -87,6 +87,9 @@ export function App(): JSX.Element {
   // between-scenario shell) — they render standalone.
   if (view === 'scenario') {
     return <Scenario onExit={goHill} />;
+  }
+  if (view === 'briefing') {
+    return <Briefing state={state} onBegin={() => setView('live')} onCancel={goHill} />;
   }
   if (view === 'live') {
     return (
@@ -136,7 +139,7 @@ export function App(): JSX.Element {
         <Hill
           state={state}
           onOpen={setView}
-          onDeploy={() => setView('live')}
+          onDeploy={() => setView('briefing')}
           onWatchReplay={() => setView('scenario')}
         />
       )}

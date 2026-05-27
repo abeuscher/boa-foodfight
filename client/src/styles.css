@@ -274,6 +274,140 @@ body {
   color: #6f6a60;
 }
 
+/* --- Briefing view --- */
+
+.briefing {
+  position: relative;
+  min-height: 100vh;
+  background: #20242b;
+  color: #e8e2d4;
+}
+
+.briefing-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #3a4049;
+}
+
+.briefing-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+.briefing-stage.faded .board {
+  opacity: 0.5;
+  filter: saturate(0.7);
+}
+
+.orient-caption {
+  margin-top: 1rem;
+  font-weight: 700;
+  color: #e7c97a;
+  letter-spacing: 0.05em;
+}
+
+.briefing-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 1rem;
+  max-width: 640px;
+  background: #fffdf8;
+  color: #1a1a1a;
+  border: 1px solid #b9a06a;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bp-portrait {
+  flex: 0 0 auto;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.bp-emblem {
+  font-size: 3rem;
+}
+
+.bp-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b6258;
+}
+
+.bp-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.bp-body p {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.bp-body .bp-placeholder {
+  font-size: 0.75rem;
+  color: #8a8170;
+  font-style: italic;
+}
+
+.bp-goal {
+  margin: 0.5rem 0 1rem;
+  font-weight: 700;
+  color: #8a6d1d;
+}
+
+.bp-ok {
+  background: #e7d9b8;
+  border-color: #b9a06a;
+  font-weight: 700;
+  padding: 0.4rem 2rem;
+}
+
+.cell .mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  border-radius: 2px;
+  animation: markpulse 0.8s ease-in-out infinite alternate;
+}
+
+.cell .mark-start {
+  color: #9fcf6e;
+  outline: 2px solid #9fcf6e;
+  outline-offset: -2px;
+}
+
+.cell .mark-goal {
+  color: #e7c97a;
+  outline: 2px solid #e7c97a;
+  outline-offset: -2px;
+}
+
+@keyframes markpulse {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* --- End-of-scenario takeover --- */
 
 .endscreen {

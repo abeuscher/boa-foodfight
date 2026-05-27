@@ -40,6 +40,13 @@ export const MS_PER_TURN = 700;
 
 const DATA = scenarioData as unknown as ScenarioData;
 
+/** Build the L1 scenario initial state (optionally injecting a carried
+ * roster). Shared by the live hook and the Briefing preview so both
+ * render the identical deterministic board (same seed + roster → same
+ * inject). */
+export const buildScenarioState = (roster?: WorldRoster): GameState =>
+  createInitialState(DATA, SEED, roster);
+
 const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => {
   const out = new Set(a);
   for (const k of b) out.add(k);
