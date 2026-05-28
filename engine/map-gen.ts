@@ -6,8 +6,10 @@
  *
  *   - storm-drain at floor (0,0) and spider-web at ceiling (9,9)
  *     held fixed (the "start" and "finish" anchors).
- *   - 3-5 randomly-placed mid-POSTs distributed across the 6 planes,
- *     subject to ≤2 mid-POSTs per plane. Three POST type pools —
+ *   - 8-10 randomly-placed mid-POSTs distributed across the 6 planes
+ *     (L1-iteration §9 density bump): one mandatory mid-POST per
+ *     non-fixed plane (floor, ceiling, 4 walls) + 2-4 extras,
+ *     subject to ≤3 mid-POSTs per plane. Three POST type pools —
  *     soap-dish, towel-rack, wall-crack — get one base instance each
  *     (suffixed `-1`); 0-2 random extras suffix incrementally.
  *   - One randomly-chosen floor-plane mid-POST gets paired with one
@@ -64,7 +66,7 @@ const MID_POST_DEFENSIVE_BONUS = 2;
 const MID_POST_HEALING_RATE = 1;
 
 const GRID = 10;
-const MAX_POSTS_PER_PLANE = 2;
+const MAX_POSTS_PER_PLANE = 3;
 const MIN_OBSTACLES_PER_PLANE = 2;
 const MAX_OBSTACLES_PER_PLANE = 5;
 
@@ -136,22 +138,35 @@ const generatePosts = (rng: Rng): { posts: PostDraft[]; mainPostTiles: ReadonlyS
     return undefined;
   };
 
-  // Phase 1: one of each base type, with placement constraints chosen
-  // so the locked baseline AI can navigate the canonical chain even
-  // on a randomized map.
+  // Phase 1 (L1-iteration §9 density bump): guarantee one mid-POST on
+  // each non-fixed plane — floor, ceiling, and all four walls — so the
+  // wall planes are never abandoned (rubric P1.2 / P2.2). Types cycle
+  // through the MID_POST_TYPES list so the AI's chain-march logic still
+  // has all three types to walk in order.
   //
-  //   - soap-dish-1 always lands on the floor (start plane). Baseline
-  //     can reach it without plane-switch.
-  //   - towel-rack-1 lands on a wall plane (any of the 4). Baseline's
-  //     mage parties can plane-switch up; vanguard-alpha can edge-walk.
-  //   - wall-crack-1 lands on a wall plane too — pairing logic below
-  //     gives the floor↔wall transition non-fly parties need.
-  placeOfType('soap-dish', [FLOOR_PLANE]);
-  placeOfType('towel-rack', WALL_PLANES);
-  placeOfType('wall-crack', WALL_PLANES);
+  //   - floor:       soap-dish-1 (chain start; baseline AI expects this)
+  //   - north-wall:  towel-rack-1
+  //   - east-wall:   wall-crack-1
+  //   - south-wall:  towel-rack-2
+  //   - west-wall:   wall-crack-2
+  //   - ceiling:     soap-dish-2 (adjacent to spider-web; the goal face
+  //                  now has an intermediate target for the ant chain)
+  const MANDATORY_PLACEMENTS: readonly { plane: Plane; type: MidPostType }[] = [
+    { plane: FLOOR_PLANE, type: 'soap-dish' },
+    { plane: 'north-wall', type: 'towel-rack' },
+    { plane: 'east-wall', type: 'wall-crack' },
+    { plane: 'south-wall', type: 'towel-rack' },
+    { plane: 'west-wall', type: 'wall-crack' },
+    { plane: CEILING_PLANE, type: 'soap-dish' },
+  ];
+  for (const { plane, type } of MANDATORY_PLACEMENTS) placeOfType(type, [plane]);
 
-  // Phase 2: 0-2 extras, picking types weighted uniformly.
-  const extras = rng.int(3); // 0 | 1 | 2
+  // Phase 2: 2-4 extras (was 0-2), picking types uniformly. Extras can
+  // land on any plane (subject to MAX_POSTS_PER_PLANE = 3) and push the
+  // total mid-POST count to 8-10, landing M2.1 (12-16 total POSTs incl.
+  // fixed) on average and meeting M2.2 (≥ 2 POSTs per combat-relevant
+  // plane).
+  const extras = 2 + rng.int(3); // 2 | 3 | 4
   for (let i = 0; i < extras; i++) {
     const type = MID_POST_TYPES[rng.int(MID_POST_TYPES.length)];
     if (type) placeOfType(type);
