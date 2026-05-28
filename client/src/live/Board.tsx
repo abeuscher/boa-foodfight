@@ -15,6 +15,9 @@ interface Props {
   readonly seen: ReadonlySet<string>;
   /** Orientation markers (briefing): START / GOAL pulses on the active plane. */
   readonly marks?: readonly { readonly coord: TileCoord; readonly kind: 'start' | 'goal' }[];
+  /** Peripheral/preview rendering: smaller cells, dot-glyph actors. The
+   * splayed cube faces use this; clicks route to face-activation. */
+  readonly compact?: boolean;
 }
 
 const factionGlyph: Record<string, string> = { ant: 'A', spider: 'S', neutral: 'N' };
@@ -53,6 +56,7 @@ export function Board({
   visible,
   seen,
   marks,
+  compact = false,
 }: Props): JSX.Element {
   const { w, h } = planeDims(state, plane);
 
@@ -147,5 +151,5 @@ export function Board({
     );
   }
 
-  return <div className="board">{rows}</div>;
+  return <div className={`board${compact ? ' compact' : ''}`}>{rows}</div>;
 }
