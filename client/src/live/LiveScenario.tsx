@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { SPEEDS } from '../clock/clock.ts';
 import { eventLabel } from '../scenario/eventLabel.ts';
 
-import { Board } from './Board.tsx';
 import { CombatPanel } from './CombatPanel.tsx';
+import { CubeBoard } from './CubeBoard.tsx';
 import type { LiveOutcome } from './liveScenario.ts';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
@@ -165,7 +165,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
         </aside>
 
         <div className="scn-world">
-          <Board
+          <CubeBoard
             state={state}
             plane={plane}
             selectedPartyId={selectedId}
@@ -175,6 +175,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             fogEnabled={live.fogEnabled}
             visible={live.visible}
             seen={live.seen}
+            onSelectFace={setPlane}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">

@@ -916,6 +916,112 @@ button:disabled {
   min-height: auto;
 }
 
+/* --- Splayed cube view: active face + 4 edge-docked peripherals --- */
+
+.cube {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-areas:
+    '.    top    .'
+    'left active right'
+    '.    bottom .';
+  gap: 0.4rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.cube-top {
+  grid-area: top;
+}
+.cube-left {
+  grid-area: left;
+}
+.cube-active {
+  grid-area: active;
+}
+.cube-right {
+  grid-area: right;
+}
+.cube-bottom {
+  grid-area: bottom;
+}
+
+.cube-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cube-peripheral {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.cube-peripheral:hover {
+  outline: 2px solid #e7c97a;
+}
+
+.cube-label {
+  font-size: 0.7rem;
+  color: #9a958a;
+  text-transform: capitalize;
+}
+
+.cube-label.active {
+  color: #e7c97a;
+  font-weight: 700;
+}
+
+/* Compact peripheral boards: small cells, dot actors, no fine detail. */
+.board.compact {
+  padding: 3px;
+  gap: 1px;
+}
+
+.board.compact .board-row {
+  gap: 1px;
+}
+
+.board.compact .cell {
+  width: 14px;
+  height: 14px;
+  border-width: 1px;
+}
+
+.board.compact .pawn {
+  font-size: 0;
+}
+
+.board.compact .pawn::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.board.compact .pawn .stack {
+  display: none;
+}
+
+.board.compact .post {
+  font-size: 0.5rem;
+  top: 0;
+  left: 1px;
+}
+
+.board.compact .post .pip {
+  display: none;
+}
+
+.board.compact .dest {
+  font-size: 0.6rem;
+  right: 0;
+}
+
 /* --- Party-detail inspection panel (replaces the action rail) --- */
 
 .pdetail {
