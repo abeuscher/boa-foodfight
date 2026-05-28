@@ -124,10 +124,10 @@ describe('engine/post-bonus offsets', () => {
     expect(offsets.ant.attack).toBe(cap);
     expect(offsets.ant.armor).toBe(cap);
     expect(countNonBasePostsOwned(owned, 'ant')).toBe(ids.length);
-    // The map generator picks 3-5 mid-POSTs per scenario (storm-drain
-    // and spider-web are fixed home bases).
-    expect(ids.length).toBeGreaterThanOrEqual(3);
-    expect(ids.length).toBeLessThanOrEqual(5);
+    // The map generator picks 8-10 mid-POSTs per scenario (L1-iteration
+    // §9 density bump; storm-drain and spider-web are fixed home bases).
+    expect(ids.length).toBeGreaterThanOrEqual(8);
+    expect(ids.length).toBeLessThanOrEqual(10);
   });
 
   it('4. storm-drain and spider-web do NOT count toward the bonus', () => {
