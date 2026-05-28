@@ -378,17 +378,28 @@ describe('engine/post-capture', () => {
     expect(b.state.parties.get(REINF_PARTY_ID)).toBeUndefined();
   });
 
-  it('14. no reinforcement config → capture unchanged, no spawn (gate-29-safe)', () => {
+  it('14. capturing a non-trigger POST emits no reinforcement-spawned event', () => {
+    // L1-iteration #3: L1 now configures spider reinforcements at
+    // towel-rack-1 and wall-crack-1 (one-shot per trigger). Capturing
+    // a mid-POST that is NOT a configured trigger must still produce
+    // no spawn.
     const { state } = loadScenario(DATA_DIR, 1);
     const ant = firstFieldAnt(state);
-    const midPost = firstMidPost(state);
-    let working = placePartyOnPost(state, ant.id, midPost);
+    const triggers = new Set([...(state.reinforcements?.keys() ?? [])]);
+    let targetPost: PostId | undefined;
+    for (const post of state.posts.values()) {
+      if (post.id === STORM_DRAIN) continue;
+      if (post.id === SPIDER_WEB) continue;
+      if (triggers.has(post.id)) continue;
+      targetPost = post.id;
+      break;
+    }
+    if (!targetPost) throw new Error('no non-trigger mid-POST found');
+    let working = placePartyOnPost(state, ant.id, targetPost);
     const tick = makeTickClock();
     working = resolvePostCapture(working, tick).state;
     const b = resolvePostCapture(working, tick);
-    expect(b.state.posts.get(midPost)?.owner).toBe<Faction>('ant');
+    expect(b.state.posts.get(targetPost)?.owner).toBe<Faction>('ant');
     expect(eventsOfKind(b.events, 'reinforcement-spawned')).toHaveLength(0);
-    expect(b.state.reinforcements).toBeUndefined();
-    expect(b.state.firedReinforcements).toBeUndefined();
   });
 });

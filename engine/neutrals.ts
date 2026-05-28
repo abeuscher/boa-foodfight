@@ -182,12 +182,31 @@ const findAntQueenLocation = (
  * Order of selection is fixed (mice → cockroaches → stinkbugs) so the
  * same seed gives the same plane assignment.
  */
+/* L1-iteration #6 — neutral wall-plane garrisons. Mice keep their
+ * floor/ceiling restriction; cockroaches and stinkbugs now prefer wall
+ * planes so the abandoned walls finally get occupants worth fighting
+ * over. Fallback to any remaining plane if the wall pool is exhausted
+ * (e.g., mice already on a wall — though MICE_PLANES forbids that). */
+const WALL_PLANES_NEUTRALS: readonly Plane[] = [
+  'north-wall',
+  'south-wall',
+  'east-wall',
+  'west-wall',
+];
+
 const pickPlanes = (rng: Rng): Record<NeutralKind, Plane> => {
   const micePlane = MICE_PLANES[rng.int(MICE_PLANES.length)]!;
   const remainingAfterMice = ALL_PLANES.filter((p) => p !== micePlane);
-  const cockroachPlane = remainingAfterMice[rng.int(remainingAfterMice.length)]!;
+  const wallsAvailable = WALL_PLANES_NEUTRALS.filter((p) => remainingAfterMice.includes(p));
+  const cockroachPool = wallsAvailable.length > 0 ? wallsAvailable : remainingAfterMice;
+  const cockroachPlane = cockroachPool[rng.int(cockroachPool.length)]!;
   const remainingAfterCockroach = remainingAfterMice.filter((p) => p !== cockroachPlane);
-  const stinkbugPlane = remainingAfterCockroach[rng.int(remainingAfterCockroach.length)]!;
+  const wallsAvailableForStink = WALL_PLANES_NEUTRALS.filter((p) =>
+    remainingAfterCockroach.includes(p),
+  );
+  const stinkbugPool =
+    wallsAvailableForStink.length > 0 ? wallsAvailableForStink : remainingAfterCockroach;
+  const stinkbugPlane = stinkbugPool[rng.int(stinkbugPool.length)]!;
   return { mice: micePlane, cockroaches: cockroachPlane, stinkbugs: stinkbugPlane };
 };
 
