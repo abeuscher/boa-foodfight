@@ -95,4 +95,32 @@ describe('loadScenario(level-1)', () => {
       expect(leader, `party ${party.id} has dangling leaderId ${party.leaderId}`).toBeDefined();
     }
   });
+
+  it('typed mid-POSTs (sanctum, gold-mine) carry the per-type profile when generated', () => {
+    // L1-iteration #4 — POST typing extension. Sanctum bumps healingRate
+    // to 3; gold-mine carries goldPerTurn: 1. The two types appear via
+    // Phase-2 extras, so any given seed may or may not include them;
+    // sweep until we see each (or fail the test loudly if neither lands
+    // across a healthy seed sweep).
+    let seenSanctum = false;
+    let seenGoldMine = false;
+    for (let seed = 1; seed <= 30; seed++) {
+      const { state } = loadScenario(DATA_DIR, seed);
+      for (const post of state.posts.values()) {
+        if (post.tags.includes('post-type:sanctum')) {
+          expect(post.healingRate).toBe(3);
+          expect(post.defensiveBonus).toBe(3);
+          seenSanctum = true;
+        }
+        if (post.tags.includes('post-type:gold-mine')) {
+          expect(post.goldPerTurn).toBe(1);
+          expect(post.healingRate).toBe(1);
+          seenGoldMine = true;
+        }
+      }
+      if (seenSanctum && seenGoldMine) break;
+    }
+    expect(seenSanctum).toBe(true);
+    expect(seenGoldMine).toBe(true);
+  });
 });

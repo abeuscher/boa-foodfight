@@ -91,12 +91,20 @@ const goldEvents = (events: readonly ReplayEvent[]): readonly ReplayEvent[] =>
 
 describe('engine dep #9 — per-POST goldPerTurn in-sim economy', () => {
   it('absent field ⇒ zero gold credited (shipped-map default-inert)', () => {
-    // data/level-1 declares no goldPerTurn on any POST.
+    // L1-iteration #4 (POST typing) introduced `gold-mine` POSTs that
+    // intentionally carry `goldPerTurn: 1`. Every other POST in L1 still
+    // omits the field. All POSTs (including gold-mine) start `neutral`-
+    // owned, so the end-of-turn gold sweep — which only credits real
+    // factions — still emits no gold-earned events at turn 0.
     const { state } = loadScenario(DATA_DIR, 1);
-    expect([...state.posts.values()].every((p) => p.goldPerTurn === undefined)).toBe(true);
+    for (const p of state.posts.values()) {
+      const isGoldMine = p.tags.includes('post-type:gold-mine');
+      if (isGoldMine) expect(p.goldPerTurn).toBe(1);
+      else expect(p.goldPerTurn).toBeUndefined();
+      expect(p.owner === 'neutral' || p.owner === 'ant' || p.owner === 'spider').toBe(true);
+    }
     const before = state.playerGold;
     const out = run(state);
-    // No income gold-earned event; totals byte-identical.
     expect(out.state.playerGold).toEqual(before);
     expect(goldEvents(out.events)).toHaveLength(0);
   });

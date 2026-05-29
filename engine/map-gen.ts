@@ -53,17 +53,40 @@ const PARTY_START_TILES: readonly TileCoord[] = [
   { plane: 'ceiling', x: 7, y: 8 },
 ];
 
-const MID_POST_TYPES = ['soap-dish', 'towel-rack', 'wall-crack'] as const;
+const MID_POST_TYPES = ['soap-dish', 'towel-rack', 'wall-crack', 'sanctum', 'gold-mine'] as const;
 type MidPostType = (typeof MID_POST_TYPES)[number];
 
 const MID_POST_NAMES: Record<MidPostType, string> = {
   'soap-dish': 'Soap Dish',
   'towel-rack': 'Towel Rack',
   'wall-crack': 'Wall Crack',
+  sanctum: 'Sanctum',
+  'gold-mine': 'Gold Mine',
 };
 
-const MID_POST_DEFENSIVE_BONUS = 2;
-const MID_POST_HEALING_RATE = 1;
+/**
+ * L1-iteration #4 — POST typing extension. Each mid-POST type carries
+ * a profile of the existing per-POST mechanics (defensiveBonus,
+ * healingRate, optional goldPerTurn) so capturing a typed POST has a
+ * distinct payoff. The original three thematic types (soap-dish /
+ * towel-rack / wall-crack) keep the baseline profile to preserve
+ * paired-POST / chain-march behavior; the two new types (sanctum,
+ * gold-mine) extend the slate via Phase-2 extras only — they don't
+ * displace the mandatory per-plane placements.
+ */
+interface MidPostProfile {
+  readonly defensiveBonus: number;
+  readonly healingRate: number;
+  readonly goldPerTurn?: number;
+}
+
+const MID_POST_PROFILES: Record<MidPostType, MidPostProfile> = {
+  'soap-dish': { defensiveBonus: 2, healingRate: 1 },
+  'towel-rack': { defensiveBonus: 2, healingRate: 1 },
+  'wall-crack': { defensiveBonus: 2, healingRate: 1 },
+  sanctum: { defensiveBonus: 3, healingRate: 3 },
+  'gold-mine': { defensiveBonus: 2, healingRate: 1, goldPerTurn: 1 },
+};
 
 const GRID = 10;
 const MAX_POSTS_PER_PLANE = 3;
@@ -115,6 +138,8 @@ const generatePosts = (rng: Rng): { posts: PostDraft[]; mainPostTiles: ReadonlyS
     'soap-dish': 0,
     'towel-rack': 0,
     'wall-crack': 0,
+    sanctum: 0,
+    'gold-mine': 0,
   };
 
   const placeOfType = (
@@ -161,11 +186,12 @@ const generatePosts = (rng: Rng): { posts: PostDraft[]; mainPostTiles: ReadonlyS
   ];
   for (const { plane, type } of MANDATORY_PLACEMENTS) placeOfType(type, [plane]);
 
-  // Phase 2: 2-4 extras (was 0-2), picking types uniformly. Extras can
-  // land on any plane (subject to MAX_POSTS_PER_PLANE = 3) and push the
-  // total mid-POST count to 8-10, landing M2.1 (12-16 total POSTs incl.
-  // fixed) on average and meeting M2.2 (≥ 2 POSTs per combat-relevant
-  // plane).
+  // Phase 2: 2-4 extras (was 0-2), picking types uniformly from the
+  // FULL pool — including the L1-iteration #4 typed POSTs (sanctum,
+  // gold-mine). Extras can land on any plane (subject to
+  // MAX_POSTS_PER_PLANE = 3) and push the total mid-POST count to 8-10,
+  // landing M2.1 (12-16 total POSTs incl. fixed) on average and meeting
+  // M2.2 (≥ 2 POSTs per combat-relevant plane).
   const extras = 2 + rng.int(3); // 2 | 3 | 4
   for (let i = 0; i < extras; i++) {
     const type = MID_POST_TYPES[rng.int(MID_POST_TYPES.length)];
@@ -265,16 +291,22 @@ export const generateRandomMap = (opts: GenerateOptions): MapFile => {
 
   const newPosts: MapFile['posts'] = [
     ...fixedPosts,
-    ...midDrafts.map((d) => ({
-      id: d.id,
-      name: d.name,
-      location: cloneCoord(d.location),
-      owner: 'neutral' as const,
-      defensiveBonus: MID_POST_DEFENSIVE_BONUS,
-      healingRate: MID_POST_HEALING_RATE,
-      ...(d.pairedWith !== undefined ? { pairedWith: d.pairedWith } : {}),
-      tags: d.pairedWith !== undefined ? ['plane-transition'] : [],
-    })),
+    ...midDrafts.map((d) => {
+      const profile = MID_POST_PROFILES[d.type];
+      const tags = [`post-type:${d.type}`];
+      if (d.pairedWith !== undefined) tags.push('plane-transition');
+      return {
+        id: d.id,
+        name: d.name,
+        location: cloneCoord(d.location),
+        owner: 'neutral' as const,
+        defensiveBonus: profile.defensiveBonus,
+        healingRate: profile.healingRate,
+        ...(d.pairedWith !== undefined ? { pairedWith: d.pairedWith } : {}),
+        ...(profile.goldPerTurn !== undefined ? { goldPerTurn: profile.goldPerTurn } : {}),
+        tags,
+      };
+    }),
   ];
 
   // ---- Obstacles: 2-5 per plane, clustered.

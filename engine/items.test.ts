@@ -209,6 +209,105 @@ describe('engine/items discovery', () => {
     expect(loserHit).toBe(false);
   });
 
+  it('phero-crown promotes every ant-mage in the party to ant-archmage on pickup', () => {
+    // L1-iteration #7 — item-gated terminal class promotion.
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const partyId = findAntFieldPartyId(state);
+    let working = state;
+    const original = working.parties.get(partyId)!;
+    const mageTmpl = state.unitTemplates.get('ant-mage' as UnitTemplateId)!;
+    const archmageTmpl = state.unitTemplates.get('ant-archmage' as UnitTemplateId)!;
+    // Inject two ant-mages into the party so we exercise the
+    // "promote every match" path. HP wounded so we can verify clamp.
+    const mages: Unit[] = [
+      {
+        id: 'test-mage-1' as UnitId,
+        templateId: 'ant-mage' as UnitTemplateId,
+        currentHp: 2,
+        level: 1,
+        xp: 0,
+      },
+      {
+        id: 'test-mage-2' as UnitId,
+        templateId: 'ant-mage' as UnitTemplateId,
+        currentHp: mageTmpl.baseStats.hp,
+        level: 1,
+        xp: 0,
+      },
+    ];
+    working = updateParty(working, partyId, { units: [...original.units, ...mages] });
+    const spawn: ItemSpawn = {
+      itemId: 'phero-crown' as ItemId,
+      location: original.location,
+      buried: false,
+      discovered: false,
+    };
+    working = placeItemAt(clearItems(working), spawn);
+
+    for (let seed = 1; seed <= 200; seed++) {
+      const out = endOfTurn(working, eotInput(data), makeTickClock(), createRng(seed));
+      const promotions = out.events.filter(
+        (e) =>
+          e.kind === 'unit-promoted' &&
+          e.partyId === partyId &&
+          e.fromTemplate === ('ant-mage' as UnitTemplateId),
+      );
+      if (promotions.length === 0) continue;
+      expect(promotions).toHaveLength(2);
+      const after = out.state.parties.get(partyId)!;
+      const mage1After = after.units.find((u) => u.id === ('test-mage-1' as UnitId))!;
+      const mage2After = after.units.find((u) => u.id === ('test-mage-2' as UnitId))!;
+      expect(mage1After.templateId).toBe('ant-archmage');
+      expect(mage2After.templateId).toBe('ant-archmage');
+      // HP preserved, clamped to new max if the new template's max is
+      // lower than the previous HP.
+      expect(mage1After.currentHp).toBe(Math.min(2, archmageTmpl.baseStats.hp));
+      expect(mage2After.currentHp).toBe(Math.min(mageTmpl.baseStats.hp, archmageTmpl.baseStats.hp));
+      // Slot stays empty (promotion-key is consumed on use).
+      expect(after.item ?? null).toBeNull();
+      // Promotion event carries the itemId so the UI can attribute it.
+      for (const ev of promotions) {
+        if (ev.kind !== 'unit-promoted') continue;
+        expect(ev.itemId).toBe('phero-crown');
+      }
+      return;
+    }
+    throw new Error('no seed produced a phero-crown discovery within 200 attempts');
+  });
+
+  it('promotion-key with no matching units leaves the spawn on the map', () => {
+    // Iron Fang promotes ant-footman → ant-veteran-footman. A party with
+    // zero ant-footmen should not pick it up. We relocate the test party
+    // + spawn to an isolated wall tile so neighbouring ant parties (any
+    // of which may have ant-footmen) can't poach the spawn.
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const partyId = findAntFieldPartyId(state);
+    let working = state;
+    const isolated: TileCoord = { plane: 'north-wall', x: 5, y: 5 };
+    const original = working.parties.get(partyId)!;
+    const noFootmen: Unit[] = original.units.filter(
+      (u) => u.templateId !== ('ant-footman' as UnitTemplateId),
+    );
+    working = updateParty(working, partyId, { units: noFootmen, location: isolated });
+    const spawn: ItemSpawn = {
+      itemId: 'iron-fang' as ItemId,
+      location: isolated,
+      buried: false,
+      discovered: false,
+    };
+    working = placeItemAt(clearItems(working), spawn);
+
+    for (let seed = 1; seed <= 50; seed++) {
+      const out = endOfTurn(working, eotInput(data), makeTickClock(), createRng(seed));
+      const after = out.state.parties.get(partyId)!;
+      const promos = out.events.filter((e) => e.kind === 'unit-promoted' && e.partyId === partyId);
+      expect(promos).toHaveLength(0);
+      expect(after.item ?? null).toBeNull();
+      const stillThere = out.state.itemSpawns.find((s) => s.itemId === ('iron-fang' as ItemId));
+      expect(stillThere?.discovered).toBe(false);
+    }
+  });
+
   it('mead heals every living unit to full HP on pickup, consumes the slot', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
     const partyId = findAntFieldPartyId(state);
