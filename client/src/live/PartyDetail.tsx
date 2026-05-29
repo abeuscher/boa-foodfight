@@ -149,6 +149,29 @@ export function PartyDetail({
         <div className="pd-stats">
           <div className="pd-sub">Composition</div>
           <div className="pd-line">{composition || '—'}</div>
+          <div className="pd-sub">Earned stats</div>
+          <div className="pd-earned">
+            <span className="pd-earned-row">
+              <span className="pd-earned-label">Aggression</span>
+              <span className="pd-earned-bar">
+                <span
+                  className="pd-earned-fill pd-earned-fill-agg"
+                  style={{ width: `${String(party.aggression ?? 0)}%` }}
+                />
+              </span>
+              <span className="pd-earned-num">{String(party.aggression ?? 0)}</span>
+            </span>
+            <span className="pd-earned-row">
+              <span className="pd-earned-label">Discipline</span>
+              <span className="pd-earned-bar">
+                <span
+                  className="pd-earned-fill pd-earned-fill-disc"
+                  style={{ width: `${String(party.discipline ?? 0)}%` }}
+                />
+              </span>
+              <span className="pd-earned-num">{String(party.discipline ?? 0)}</span>
+            </span>
+          </div>
           <div className="pd-sub">Modifiers</div>
           {modifiers.length === 0 ? (
             <div className="pd-line hint">No active modifiers</div>

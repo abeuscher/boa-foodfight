@@ -1401,6 +1401,54 @@ export const resolveBattle = (
   }
   events.push(...charismaEvents);
 
+  // L1-iteration #8 — earned stats. Aggression accrues on attack
+  // initiation (+1 attacker) and decays on being defended on (-1
+  // defender). Discipline decays on a successful flee (-1 fleeing
+  // side). Stats clamp to [0, EARNED_STAT_MAX]; emit one stat-earned
+  // event per actual change so the play-by-play / log surfaces the
+  // accrual. POST-hold gains live in `resolvePostCapture`.
+  const EARNED_STAT_MAX = 100;
+  const clampStat = (n: number): number => Math.max(0, Math.min(EARNED_STAT_MAX, n));
+  const atkBeforeAgg = attacker.aggression ?? 0;
+  const atkAfterAgg = clampStat(atkBeforeAgg + 1);
+  const defBeforeAgg = defender.aggression ?? 0;
+  const defAfterAgg = clampStat(defBeforeAgg - 1);
+  let atkAfterDisc = attacker.discipline ?? 0;
+  let defAfterDisc = defender.discipline ?? 0;
+  const fleeingIsAtk = fleeSucceeded && fleeingPartyId === attacker.id;
+  const fleeingIsDef = fleeSucceeded && fleeingPartyId === defender.id;
+  if (fleeingIsAtk) atkAfterDisc = clampStat((attacker.discipline ?? 0) - 1);
+  if (fleeingIsDef) defAfterDisc = clampStat((defender.discipline ?? 0) - 1);
+
+  const pushStatEvent = (
+    partyId: PartyId,
+    stat: 'aggression' | 'discipline',
+    before: number,
+    after: number,
+    reason: 'attack-initiated' | 'defended-on' | 'post-held' | 'fled',
+  ): void => {
+    if (after === before) return;
+    events.push({
+      kind: 'stat-earned',
+      turn,
+      tick: tick(),
+      partyId,
+      stat,
+      delta: after - before,
+      before,
+      after,
+      reason,
+    });
+  };
+  pushStatEvent(attacker.id, 'aggression', atkBeforeAgg, atkAfterAgg, 'attack-initiated');
+  pushStatEvent(defender.id, 'aggression', defBeforeAgg, defAfterAgg, 'defended-on');
+  if (fleeingIsAtk) {
+    pushStatEvent(attacker.id, 'discipline', attacker.discipline ?? 0, atkAfterDisc, 'fled');
+  }
+  if (fleeingIsDef) {
+    pushStatEvent(defender.id, 'discipline', defender.discipline ?? 0, defAfterDisc, 'fled');
+  }
+
   // Locations: winner stays. Loser moves to retreatTo if available; otherwise
   // stays in place (caller treats retreatTo === null as loser stuck/destroyed).
   // Round 15: the fleer's knockback tile is stored in retreatTo and the
@@ -1420,6 +1468,8 @@ export const resolveBattle = (
     // the live filter, but the slot id stays so a subsequent
     // promotion doesn't double-up.)
     formation: formations.attacker,
+    aggression: atkAfterAgg,
+    discipline: atkAfterDisc,
   };
   const newDefender: Party = {
     ...defender,
@@ -1428,6 +1478,8 @@ export const resolveBattle = (
     leaderless: defender.leaderless || defenderLeaderKilled,
     orders: defenderOrders,
     formation: formations.defender,
+    aggression: defAfterAgg,
+    discipline: defAfterDisc,
   };
 
   const newParties = new Map(state.parties);

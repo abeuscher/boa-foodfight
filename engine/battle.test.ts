@@ -180,6 +180,56 @@ describe('resolveBattle: smoke', () => {
     expect(stack.defender.postureName).toBe(def.posture);
   });
 
+  it('attacker gains +1 aggression and defender loses 1 on every battle', () => {
+    // L1-iteration #8 — earned stats. The first battle a fresh party
+    // initiates puts its aggression at 1; the defending side's
+    // aggression decays (clamped at 0 so 0→0 emits no event).
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const { atk, def } = buildSmokeMatchup(base);
+    const state = installParties(base, [atk, def]);
+    const out = resolveBattle(state, neutralInput(atk, def), createRng(11), makeTickClock());
+    const events = out.events.filter((e) => e.kind === 'stat-earned');
+    const atkAggEvent = events.find(
+      (e) => e.kind === 'stat-earned' && e.partyId === atk.id && e.stat === 'aggression',
+    );
+    expect(atkAggEvent).toBeDefined();
+    if (atkAggEvent?.kind === 'stat-earned') {
+      expect(atkAggEvent.delta).toBe(1);
+      expect(atkAggEvent.after).toBe(1);
+      expect(atkAggEvent.reason).toBe('attack-initiated');
+    }
+    // Defender starts at 0 aggression; clamp prevents going below 0,
+    // so no decay event fires for the defender on a fresh party.
+    const defAggEvent = events.find(
+      (e) => e.kind === 'stat-earned' && e.partyId === def.id && e.stat === 'aggression',
+    );
+    expect(defAggEvent).toBeUndefined();
+    // The new attacker carries the bumped aggression on its state-side
+    // party object so subsequent battles see the new floor.
+    const updatedAtk = out.state.parties.get(atk.id);
+    expect(updatedAtk?.aggression).toBe(1);
+  });
+
+  it('aggression clamps at [0, 100]; cumulative gains saturate at the ceiling', () => {
+    // Seed an attacker at aggression 100 and assert the bump emits no
+    // event (clamp prevents 100→101).
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const { atk, def } = buildSmokeMatchup(base);
+    const saturatedAtk = { ...atk, aggression: 100 };
+    const state = installParties(base, [saturatedAtk, def]);
+    const out = resolveBattle(
+      state,
+      neutralInput(saturatedAtk, def),
+      createRng(12),
+      makeTickClock(),
+    );
+    const atkAgg = out.events.find(
+      (e) => e.kind === 'stat-earned' && e.partyId === atk.id && e.stat === 'aggression',
+    );
+    expect(atkAgg).toBeUndefined();
+    expect(out.state.parties.get(atk.id)?.aggression).toBe(100);
+  });
+
   it('round count is in [3,5] when neither side is wiped early', () => {
     // Queen-vs-queen so the battle doesn't terminate early regardless of
     // elite/footman stat tuning (both queens have 30+ HP and high armor).
