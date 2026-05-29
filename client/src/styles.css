@@ -562,6 +562,142 @@ body {
   font-weight: 600;
 }
 
+.scn-beat-message {
+  margin: 0.35rem 0 0;
+  font-weight: 400;
+  font-style: italic;
+  color: #5a4f33;
+  font-size: 0.82rem;
+}
+
+.battle-panel {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: #fffaf0;
+  border: 1px solid #d6c79a;
+  border-radius: 6px;
+  text-align: left;
+  font-weight: 400;
+  font-size: 0.78rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.bp-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.bp-winner {
+  color: #6e3b1a;
+}
+
+.bp-retreat {
+  font-style: italic;
+  color: #7a6a55;
+}
+
+.bp-rounds {
+  margin: 0;
+  padding: 0 0 0 0.25rem;
+  list-style: none;
+}
+
+.bp-round {
+  margin-bottom: 0.35rem;
+}
+
+.bp-round-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #5a4f33;
+}
+
+.bp-actions {
+  margin: 0.15rem 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.bp-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: baseline;
+  padding: 0.05rem 0;
+}
+
+.bp-action.bp-attacker .bp-attacker {
+  color: #2f5a2c;
+}
+
+.bp-action.bp-defender .bp-attacker {
+  color: #7a3b1c;
+}
+
+.bp-arrow {
+  color: #9b8e74;
+}
+
+.bp-damage {
+  font-weight: 600;
+  color: #8a2618;
+}
+
+.bp-hp {
+  color: #6b6258;
+}
+
+.bp-killed {
+  color: #8a2618;
+  font-weight: 700;
+}
+
+.bp-roster {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px dashed #d6c79a;
+  padding-top: 0.4rem;
+}
+
+.bp-side {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-side-label {
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7a6a55;
+  margin-bottom: 0.15rem;
+}
+
+.bp-unit {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.bp-unit.dead {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.bp-empty {
+  margin: 0;
+  font-style: italic;
+  color: #7a6a55;
+}
+
 .oa header h1 {
   margin: 0;
 }

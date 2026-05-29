@@ -2,6 +2,7 @@ import { REPLAY } from '../fixture.ts';
 import { SPEEDS, atEnd, currentEvent } from '../clock/clock.ts';
 import { useClock } from '../clock/useClock.ts';
 
+import { BattlePanel } from './BattlePanel.tsx';
 import { eventLabel, pauseReasonLabel } from './eventLabel.ts';
 
 interface Props {
@@ -76,6 +77,9 @@ export function Scenario({ onExit }: Props): JSX.Element {
               : 'Paused at start'}
           {state.pausedAt?.kind === 'scripted-beat' && (
             <p className="scn-beat-message">{state.pausedAt.message}</p>
+          )}
+          {state.pausedAt?.kind === 'battle-resolved' && (
+            <BattlePanel result={state.pausedAt.result} />
           )}
         </div>
       </footer>

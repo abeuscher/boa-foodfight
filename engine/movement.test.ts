@@ -132,6 +132,47 @@ describe('resolveMovement', () => {
     expect(out.state.parties.get(partyId)?.orders.length).toBe(1);
   });
 
+  it('detours around a blocking obstacle row to reach the target', () => {
+    // Regression: the old Manhattan-greedy walker stalled when both
+    // axis-progress neighbors were obstacles, because lateral neighbors
+    // were filtered (tie or increase in Manhattan distance). With BFS
+    // the party routes laterally and resumes progress. Setup mirrors
+    // the user-reported case (A3 → A9 with A4 / B4 obstacles).
+    const { state } = loadScenario(DATA_DIR, 1);
+    const partyId = 'vanguard-alpha' as PartyId;
+    const here: TileCoord = { plane: 'floor', x: 5, y: 3 };
+    const open: Terrain = { kind: 'open', movementCost: 1, defenseModifier: 0 };
+    // Carve a guaranteed-clear corridor so random-map obstacles can't
+    // confound the assertion (seed=1 also drops obstacles on the floor).
+    let s = state;
+    for (let y = 3; y <= 9; y++) {
+      for (let x = 5; x <= 7; x++) {
+        s = setTerrain(s, { plane: 'floor', x, y }, open);
+      }
+    }
+    s = setLocation(s, partyId, here);
+    const obstacle: Terrain = { kind: 'obstacle', movementCost: 99, defenseModifier: 0 };
+    s = setTerrain(s, { plane: 'floor', x: 5, y: 4 }, obstacle);
+    s = setTerrain(s, { plane: 'floor', x: 6, y: 4 }, obstacle);
+
+    const target: TileCoord = { plane: 'floor', x: 5, y: 9 };
+    s = setOrders(s, partyId, [{ kind: 'move-to', target }]);
+
+    const out = resolveMovement(s, createRng(s.seed), makeTickClock());
+    const myMoves = partyMovedEvents(out.events).filter(
+      (e) => e.kind === 'party-moved' && e.partyId === partyId,
+    );
+    // The party should have moved at least one tile (greedy stalled here).
+    expect(myMoves.length).toBeGreaterThan(0);
+    // Must not have stepped onto either obstacle tile.
+    for (const ev of myMoves) {
+      if (ev.kind !== 'party-moved') continue;
+      const blocked = sameCoord(ev.to, { plane: 'floor', x: 5, y: 4 });
+      const blocked2 = sameCoord(ev.to, { plane: 'floor', x: 6, y: 4 });
+      expect(blocked || blocked2).toBe(false);
+    }
+  });
+
   it('reports a collision when opposing-faction parties end on the same tile', () => {
     const { state } = loadScenario(DATA_DIR, 1);
     const antId = 'vanguard-alpha' as PartyId;
