@@ -21,6 +21,7 @@ import { PHASE_LENGTH } from './phase.ts';
 import { createRng } from './rng.ts';
 import {
   abilitiesFileSchema,
+  beatsFileSchema,
   dialogueFileSchema,
   formationsFileSchema,
   itemsFileSchema,
@@ -34,6 +35,7 @@ import {
 } from './schemas/index.ts';
 import type {
   AbilitiesFile,
+  BeatsFile,
   DialogueFile,
   FormationsFile,
   ItemsFile,
@@ -116,6 +118,9 @@ export interface ScenarioData {
   readonly dialogue: DialogueFile;
   readonly rosters: readonly RosterFile[];
   readonly items: ItemsFile;
+  /** L1-iteration #5 — optional scripted-beat authoring. Absent when
+   * the scenario has no beats authored (engine path is byte-identical). */
+  readonly beats?: BeatsFile;
 }
 
 const readJson = <T>(file: string, parse: (raw: unknown) => T): T => {
@@ -123,22 +128,35 @@ const readJson = <T>(file: string, parse: (raw: unknown) => T): T => {
   return parse(raw);
 };
 
-export const loadScenarioData = (dataDir: string): ScenarioData => ({
-  units: readJson(path.join(dataDir, 'units.json'), (v) => unitsFileSchema.parse(v)),
-  abilities: readJson(path.join(dataDir, 'abilities.json'), (v) => abilitiesFileSchema.parse(v)),
-  leaders: readJson(path.join(dataDir, 'leaders.json'), (v) => leadersFileSchema.parse(v)),
-  map: readJson(path.join(dataDir, 'map.json'), (v) => mapFileSchema.parse(v)),
-  queen: readJson(path.join(dataDir, 'queen.json'), (v) => queenFileSchema.parse(v)),
-  jelly: readJson(path.join(dataDir, 'jelly.json'), (v) => jellyFileSchema.parse(v)),
-  formations: readJson(path.join(dataDir, 'formations.json'), (v) => formationsFileSchema.parse(v)),
-  shop: readJson(path.join(dataDir, 'shop.json'), (v) => shopFileSchema.parse(v)),
-  dialogue: readJson(path.join(dataDir, 'dialogue.json'), (v) => dialogueFileSchema.parse(v)),
-  rosters: [
-    readJson(path.join(dataDir, 'roster-ants.json'), (v) => rosterFileSchema.parse(v)),
-    readJson(path.join(dataDir, 'roster-spiders.json'), (v) => rosterFileSchema.parse(v)),
-  ],
-  items: readJson(path.join(dataDir, 'items.json'), (v) => itemsFileSchema.parse(v)),
-});
+const readOptionalJson = <T>(file: string, parse: (raw: unknown) => T): T | undefined => {
+  if (!fs.existsSync(file)) return undefined;
+  return readJson(file, parse);
+};
+
+export const loadScenarioData = (dataDir: string): ScenarioData => {
+  const beats = readOptionalJson(path.join(dataDir, 'beats.json'), (v) => beatsFileSchema.parse(v));
+  return {
+    units: readJson(path.join(dataDir, 'units.json'), (v) => unitsFileSchema.parse(v)),
+    abilities: readJson(path.join(dataDir, 'abilities.json'), (v) => abilitiesFileSchema.parse(v)),
+    leaders: readJson(path.join(dataDir, 'leaders.json'), (v) => leadersFileSchema.parse(v)),
+    map: readJson(path.join(dataDir, 'map.json'), (v) => mapFileSchema.parse(v)),
+    queen: readJson(path.join(dataDir, 'queen.json'), (v) => queenFileSchema.parse(v)),
+    jelly: readJson(path.join(dataDir, 'jelly.json'), (v) => jellyFileSchema.parse(v)),
+    formations: readJson(path.join(dataDir, 'formations.json'), (v) =>
+      formationsFileSchema.parse(v),
+    ),
+    shop: readJson(path.join(dataDir, 'shop.json'), (v) => shopFileSchema.parse(v)),
+    dialogue: readJson(path.join(dataDir, 'dialogue.json'), (v) => dialogueFileSchema.parse(v)),
+    rosters: [
+      readJson(path.join(dataDir, 'roster-ants.json'), (v) => rosterFileSchema.parse(v)),
+      readJson(path.join(dataDir, 'roster-spiders.json'), (v) => rosterFileSchema.parse(v)),
+    ],
+    items: readJson(path.join(dataDir, 'items.json'), (v) => itemsFileSchema.parse(v)),
+    // Omit-when-undefined keeps `JSON.stringify(scenarioData)` byte-stable
+    // for pre-beats scenarios (the bake script consumes this object).
+    ...(beats !== undefined ? { beats } : {}),
+  };
+};
 
 const buildUnitTemplates = (units: UnitsFile): ReadonlyMap<UnitTemplateId, UnitTemplate> => {
   const map = new Map<UnitTemplateId, UnitTemplate>();

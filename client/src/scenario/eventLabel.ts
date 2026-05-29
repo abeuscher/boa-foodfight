@@ -30,6 +30,8 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return 'Royal jelly applied';
     case 'recruit-attempted':
       return ev.success ? 'Recruited a neutral' : 'Recruit attempt failed';
+    case 'scripted-beat':
+      return ev.title;
     default:
       return ev.kind.replace(/-/g, ' ');
   }
@@ -44,6 +46,8 @@ export const pauseReasonLabel = (ev: ReplayEvent): string => {
       return 'Combat';
     case 'reinforcement-spawned':
       return 'Reinforcements';
+    case 'scripted-beat':
+      return ev.title;
     default:
       return ev.kind.replace(/-/g, ' ');
   }

@@ -35,10 +35,12 @@ export const SPEEDS: readonly Speed[] = [0.5, 1, 2, 4];
 /** Wall-clock duration one event occupies at 1× speed. */
 export const MS_PER_EVENT = 600;
 
-/** Default auto-pause triggers: the event-keyed subset of the contract. */
+/** Default auto-pause triggers: the event-keyed subset of the contract.
+ * `scripted-beat` joins as the L1-iteration narrative hook — authored
+ * mid-scenario callouts the player should read before playback continues. */
 export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Set<
   ReplayEvent['kind']
->(['post-captured', 'reinforcement-spawned', 'battle-resolved']);
+>(['post-captured', 'reinforcement-spawned', 'battle-resolved', 'scripted-beat']);
 
 export interface ClockState {
   readonly events: readonly ReplayEvent[];
