@@ -93,18 +93,18 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
 
   const selectParty = (id: PartyId): void => {
     setSelectedId(id);
-    setOrdering(false);
     setUnitId(null); // switching party clears unit drill-down
     const p = state.parties.get(id);
     if (p) setPlane(p.location.plane);
+    // L1-iteration PR-58 follow-up: auto-enter Move mode whenever the
+    // selected party is movable, so the player can click a destination
+    // tile immediately without first hitting the Move button. Queen-
+    // guard (immobile) and fallen parties stay out of ordering mode.
+    const movable = p !== undefined && p.id !== QUEEN_GUARD && partyAlive(p);
+    setOrdering(movable);
   };
 
   const handleTile = (coord: TileCoord): void => {
-    if (ordering && selectedId !== null && canMove) {
-      live.setOrder(selectedId, coord);
-      setOrdering(false);
-      return;
-    }
     const hit = antParties.find(
       (p) =>
         partyAlive(p) &&
@@ -112,10 +112,28 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
         p.location.x === coord.x &&
         p.location.y === coord.y,
     );
-    setSelectedId(hit ? hit.id : null);
+    // While ordering, a click on another friendly party switches
+    // selection (and auto-enters ordering for the new party) rather
+    // than committing the order — flicking between squads shouldn't
+    // misfire orders. Re-clicking the selected party's own tile, or
+    // clicking any tile with no friendly party, commits the order.
+    if (ordering && selectedId !== null && canMove) {
+      if (!hit || hit.id === selectedId) {
+        live.setOrder(selectedId, coord);
+        setOrdering(false);
+        return;
+      }
+      selectParty(hit.id);
+      return;
+    }
+    if (hit) {
+      selectParty(hit.id);
+      return;
+    }
+    setSelectedId(null);
     setUnitId(null);
     setOrdering(false);
-    if (!hit) setInspecting(false); // clicking empty space closes the panel
+    setInspecting(false);
   };
 
   return (
@@ -213,9 +231,43 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           />
         ) : (
           <aside className="rail">
-            {selected === null && (
-              <p className="hint">Select a party (roster or board), then Move.</p>
-            )}
+            {/* L1-iteration PR-58 follow-up: playback controls moved
+                from the bottom HUD into the right rail so they're
+                reachable while the board is in view. */}
+            <div className="rail-controls">
+              <div className="hud-pod">
+                <button onClick={live.toggle} disabled={live.atEnd}>
+                  {live.playing ? '⏸ Pause' : '⏵ Play'}
+                </button>
+                <button onClick={live.step} disabled={live.playing || live.atEnd}>
+                  Step
+                </button>
+              </div>
+              <div className="hud-pod">
+                <span className="speeds">
+                  {SPEEDS.map((sp) => (
+                    <button
+                      key={sp}
+                      className={live.speed === sp ? 'active' : ''}
+                      onClick={() => {
+                        live.setSpeed(sp);
+                      }}
+                    >
+                      {sp}×
+                    </button>
+                  ))}
+                </span>
+              </div>
+              <div className={`scn-notif rail-notif ${live.pauseReason ? 'paused' : ''}`}>
+                {live.pauseReason
+                  ? `⏸ ${live.pauseReason}`
+                  : live.playing
+                    ? `Turn ${String(live.turnsPlayed)} · Playing…`
+                    : `Turn ${String(live.turnsPlayed)} · Paused`}
+              </div>
+            </div>
+            <hr className="rail-sep" />
+            {selected === null && <p className="hint">Select a party — Move is pre-armed.</p>}
             {selected !== null && !ordering && (
               <>
                 <div className="rail-head">{selected.id}</div>
@@ -248,9 +300,23 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             )}
             {ordering && (
               <>
-                <div className="rail-head">Pick destination</div>
-                <p className="hint">Click a tile on the board.</p>
+                <div className="rail-head">{selected?.id ?? 'Move'} — pick destination</div>
+                <p className="hint">Click a tile on the board (or another squad to switch).</p>
                 <button onClick={() => setOrdering(false)}>Cancel</button>
+                {selected !== null && (
+                  <>
+                    <button
+                      disabled={!canMove}
+                      onClick={() => {
+                        live.setOrder(selected.id, null);
+                        setOrdering(false);
+                      }}
+                    >
+                      Hold position
+                    </button>
+                    <button onClick={() => setInspecting(true)}>Inspect</button>
+                  </>
+                )}
               </>
             )}
           </aside>
@@ -269,38 +335,6 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           ))}
         </ul>
       </div>
-
-      <footer className="scn-hud">
-        <div className="hud-pod">
-          <button onClick={live.toggle} disabled={live.atEnd}>
-            {live.playing ? '⏸ Pause' : '⏵ Play'}
-          </button>
-          <button onClick={live.step} disabled={live.playing || live.atEnd}>
-            Step
-          </button>
-          <span className="speeds">
-            {SPEEDS.map((sp) => (
-              <button
-                key={sp}
-                className={live.speed === sp ? 'active' : ''}
-                onClick={() => {
-                  live.setSpeed(sp);
-                }}
-              >
-                {sp}×
-              </button>
-            ))}
-          </span>
-          <span className="hud-readout">Turn {live.turnsPlayed}</span>
-        </div>
-        <div className={`scn-notif ${live.pauseReason ? 'paused' : ''}`} role="status">
-          {live.pauseReason
-            ? `⏸ Paused — ${live.pauseReason}`
-            : live.playing
-              ? 'Playing…'
-              : 'Paused'}
-        </div>
-      </footer>
 
       {battleQueue && (
         <div className="combat-overlay">

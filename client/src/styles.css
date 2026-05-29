@@ -865,7 +865,10 @@ button:disabled {
 .live-mid {
   flex: 1;
   display: grid;
-  grid-template-columns: 180px 1fr 200px;
+  /* Right rail widened from 200px to 240px to host the playback
+   * controls (play/pause/step + speeds + status) above the action
+   * buttons — see `.rail-controls`. */
+  grid-template-columns: 180px 1fr 240px;
   gap: 1rem;
   align-items: start;
 }
@@ -909,6 +912,33 @@ button:disabled {
 .rail-head {
   font-weight: 700;
   font-size: 0.9rem;
+}
+
+/* L1-iteration PR-58 follow-up: playback controls moved into the
+ * top of the right rail. Stack the play/pause + speeds rows tight
+ * so they don't push the action panel down too far. */
+.rail-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rail-controls .hud-pod {
+  flex-wrap: wrap;
+}
+
+.rail-notif {
+  margin-left: 0;
+  min-width: 0;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.rail-sep {
+  border: 0;
+  border-top: 1px dashed #cdd6cd;
+  margin: 0.25rem 0;
+  width: 100%;
 }
 
 .board {
