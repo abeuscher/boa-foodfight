@@ -568,6 +568,37 @@ export interface BattleParticipant {
   readonly isLeader: boolean;
 }
 
+/**
+ * L1-iteration #12 — per-side input modifiers captured at battle
+ * resolution time. The combat math folds these into effective attack /
+ * armor values; surfacing the raw values lets the UI render a legible
+ * "what stacked onto this side" panel without re-deriving the math.
+ * Multiplicative entries default to 1 (a no-op layer) and additive
+ * `postDefense` defaults to 0.
+ */
+export interface BattleSideModifiers {
+  readonly postureName: Posture;
+  readonly postureAttack: number;
+  readonly postureDefense: number;
+  readonly strategyAttack: number;
+  readonly strategyDefense: number;
+  readonly jellyAttack: number;
+  readonly jellyResilience: number;
+  readonly queenProximityAttack: number;
+  readonly queenProximityResilience: number;
+}
+
+export interface BattleModifierStack {
+  /** Plane the battle resolved on — drives plane-affinity rows shown
+   * adjacent to the stack. */
+  readonly plane: Plane;
+  /** Additive defense from a friendly POST under the defender, 0 if
+   * neither side held a POST. */
+  readonly postDefense: number;
+  readonly attacker: BattleSideModifiers;
+  readonly defender: BattleSideModifiers;
+}
+
 export interface BattleResult {
   readonly attackerPartyId: PartyId;
   readonly defenderPartyId: PartyId;
@@ -580,6 +611,11 @@ export interface BattleResult {
    * action's damage from these values to produce a running HP for the
    * play-by-play panel. */
   readonly participants: readonly BattleParticipant[];
+  /** L1-iteration #12 — input modifiers for the UI's modifier-stack
+   * panel. Optional for backwards compatibility with replays / tests
+   * built before the field shipped; absent → the panel falls back to
+   * the base-stats display only. */
+  readonly modifierStack?: BattleModifierStack;
 }
 
 // ---------------------------------------------------------------------------

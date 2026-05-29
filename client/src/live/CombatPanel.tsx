@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { summarizeBattle } from '../scenario/battleSummary.ts';
+
 import type { BattleResult, GameState, UnitId, UnitTemplateId } from '../../../engine/types.ts';
 
 interface Props {
@@ -122,6 +124,44 @@ export function CombatPanel({
         {side('defender')}
       </div>
 
+      {(() => {
+        const summary = summarizeBattle(result);
+        if (!summary.modifierStack) return null;
+        return (
+          <div className="cb-mods">
+            <div className="cb-mods-head">Modifier stack · {summary.modifierStack.plane}</div>
+            <div className="cb-mods-sides">
+              {(['attacker', 'defender'] as const).map((side) => {
+                const s = summary.modifierStack![side];
+                const rows = [...s.attackRows, ...s.defenseRows];
+                return (
+                  <div key={side} className="cb-mods-side">
+                    <div className="cb-mods-side-head">{side}</div>
+                    {rows.length === 0 ? (
+                      <p className="cb-mods-empty">No active modifiers.</p>
+                    ) : (
+                      <ul className="cb-mods-rows">
+                        {rows.map((r, i) => (
+                          <li key={i} className={`cb-mod cb-mod-${r.axis}`}>
+                            <span className="cb-mod-label">{r.label}</span>
+                            <span className="cb-mod-value">
+                              {r.kind === 'mult'
+                                ? `×${r.value.toFixed(2)}`
+                                : `${r.value >= 0 ? '+' : ''}${String(r.value)}`}{' '}
+                              <em>{r.axis}</em>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="cb-foot">
         <div className="cb-context">
           {done ? (
@@ -133,8 +173,7 @@ export function CombatPanel({
             </span>
           ) : (
             <span className="hint">
-              Round {String(Math.min(beat + 1, lastBeat))} of {String(lastBeat)} · per-battle
-              modifier stack not engine-surfaced (forward dep)
+              Round {String(Math.min(beat + 1, lastBeat))} of {String(lastBeat)}
             </span>
           )}
         </div>

@@ -8,7 +8,12 @@
  * No engine round-trip, no template lookups — everything is on the event.
  */
 
-import type { BattleResult, UnitId } from '../../../engine/types.ts';
+import type {
+  BattleModifierStack,
+  BattleResult,
+  BattleSideModifiers,
+  UnitId,
+} from '../../../engine/types.ts';
 
 export interface BattleActionLine {
   readonly roundIndex: number;
@@ -32,6 +37,35 @@ export interface BattleParticipantSummary {
   readonly maxHp: number;
 }
 
+/**
+ * L1-iteration #12 — flattened modifier-stack rows. Each row is one
+ * "layer" of an effective stat (a posture multiplier, a jelly boost,
+ * etc.). The panel renders rows in this order; layers at their no-op
+ * value (×1.0 multipliers, +0 flat) are skipped so the stack reads as
+ * "what actually applied here."
+ */
+export interface BattleModifierRow {
+  readonly label: string;
+  /** Multiplicative layer ("×1.5") or additive ("+2"). */
+  readonly kind: 'mult' | 'add';
+  /** Numeric value (1.5 for ×1.5, 2 for +2). */
+  readonly value: number;
+  /** Which axis this affects on the side it belongs to. */
+  readonly axis: 'attack' | 'defense';
+}
+
+export interface BattleSideStackSummary {
+  readonly postureName: string;
+  readonly attackRows: readonly BattleModifierRow[];
+  readonly defenseRows: readonly BattleModifierRow[];
+}
+
+export interface BattleModifierStackSummary {
+  readonly plane: string;
+  readonly attacker: BattleSideStackSummary;
+  readonly defender: BattleSideStackSummary;
+}
+
 export interface BattleSummary {
   readonly attackerPartyId: string;
   readonly defenderPartyId: string;
@@ -39,7 +73,101 @@ export interface BattleSummary {
   readonly retreatedTo: string | null;
   readonly actions: readonly BattleActionLine[];
   readonly participants: readonly BattleParticipantSummary[];
+  /** Optional — absent for pre-modifier-stack replays. */
+  readonly modifierStack: BattleModifierStackSummary | null;
 }
+
+const APPROX = (n: number): boolean => Math.abs(n - 1) < 0.001;
+
+const sideRows = (
+  side: BattleSideModifiers,
+  isAttacker: boolean,
+  postDefense: number,
+): BattleSideStackSummary => {
+  const attackRows: BattleModifierRow[] = [];
+  const defenseRows: BattleModifierRow[] = [];
+  // Posture
+  if (!APPROX(side.postureAttack)) {
+    attackRows.push({
+      label: `Posture (${side.postureName})`,
+      kind: 'mult',
+      value: side.postureAttack,
+      axis: 'attack',
+    });
+  }
+  if (!APPROX(side.postureDefense)) {
+    defenseRows.push({
+      label: `Posture (${side.postureName})`,
+      kind: 'mult',
+      value: side.postureDefense,
+      axis: 'defense',
+    });
+  }
+  if (!APPROX(side.strategyAttack)) {
+    attackRows.push({
+      label: 'Strategy',
+      kind: 'mult',
+      value: side.strategyAttack,
+      axis: 'attack',
+    });
+  }
+  if (!APPROX(side.strategyDefense)) {
+    defenseRows.push({
+      label: 'Strategy',
+      kind: 'mult',
+      value: side.strategyDefense,
+      axis: 'defense',
+    });
+  }
+  if (!APPROX(side.jellyAttack)) {
+    attackRows.push({
+      label: 'Royal jelly',
+      kind: 'mult',
+      value: side.jellyAttack,
+      axis: 'attack',
+    });
+  }
+  if (!APPROX(side.jellyResilience)) {
+    defenseRows.push({
+      label: 'Royal jelly',
+      kind: 'mult',
+      value: side.jellyResilience,
+      axis: 'defense',
+    });
+  }
+  if (!APPROX(side.queenProximityAttack)) {
+    attackRows.push({
+      label: 'Queen proximity',
+      kind: 'mult',
+      value: side.queenProximityAttack,
+      axis: 'attack',
+    });
+  }
+  if (!APPROX(side.queenProximityResilience)) {
+    defenseRows.push({
+      label: 'Queen proximity',
+      kind: 'mult',
+      value: side.queenProximityResilience,
+      axis: 'defense',
+    });
+  }
+  // POST defense is additive and applies only to the defender's armor.
+  if (!isAttacker && postDefense !== 0) {
+    defenseRows.push({
+      label: 'POST defense',
+      kind: 'add',
+      value: postDefense,
+      axis: 'defense',
+    });
+  }
+  return { postureName: side.postureName, attackRows, defenseRows };
+};
+
+const summarizeStack = (stack: BattleModifierStack): BattleModifierStackSummary => ({
+  plane: stack.plane,
+  attacker: sideRows(stack.attacker, true, stack.postDefense),
+  defender: sideRows(stack.defender, false, stack.postDefense),
+});
 
 /** Display name from a templateId — `spider-elite` → `Spider elite`. */
 const labelFromTemplate = (templateId: string): string => {
@@ -126,5 +254,6 @@ export const summarizeBattle = (result: BattleResult): BattleSummary => {
     retreatedTo,
     actions,
     participants,
+    modifierStack: result.modifierStack ? summarizeStack(result.modifierStack) : null,
   };
 };
