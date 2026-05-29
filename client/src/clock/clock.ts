@@ -32,8 +32,19 @@ export type Speed = 0.5 | 1 | 2 | 4;
 /** Speed-control steps (main-screen HUD pod, ruleset I3). */
 export const SPEEDS: readonly Speed[] = [0.5, 1, 2, 4];
 
-/** Wall-clock duration one event occupies at 1× speed. */
-export const MS_PER_EVENT = 600;
+/**
+ * Default wall-clock duration one event occupies at 1× speed. Bumped
+ * from 600 ms to 2000 ms during L1 iteration so the play-by-play is
+ * readable without scrubbing. The faster end of the speed slate (2× /
+ * 4×) gets the prior pacing back for skim. Each clock instance can
+ * override the default per-create — see `createClock`'s third arg.
+ */
+export const DEFAULT_MS_PER_EVENT = 2000;
+
+/** @deprecated Kept as a re-export for the existing clock.test.ts call
+ * sites; new code reads `clock.msPerEvent` off the state instead so a
+ * per-clock override actually takes effect. */
+export const MS_PER_EVENT = DEFAULT_MS_PER_EVENT;
 
 /** Default auto-pause triggers: the event-keyed subset of the contract.
  * `scripted-beat` joins as the L1-iteration narrative hook; `unit-promoted`
@@ -53,11 +64,19 @@ export interface ClockState {
   /** The auto-pause trigger playback stopped on, else null. */
   readonly pausedAt: ReplayEvent | null;
   readonly autoPauseKinds: ReadonlySet<ReplayEvent['kind']>;
+  /**
+   * Wall-clock duration per event at 1× speed. Defaults to
+   * `DEFAULT_MS_PER_EVENT` (2000 ms); thread an override through
+   * `createClock` so a future Slow / Normal / Fast preset selector
+   * picks this up without touching the playback algorithm.
+   */
+  readonly msPerEvent: number;
 }
 
 export const createClock = (
   events: readonly ReplayEvent[],
   autoPauseKinds: ReadonlySet<ReplayEvent['kind']> = DEFAULT_AUTO_PAUSE_KINDS,
+  msPerEvent: number = DEFAULT_MS_PER_EVENT,
 ): ClockState => ({
   events,
   index: 0,
@@ -66,6 +85,7 @@ export const createClock = (
   accumMs: 0,
   pausedAt: null,
   autoPauseKinds,
+  msPerEvent,
 });
 
 export const atEnd = (s: ClockState): boolean => s.index >= s.events.length;
@@ -106,9 +126,9 @@ export const tick = (s: ClockState, dtMs: number): ClockState => {
   let accumMs = s.accumMs + dtMs * s.speed;
   let pausedAt: ReplayEvent | null = null;
   let playing = true;
-  while (accumMs >= MS_PER_EVENT && index < s.events.length) {
+  while (accumMs >= s.msPerEvent && index < s.events.length) {
     const ev = s.events[index]!;
-    accumMs -= MS_PER_EVENT;
+    accumMs -= s.msPerEvent;
     index += 1;
     if (s.autoPauseKinds.has(ev.kind)) {
       pausedAt = ev;

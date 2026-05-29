@@ -78,13 +78,49 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
     readonly battles: readonly BattleResult[];
     readonly index: number;
   } | null>(null);
+  // L1-iteration UX: recent-battle tile marks linger for a few seconds
+  // after the combat panel dismisses so the player can see where the
+  // engagement happened. Each entry expires at `until` (Date.now ms).
+  const [recentBattles, setRecentBattles] = useState<
+    readonly { readonly key: string; readonly coord: TileCoord; readonly until: number }[]
+  >([]);
 
   // Open the combat panel when a resolved turn produced battles. The turn
   // already auto-paused on `battle-resolved`, so playback is halted while
   // the panel is up; dismissing returns to the (still paused) board.
   useEffect(() => {
-    if (live.battles.length > 0) setBattleQueue({ battles: live.battles, index: 0 });
+    if (live.battles.length === 0) return;
+    setBattleQueue({ battles: live.battles, index: 0 });
+    // Capture battle locations at resolution time — the defender tile is
+    // the collision tile (both parties were co-located when battle fired).
+    const now = Date.now();
+    const additions = live.battles
+      .map((b, i) => {
+        const defender = state.parties.get(b.defenderPartyId);
+        const attacker = state.parties.get(b.attackerPartyId);
+        const coord = defender?.location ?? attacker?.location;
+        if (!coord) return null;
+        return {
+          key: `${String(b.attackerPartyId)}-${String(b.defenderPartyId)}-${String(now)}-${String(i)}`,
+          coord,
+          until: now + 8000,
+        };
+      })
+      .filter((x): x is { key: string; coord: TileCoord; until: number } => x !== null);
+    if (additions.length > 0) setRecentBattles((prev) => [...prev, ...additions]);
   }, [live.turnsPlayed]);
+
+  // Reap expired battle marks. Cheap once-a-second sweep.
+  useEffect(() => {
+    if (recentBattles.length === 0) return undefined;
+    const id = setInterval(() => {
+      const now = Date.now();
+      setRecentBattles((prev) => prev.filter((m) => m.until > now));
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
+  }, [recentBattles.length]);
 
   const selected = selectedId !== null ? (state.parties.get(selectedId) ?? null) : null;
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
@@ -194,6 +230,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             visible={live.visible}
             seen={live.seen}
             onSelectFace={setPlane}
+            marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">

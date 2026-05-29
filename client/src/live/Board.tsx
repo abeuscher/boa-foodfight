@@ -13,8 +13,14 @@ interface Props {
   readonly visible: ReadonlySet<string>;
   /** Ever-seen tile keys (coordKey) — explored terrain stays dim. */
   readonly seen: ReadonlySet<string>;
-  /** Orientation markers (briefing): START / GOAL pulses on the active plane. */
-  readonly marks?: readonly { readonly coord: TileCoord; readonly kind: 'start' | 'goal' }[];
+  /** Orientation markers (briefing): START / GOAL pulses on the active
+   * plane. `battle` markers are the recent-combat tile highlight added
+   * during L1 iteration — they linger a few seconds after a battle
+   * resolves so the player can see where it happened. */
+  readonly marks?: readonly {
+    readonly coord: TileCoord;
+    readonly kind: 'start' | 'goal' | 'battle';
+  }[];
   /** Peripheral/preview rendering: smaller cells, dot-glyph actors. The
    * splayed cube faces use this; clicks route to face-activation. */
   readonly compact?: boolean;
@@ -81,10 +87,13 @@ export function Board({
     const k = cellKey(dest.x, dest.y);
     destByCell.set(k, destByCell.get(k) === true || pid === selectedPartyId);
   }
-  const markByCell = new Map<string, 'start' | 'goal'>();
+  const markByCell = new Map<string, 'start' | 'goal' | 'battle'>();
   for (const m of marks ?? []) {
     if (m.coord.plane === plane) markByCell.set(cellKey(m.coord.x, m.coord.y), m.kind);
   }
+
+  const markGlyph = (kind: 'start' | 'goal' | 'battle'): string =>
+    kind === 'start' ? 'S' : kind === 'goal' ? 'G' : '⚔';
 
   const rows: JSX.Element[] = [];
   for (let y = 0; y < h; y++) {
@@ -138,7 +147,7 @@ export function Board({
           {destHere && <span className={`dest ${destByCell.get(k) ? 'mine' : ''}`}>×</span>}
           {markByCell.has(k) && (
             <span className={`mark mark-${String(markByCell.get(k))}`}>
-              {markByCell.get(k) === 'start' ? 'S' : 'G'}
+              {markGlyph(markByCell.get(k)!)}
             </span>
           )}
         </button>,

@@ -3346,7 +3346,33 @@
           "maxHp": 5,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "floor",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -3904,7 +3930,33 @@
           "maxHp": 3,
           "isLeader": true
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -4285,7 +4337,33 @@
           "maxHp": 14,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -4860,7 +4938,33 @@
           "maxHp": 3,
           "isLeader": true
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -5228,7 +5332,33 @@
           "maxHp": 14,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -5725,7 +5855,33 @@
           "maxHp": 14,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -6082,7 +6238,33 @@
           "maxHp": 3,
           "isLeader": true
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -6263,7 +6445,33 @@
           "maxHp": 3,
           "isLeader": true
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -6561,7 +6769,33 @@
           "maxHp": 14,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -6947,7 +7181,33 @@
           "maxHp": 14,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {
@@ -7177,7 +7437,33 @@
           "maxHp": 10,
           "isLeader": false
         }
-      ]
+      ],
+      "modifierStack": {
+        "plane": "ceiling",
+        "postDefense": 2,
+        "attacker": {
+          "postureName": "fight",
+          "postureAttack": 1,
+          "postureDefense": 1,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1.1,
+          "jellyResilience": 1.05,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        },
+        "defender": {
+          "postureName": "defend",
+          "postureAttack": 0.7,
+          "postureDefense": 1.5,
+          "strategyAttack": 1,
+          "strategyDefense": 1,
+          "jellyAttack": 1,
+          "jellyResilience": 1,
+          "queenProximityAttack": 1,
+          "queenProximityResilience": 1
+        }
+      }
     }
   },
   {

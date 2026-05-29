@@ -83,6 +83,39 @@ export function BattlePanel({ result }: Props): JSX.Element {
           </ul>
         ))}
       </div>
+      {summary.modifierStack && (
+        <div className="bp-mods">
+          <div className="bp-mods-head">Modifier stack ({summary.modifierStack.plane})</div>
+          <div className="bp-mods-sides">
+            {(['attacker', 'defender'] as const).map((side) => {
+              const s = summary.modifierStack![side];
+              const rows = [...s.attackRows, ...s.defenseRows];
+              return (
+                <div key={side} className="bp-mods-side">
+                  <div className="bp-mods-side-head">{side}</div>
+                  {rows.length === 0 ? (
+                    <p className="bp-mods-empty">No active modifiers.</p>
+                  ) : (
+                    <ul className="bp-mods-rows">
+                      {rows.map((r, i) => (
+                        <li key={i} className={`bp-mod bp-mod-${r.axis}`}>
+                          <span className="bp-mod-label">{r.label}</span>
+                          <span className="bp-mod-value">
+                            {r.kind === 'mult'
+                              ? `×${r.value.toFixed(2)}`
+                              : `${r.value >= 0 ? '+' : ''}${String(r.value)}`}{' '}
+                            <em>{r.axis}</em>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

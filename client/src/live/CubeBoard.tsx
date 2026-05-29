@@ -13,6 +13,12 @@ interface Props {
   readonly visible: ReadonlySet<string>;
   readonly seen: ReadonlySet<string>;
   readonly onSelectFace: (plane: Plane) => void;
+  /** Active-face overlays (recent-battle pulses, briefing START/GOAL).
+   * Peripheral faces never receive marks. */
+  readonly marks?: readonly {
+    readonly coord: TileCoord;
+    readonly kind: 'start' | 'goal' | 'battle';
+  }[];
 }
 
 /**
@@ -62,6 +68,7 @@ export function CubeBoard({
   visible,
   seen,
   onSelectFace,
+  marks,
 }: Props): JSX.Element {
   const layout = FACE_LAYOUT[plane];
 
@@ -112,6 +119,7 @@ export function CubeBoard({
             fogEnabled={fogEnabled}
             visible={visible}
             seen={seen}
+            marks={marks ?? EMPTY_MARKS}
           />
         </div>
       </div>

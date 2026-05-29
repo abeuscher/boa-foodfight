@@ -161,6 +161,25 @@ describe('resolveBattle: smoke', () => {
     expect(sample.hp).toBeLessThanOrEqual(sample.maxHp);
   });
 
+  it('attaches a modifier stack to every resolved BattleResult', () => {
+    // L1-iteration #12 — modifier stack is the input-side multipliers /
+    // additive defense captured at resolution time. Every real battle
+    // must carry one so the UI panel has data to render.
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const { atk, def } = buildSmokeMatchup(base);
+    const state = installParties(base, [atk, def]);
+    const out = resolveBattle(state, neutralInput(atk, def), createRng(7), makeTickClock());
+    const stack = out.result.modifierStack;
+    expect(stack).toBeDefined();
+    if (!stack) return;
+    expect(stack.plane).toBe(def.location.plane);
+    // Default neutralInput has all multipliers at 1.0 and postDefense=0.
+    expect(stack.postDefense).toBe(0);
+    expect(stack.attacker.jellyAttack).toBe(1);
+    expect(stack.attacker.queenProximityAttack).toBe(1);
+    expect(stack.defender.postureName).toBe(def.posture);
+  });
+
   it('round count is in [3,5] when neither side is wiped early', () => {
     // Queen-vs-queen so the battle doesn't terminate early regardless of
     // elite/footman stat tuning (both queens have 30+ HP and high armor).

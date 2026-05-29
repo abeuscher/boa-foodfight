@@ -399,6 +399,28 @@ body {
   outline-offset: -2px;
 }
 
+/* L1-iteration UX: recent-battle tile pulse — lingers ~8s after a
+ * battle resolves so the player can locate where it happened. Faster
+ * pulse than start/goal to read as urgent, and a red outline so it
+ * doesn't collide visually with the steady goal/start markers. */
+.cell .mark-battle {
+  color: #c8492f;
+  outline: 2px solid #c8492f;
+  outline-offset: -2px;
+  animation: battlepulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes battlepulse {
+  from {
+    opacity: 0.55;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
 @keyframes markpulse {
   from {
     opacity: 0.5;
@@ -696,6 +718,111 @@ body {
   margin: 0;
   font-style: italic;
   color: #7a6a55;
+}
+
+/* L1-iteration #12 — modifier-stack panel inside the BattlePanel
+ * (replay viewer) and CombatPanel (live game). The two panels share
+ * a layout shape (per-side rows of "label / value axis"); the
+ * styling diverges only in the host container (yellow vs. dark). */
+.bp-mods,
+.cb-mods {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.bp-mods {
+  background: #fffaf0;
+  border: 1px solid #d6c79a;
+  color: #3a2d12;
+}
+
+.cb-mods {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f2eedf;
+}
+
+.bp-mods-head,
+.cb-mods-head {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.bp-mods-sides,
+.cb-mods-sides {
+  display: flex;
+  gap: 1rem;
+}
+
+.bp-mods-side,
+.cb-mods-side {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-mods-side-head,
+.cb-mods-side-head {
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-bottom: 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.75;
+}
+
+.bp-mods-empty,
+.cb-mods-empty {
+  margin: 0;
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.bp-mods-rows,
+.cb-mods-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bp-mod,
+.cb-mod {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.05rem 0;
+}
+
+.bp-mod-value em,
+.cb-mod-value em {
+  opacity: 0.6;
+  font-style: normal;
+  font-size: 0.72rem;
+  margin-left: 0.25rem;
+}
+
+.bp-mod-attack .bp-mod-value,
+.cb-mod-attack .cb-mod-value {
+  color: #8a2618;
+  font-weight: 600;
+}
+
+.cb-mod-attack .cb-mod-value {
+  color: #f3a48a;
+}
+
+.bp-mod-defense .bp-mod-value,
+.cb-mod-defense .cb-mod-value {
+  color: #2f5a2c;
+  font-weight: 600;
+}
+
+.cb-mod-defense .cb-mod-value {
+  color: #a3d39c;
 }
 
 .oa header h1 {

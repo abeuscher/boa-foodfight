@@ -50,6 +50,7 @@ import {
 import type { AbilitiesFile } from './schemas/index.ts';
 import type {
   BattleAction,
+  BattleModifierStack,
   BattleParticipant,
   BattleResult,
   BattleRound,
@@ -1130,6 +1131,43 @@ export const resolveBattle = (
     }
   }
 
+  // L1-iteration #12 — modifier stack snapshot. Captures the raw input
+  // multipliers / flat-defense values for the UI panel, computed once
+  // from `ctx` so the panel doesn't re-derive math. Posture-attack on
+  // the attacker side and posture-defense on the defender side are the
+  // "natural-direction" entries; the cross-fields (attacker's defense
+  // posture and defender's attack posture) are also reported because
+  // counter-attacks within a round use them.
+  const modifierStack: BattleModifierStack = {
+    plane: battlePlane,
+    postDefense: input.postDefense,
+    attacker: {
+      postureName: attacker.posture,
+      postureAttack: ctx.atkPosture.attack,
+      postureDefense: ctx.atkPosture.defense,
+      strategyAttack: ctx.atkStrat.attack,
+      strategyDefense: ctx.atkStrat.defense,
+      jellyAttack: input.attackerJellyAttack,
+      jellyResilience: input.attackerJellyResilience,
+      queenProximityAttack: input.queenProximityAttack,
+      queenProximityResilience: input.queenProximityResilience,
+    },
+    defender: {
+      postureName: defender.posture,
+      postureAttack: ctx.defPosture.attack,
+      postureDefense: ctx.defPosture.defense,
+      strategyAttack: ctx.defStrat.attack,
+      strategyDefense: ctx.defStrat.defense,
+      jellyAttack: input.defenderJellyAttack,
+      jellyResilience: input.defenderJellyResilience,
+      // Queen-proximity bonuses are caller-attributed to the attacker
+      // side; the defender's resilience entry mirrors how the math
+      // applies (defender resilience uses the attacker's proximity).
+      queenProximityAttack: 1,
+      queenProximityResilience: 1,
+    },
+  };
+
   const result: BattleResult = {
     attackerPartyId: attacker.id,
     defenderPartyId: defender.id,
@@ -1139,6 +1177,7 @@ export const resolveBattle = (
     defenderCasualties,
     retreatTo,
     participants,
+    modifierStack,
   };
 
   // Events: opening-ability events first (volley, mend, opening kills),
