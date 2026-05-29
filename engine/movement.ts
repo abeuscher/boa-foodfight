@@ -160,8 +160,6 @@ const OBSTACLE_COST_THRESHOLD = 99;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const manhattan = (a: TileCoord, b: TileCoord): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-
 const firstMoveOrder = (orders: readonly Order[]): MoveOrderWithIndex | undefined => {
   for (let i = 0; i < orders.length; i++) {
     const o = orders[i];
@@ -200,21 +198,70 @@ const isPassableTile = (tile: Tile | undefined): tile is Tile =>
   tile !== undefined && tile.terrain.movementCost < OBSTACLE_COST_THRESHOLD;
 
 /**
- * Pick the in-plane neighbor that (a) decreases Manhattan distance to the
- * target, (b) is passable, and (c) has the lowest `movementCost`. Ties are
- * broken deterministically through the supplied tiebreak Rng.
+ * BFS distance map from `target` outward over passable tiles in the
+ * target's plane. The target tile itself is seeded at distance 0 even
+ * if it is impassable, so a party adjacent to an obstacle-tile target
+ * still sees a candidate step (preserving the prior greedy walker's
+ * behavior at the goal tile). Tiles unreachable from `target` are
+ * absent from the map.
+ *
+ * BFS is in *tile count* — the engine spends one allowance per step
+ * regardless of `movementCost`, so tile count is the true path metric;
+ * `movementCost` survives only as a tiebreak preference at each step.
  */
-const pickGreedyStep = (
+const bfsDistancesFromTarget = (
+  target: TileCoord,
+  tiles: ReadonlyMap<string, Tile>,
+): ReadonlyMap<string, number> => {
+  const dist = new Map<string, number>();
+  dist.set(coordKey(target), 0);
+  const queue: TileCoord[] = [target];
+  let head = 0;
+  while (head < queue.length) {
+    const c = queue[head++]!;
+    const d = dist.get(coordKey(c)) ?? 0;
+    for (const n of inPlaneNeighbors(c)) {
+      const key = coordKey(n);
+      if (dist.has(key)) continue;
+      const tile = tileAt(n, tiles);
+      if (!isPassableTile(tile)) continue;
+      dist.set(key, d + 1);
+      queue.push(n);
+    }
+  }
+  return dist;
+};
+
+/**
+ * Pick the in-plane neighbor that lies on a *shortest* passable path
+ * to `target`. Replaces the older Manhattan-greedy walker, which
+ * filtered any neighbor that didn't strictly decrease Manhattan
+ * distance — and therefore stalled forever the moment the only
+ * Manhattan-progress tiles were obstacles (e.g., a party at A3
+ * ordered to A9 with obstacles at A4 and B4). BFS routes around the
+ * obstacle by counting *actual* shortest-path tiles.
+ *
+ * Selection rule per step: among `from`'s neighbors that are strictly
+ * closer to `target` in BFS distance, pick the lowest `movementCost`
+ * (preserving the old tile-cost preference for path / open over wet),
+ * then break ties with the supplied RNG.
+ */
+const pickBfsStep = (
   from: TileCoord,
   target: TileCoord,
   tiles: ReadonlyMap<string, Tile>,
   tiebreak: Rng,
 ): TileCoord | undefined => {
   if (from.plane !== target.plane) return undefined;
+  if (sameCoord(from, target)) return undefined;
+  const distances = bfsDistancesFromTarget(target, tiles);
+  const fromDist = distances.get(coordKey(from));
+  if (fromDist === undefined) return undefined; // target unreachable from `from`
   const candidates: { coord: TileCoord; cost: number }[] = [];
-  const currentDistance = manhattan(from, target);
   for (const neighbor of inPlaneNeighbors(from)) {
-    if (manhattan(neighbor, target) >= currentDistance) continue;
+    const d = distances.get(coordKey(neighbor));
+    if (d === undefined) continue;
+    if (d >= fromDist) continue;
     const tile = tileAt(neighbor, tiles);
     if (!isPassableTile(tile)) continue;
     candidates.push({ coord: neighbor, cost: tile.terrain.movementCost });
@@ -224,7 +271,6 @@ const pickGreedyStep = (
   for (const c of candidates) if (c.cost < bestCost) bestCost = c.cost;
   const tied = candidates.filter((c) => c.cost === bestCost);
   if (tied.length === 1) return tied[0]?.coord;
-  // Deterministic tiebreak via injected RNG.
   const idx = tiebreak.int(tied.length);
   return tied[idx]?.coord;
 };
@@ -368,11 +414,11 @@ const resolveParty = (
       next = tryPlaneTransition({ ...partyIn, location }, target, state.posts, state.unitTemplates);
       if (!next) {
         const anchor = edgeAnchor(location, target.plane);
-        if (anchor) next = pickGreedyStep(location, anchor, state.tiles, tiebreak);
+        if (anchor) next = pickBfsStep(location, anchor, state.tiles, tiebreak);
       }
       if (!next) break; // Order stalls; will retry next turn.
     } else {
-      next = pickGreedyStep(location, target, state.tiles, tiebreak);
+      next = pickBfsStep(location, target, state.tiles, tiebreak);
       if (!next) break; // Boxed in; party stays put for the rest of this turn.
     }
 
