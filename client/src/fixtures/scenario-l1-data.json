@@ -5305,5 +5305,26 @@
         "description": "Adds +2 jelly doses to the picking-up party (capped at jelly capacity)."
       }
     ]
+  },
+  "beats": {
+    "version": 1,
+    "beats": [
+      {
+        "id": "first-stirrings",
+        "trigger": {
+          "turn": 5
+        },
+        "title": "The web tightens",
+        "message": "Distant skittering carries down through the pipes — the spider queen has noticed your approach."
+      },
+      {
+        "id": "wall-crack-splits",
+        "trigger": {
+          "postCaptured": "wall-crack-1"
+        },
+        "title": "The Wall Crack splinters",
+        "message": "Dust falls. Light spills through the fracture. The colony's reach now extends to the east wall."
+      }
+    ]
   }
 }

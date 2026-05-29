@@ -20,6 +20,7 @@ import { applyPlacement } from './placement.ts';
 import { resolvePostCapture } from './post-capture.ts';
 import { postAt } from './posts.ts';
 import { scoreScenario, winnerFromScore } from './score.ts';
+import { resolveScriptedBeats } from './scripted-beats.ts';
 import type { ItemSpawnEvent, NeutralSpawnEvent, ScenarioData } from './state.ts';
 import { DEFAULT_VICTORY_CONDITION } from './types.ts';
 import type { Faction, GameState, Party, PartyId, ReplayEvent, Rng, TileCoord } from './types.ts';
@@ -242,6 +243,13 @@ export const runTurn = (
   );
   working = eotOutcome.state;
   events.push(...eotOutcome.events);
+
+  // 5. L1-iteration #5 — scripted beats. Fired after end-of-turn so
+  //    triggers like `postCaptured` see this turn's captures. Gated-
+  //    inert: scenarios without `beats` data are a byte-identical no-op.
+  const beatOutcome = resolveScriptedBeats(working, scenario.beats, events, tick);
+  working = beatOutcome.state;
+  events.push(...beatOutcome.events);
 
   return { state: working, events };
 };

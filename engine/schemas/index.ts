@@ -1,5 +1,6 @@
 export * from './common.ts';
 export * from './abilities.ts';
+export * from './beats.ts';
 export * from './dialogue.ts';
 export * from './formations.ts';
 export * from './items.ts';

@@ -27,4 +27,17 @@ describe('pauseReasonLabel', () => {
     expect(pauseReasonLabel(ev({ kind: 'post-captured' }))).toBe('POST captured');
     expect(pauseReasonLabel(ev({ kind: 'battle-resolved' }))).toBe('Combat');
   });
+
+  it('uses the beat title for scripted-beat pauses', () => {
+    expect(
+      pauseReasonLabel(
+        ev({
+          kind: 'scripted-beat',
+          beatId: 'first-stirrings',
+          title: 'The web tightens',
+          message: 'A distant skitter.',
+        }),
+      ),
+    ).toBe('The web tightens');
+  });
 });

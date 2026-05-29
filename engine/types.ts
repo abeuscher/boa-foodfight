@@ -832,6 +832,12 @@ export interface GameState {
    * a reinforcement spawns.
    */
   readonly firedReinforcements?: ReadonlySet<PostId>;
+  /**
+   * L1-iteration #5 — single-shot tracking for scripted-beat ids that
+   * have already fired this scenario. Absent/empty until the first beat
+   * fires. Byte-identical for scenarios with no `beats` data.
+   */
+  readonly firedBeats?: ReadonlySet<string>;
   readonly winner: Faction | null;
 }
 
@@ -1004,6 +1010,19 @@ export type ReplayEvent =
       readonly slotsRemaining: MpSlots;
     })
   | (ReplayEventCommon & { readonly kind: 'unit-died'; readonly unitId: UnitId })
+  | (ReplayEventCommon & {
+      /**
+       * L1-iteration #5 — scripted-beat. Authored mid-scenario narrative
+       * event keyed off a (turn, condition) trigger array on the scenario
+       * data file. Carries the display copy directly so the UI can surface
+       * it without re-reading the scenario data. Fires at most once per
+       * beat per scenario; the engine tracks `firedBeats` to enforce this.
+       */
+      readonly kind: 'scripted-beat';
+      readonly beatId: string;
+      readonly title: string;
+      readonly message: string;
+    })
   | (ReplayEventCommon & { readonly kind: 'leader-died'; readonly partyId: PartyId })
   | (ReplayEventCommon & { readonly kind: 'queen-ultimate-charged'; readonly charge: number })
   | (ReplayEventCommon & { readonly kind: 'queen-ultimate-fired' })

@@ -74,6 +74,9 @@ export function Scenario({ onExit }: Props): JSX.Element {
             : cur
               ? eventLabel(cur)
               : 'Paused at start'}
+          {state.pausedAt?.kind === 'scripted-beat' && (
+            <p className="scn-beat-message">{state.pausedAt.message}</p>
+          )}
         </div>
       </footer>
     </div>
