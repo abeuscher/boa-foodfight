@@ -11326,9 +11326,17 @@
     "tick": 662
   },
   {
-    "kind": "party-moved",
+    "kind": "scripted-beat",
     "turn": 60,
     "tick": 663,
+    "beatId": "the-web-quiets",
+    "title": "The web hangs heavy",
+    "message": "Movement above stills. The spider queen has settled into her web — every approach is now her hunting ground."
+  },
+  {
+    "kind": "party-moved",
+    "turn": 60,
+    "tick": 664,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11344,7 +11352,7 @@
   {
     "kind": "party-moved",
     "turn": 60,
-    "tick": 664,
+    "tick": 665,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11360,7 +11368,7 @@
   {
     "kind": "party-moved",
     "turn": 60,
-    "tick": 665,
+    "tick": 666,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11376,7 +11384,7 @@
   {
     "kind": "party-moved",
     "turn": 60,
-    "tick": 666,
+    "tick": 667,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11385,22 +11393,6 @@
     },
     "to": {
       "plane": "north-wall",
-      "x": 6,
-      "y": 1
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 60,
-    "tick": 667,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 2
-    },
-    "to": {
-      "plane": "ceiling",
       "x": 6,
       "y": 1
     }
@@ -11413,6 +11405,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 2
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 60,
+    "tick": 669,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 1
     },
     "to": {
@@ -11424,7 +11432,7 @@
   {
     "kind": "post-capture-started",
     "turn": 60,
-    "tick": 669,
+    "tick": 670,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -11432,7 +11440,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 60,
-    "tick": 670,
+    "tick": 671,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -11440,12 +11448,12 @@
   {
     "kind": "turn-start",
     "turn": 61,
-    "tick": 671
+    "tick": 672
   },
   {
     "kind": "party-moved",
     "turn": 61,
-    "tick": 672,
+    "tick": 673,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11461,7 +11469,7 @@
   {
     "kind": "party-moved",
     "turn": 61,
-    "tick": 673,
+    "tick": 674,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11477,7 +11485,7 @@
   {
     "kind": "party-moved",
     "turn": 61,
-    "tick": 674,
+    "tick": 675,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11493,7 +11501,7 @@
   {
     "kind": "party-moved",
     "turn": 61,
-    "tick": 675,
+    "tick": 676,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11509,19 +11517,19 @@
   {
     "kind": "post-capture-aborted",
     "turn": 61,
-    "tick": 676,
+    "tick": 677,
     "postId": "soap-dish-2",
     "previousOwner": "neutral"
   },
   {
     "kind": "turn-start",
     "turn": 62,
-    "tick": 677
+    "tick": 678
   },
   {
     "kind": "party-moved",
     "turn": 62,
-    "tick": 678,
+    "tick": 679,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11537,7 +11545,7 @@
   {
     "kind": "party-moved",
     "turn": 62,
-    "tick": 679,
+    "tick": 680,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11553,7 +11561,7 @@
   {
     "kind": "party-moved",
     "turn": 62,
-    "tick": 680,
+    "tick": 681,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11569,12 +11577,12 @@
   {
     "kind": "turn-start",
     "turn": 63,
-    "tick": 681
+    "tick": 682
   },
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 682,
+    "tick": 683,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11590,7 +11598,7 @@
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 683,
+    "tick": 684,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11606,7 +11614,7 @@
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 684,
+    "tick": 685,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11622,7 +11630,7 @@
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 685,
+    "tick": 686,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11638,7 +11646,7 @@
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 686,
+    "tick": 687,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11654,7 +11662,7 @@
   {
     "kind": "party-moved",
     "turn": 63,
-    "tick": 687,
+    "tick": 688,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11670,18 +11678,18 @@
   {
     "kind": "phase-changed",
     "turn": 64,
-    "tick": 688,
+    "tick": 689,
     "phase": "day"
   },
   {
     "kind": "turn-start",
     "turn": 64,
-    "tick": 689
+    "tick": 690
   },
   {
     "kind": "party-moved",
     "turn": 64,
-    "tick": 690,
+    "tick": 691,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11697,7 +11705,7 @@
   {
     "kind": "party-moved",
     "turn": 64,
-    "tick": 691,
+    "tick": 692,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11713,7 +11721,7 @@
   {
     "kind": "party-moved",
     "turn": 64,
-    "tick": 692,
+    "tick": 693,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11729,7 +11737,7 @@
   {
     "kind": "party-moved",
     "turn": 64,
-    "tick": 693,
+    "tick": 694,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11745,12 +11753,12 @@
   {
     "kind": "turn-start",
     "turn": 65,
-    "tick": 694
+    "tick": 695
   },
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 695,
+    "tick": 696,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11766,7 +11774,7 @@
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 696,
+    "tick": 697,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -11782,7 +11790,7 @@
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 697,
+    "tick": 698,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11798,7 +11806,7 @@
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 698,
+    "tick": 699,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11814,7 +11822,7 @@
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 699,
+    "tick": 700,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11830,7 +11838,7 @@
   {
     "kind": "party-moved",
     "turn": 65,
-    "tick": 700,
+    "tick": 701,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11846,12 +11854,12 @@
   {
     "kind": "turn-start",
     "turn": 66,
-    "tick": 701
+    "tick": 702
   },
   {
     "kind": "party-moved",
     "turn": 66,
-    "tick": 702,
+    "tick": 703,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11867,7 +11875,7 @@
   {
     "kind": "party-moved",
     "turn": 66,
-    "tick": 703,
+    "tick": 704,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11883,12 +11891,12 @@
   {
     "kind": "turn-start",
     "turn": 67,
-    "tick": 704
+    "tick": 705
   },
   {
     "kind": "party-moved",
     "turn": 67,
-    "tick": 705,
+    "tick": 706,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11898,22 +11906,6 @@
     "to": {
       "plane": "ceiling",
       "x": 7,
-      "y": 1
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 67,
-    "tick": 706,
-    "partyId": "neutral-stinkbugs",
-    "from": {
-      "plane": "north-wall",
-      "x": 6,
-      "y": 0
-    },
-    "to": {
-      "plane": "north-wall",
-      "x": 6,
       "y": 1
     }
   },
@@ -11925,6 +11917,22 @@
     "from": {
       "plane": "north-wall",
       "x": 6,
+      "y": 0
+    },
+    "to": {
+      "plane": "north-wall",
+      "x": 6,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 67,
+    "tick": 708,
+    "partyId": "neutral-stinkbugs",
+    "from": {
+      "plane": "north-wall",
+      "x": 6,
       "y": 1
     },
     "to": {
@@ -11936,7 +11944,7 @@
   {
     "kind": "party-moved",
     "turn": 67,
-    "tick": 708,
+    "tick": 709,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -11952,18 +11960,18 @@
   {
     "kind": "phase-changed",
     "turn": 68,
-    "tick": 709,
+    "tick": 710,
     "phase": "night"
   },
   {
     "kind": "turn-start",
     "turn": 68,
-    "tick": 710
+    "tick": 711
   },
   {
     "kind": "party-moved",
     "turn": 68,
-    "tick": 711,
+    "tick": 712,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -11979,7 +11987,7 @@
   {
     "kind": "party-moved",
     "turn": 68,
-    "tick": 712,
+    "tick": 713,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -11995,7 +12003,7 @@
   {
     "kind": "party-moved",
     "turn": 68,
-    "tick": 713,
+    "tick": 714,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12011,7 +12019,7 @@
   {
     "kind": "party-moved",
     "turn": 68,
-    "tick": 714,
+    "tick": 715,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12027,12 +12035,12 @@
   {
     "kind": "turn-start",
     "turn": 69,
-    "tick": 715
+    "tick": 716
   },
   {
     "kind": "party-moved",
     "turn": 69,
-    "tick": 716,
+    "tick": 717,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12048,7 +12056,7 @@
   {
     "kind": "party-moved",
     "turn": 69,
-    "tick": 717,
+    "tick": 718,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12064,12 +12072,12 @@
   {
     "kind": "turn-start",
     "turn": 70,
-    "tick": 718
+    "tick": 719
   },
   {
     "kind": "party-moved",
     "turn": 70,
-    "tick": 719,
+    "tick": 720,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12085,12 +12093,12 @@
   {
     "kind": "turn-start",
     "turn": 71,
-    "tick": 720
+    "tick": 721
   },
   {
     "kind": "party-moved",
     "turn": 71,
-    "tick": 721,
+    "tick": 722,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12100,22 +12108,6 @@
     "to": {
       "plane": "ceiling",
       "x": 7,
-      "y": 1
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 71,
-    "tick": 722,
-    "partyId": "neutral-stinkbugs",
-    "from": {
-      "plane": "north-wall",
-      "x": 4,
-      "y": 0
-    },
-    "to": {
-      "plane": "north-wall",
-      "x": 4,
       "y": 1
     }
   },
@@ -12127,6 +12119,22 @@
     "from": {
       "plane": "north-wall",
       "x": 4,
+      "y": 0
+    },
+    "to": {
+      "plane": "north-wall",
+      "x": 4,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 71,
+    "tick": 724,
+    "partyId": "neutral-stinkbugs",
+    "from": {
+      "plane": "north-wall",
+      "x": 4,
       "y": 1
     },
     "to": {
@@ -12138,7 +12146,7 @@
   {
     "kind": "party-moved",
     "turn": 71,
-    "tick": 724,
+    "tick": 725,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12154,7 +12162,7 @@
   {
     "kind": "party-moved",
     "turn": 71,
-    "tick": 725,
+    "tick": 726,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12170,18 +12178,18 @@
   {
     "kind": "phase-changed",
     "turn": 72,
-    "tick": 726,
+    "tick": 727,
     "phase": "day"
   },
   {
     "kind": "turn-start",
     "turn": 72,
-    "tick": 727
+    "tick": 728
   },
   {
     "kind": "party-moved",
     "turn": 72,
-    "tick": 728,
+    "tick": 729,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12197,7 +12205,7 @@
   {
     "kind": "party-moved",
     "turn": 72,
-    "tick": 729,
+    "tick": 730,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12213,7 +12221,7 @@
   {
     "kind": "party-moved",
     "turn": 72,
-    "tick": 730,
+    "tick": 731,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12229,7 +12237,7 @@
   {
     "kind": "party-moved",
     "turn": 72,
-    "tick": 731,
+    "tick": 732,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12245,12 +12253,12 @@
   {
     "kind": "turn-start",
     "turn": 73,
-    "tick": 732
+    "tick": 733
   },
   {
     "kind": "party-moved",
     "turn": 73,
-    "tick": 733,
+    "tick": 734,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12266,7 +12274,7 @@
   {
     "kind": "party-moved",
     "turn": 73,
-    "tick": 734,
+    "tick": 735,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12282,7 +12290,7 @@
   {
     "kind": "party-moved",
     "turn": 73,
-    "tick": 735,
+    "tick": 736,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12298,12 +12306,12 @@
   {
     "kind": "turn-start",
     "turn": 74,
-    "tick": 736
+    "tick": 737
   },
   {
     "kind": "party-moved",
     "turn": 74,
-    "tick": 737,
+    "tick": 738,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12319,7 +12327,7 @@
   {
     "kind": "party-moved",
     "turn": 74,
-    "tick": 738,
+    "tick": 739,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12335,7 +12343,7 @@
   {
     "kind": "party-moved",
     "turn": 74,
-    "tick": 739,
+    "tick": 740,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12351,12 +12359,12 @@
   {
     "kind": "turn-start",
     "turn": 75,
-    "tick": 740
+    "tick": 741
   },
   {
     "kind": "party-moved",
     "turn": 75,
-    "tick": 741,
+    "tick": 742,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12372,7 +12380,7 @@
   {
     "kind": "party-moved",
     "turn": 75,
-    "tick": 742,
+    "tick": 743,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12388,7 +12396,7 @@
   {
     "kind": "party-moved",
     "turn": 75,
-    "tick": 743,
+    "tick": 744,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12404,18 +12412,18 @@
   {
     "kind": "phase-changed",
     "turn": 76,
-    "tick": 744,
+    "tick": 745,
     "phase": "night"
   },
   {
     "kind": "turn-start",
     "turn": 76,
-    "tick": 745
+    "tick": 746
   },
   {
     "kind": "party-moved",
     "turn": 76,
-    "tick": 746,
+    "tick": 747,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12431,7 +12439,7 @@
   {
     "kind": "party-moved",
     "turn": 76,
-    "tick": 747,
+    "tick": 748,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12447,7 +12455,7 @@
   {
     "kind": "party-moved",
     "turn": 76,
-    "tick": 748,
+    "tick": 749,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12463,7 +12471,7 @@
   {
     "kind": "party-moved",
     "turn": 76,
-    "tick": 749,
+    "tick": 750,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12479,7 +12487,7 @@
   {
     "kind": "party-moved",
     "turn": 76,
-    "tick": 750,
+    "tick": 751,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12495,7 +12503,7 @@
   {
     "kind": "post-capture-started",
     "turn": 76,
-    "tick": 751,
+    "tick": 752,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -12503,7 +12511,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 76,
-    "tick": 752,
+    "tick": 753,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -12511,12 +12519,12 @@
   {
     "kind": "turn-start",
     "turn": 77,
-    "tick": 753
+    "tick": 754
   },
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 754,
+    "tick": 755,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12532,7 +12540,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 755,
+    "tick": 756,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12548,7 +12556,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 756,
+    "tick": 757,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12564,7 +12572,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 757,
+    "tick": 758,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12580,7 +12588,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 758,
+    "tick": 759,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12596,7 +12604,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 759,
+    "tick": 760,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12612,7 +12620,7 @@
   {
     "kind": "party-moved",
     "turn": 77,
-    "tick": 760,
+    "tick": 761,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12628,19 +12636,19 @@
   {
     "kind": "post-capture-aborted",
     "turn": 77,
-    "tick": 761,
+    "tick": 762,
     "postId": "soap-dish-2",
     "previousOwner": "neutral"
   },
   {
     "kind": "turn-start",
     "turn": 78,
-    "tick": 762
+    "tick": 763
   },
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 763,
+    "tick": 764,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12656,7 +12664,7 @@
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 764,
+    "tick": 765,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12672,7 +12680,7 @@
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 765,
+    "tick": 766,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12688,7 +12696,7 @@
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 766,
+    "tick": 767,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12704,7 +12712,7 @@
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 767,
+    "tick": 768,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12720,7 +12728,7 @@
   {
     "kind": "party-moved",
     "turn": 78,
-    "tick": 768,
+    "tick": 769,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12736,12 +12744,12 @@
   {
     "kind": "turn-start",
     "turn": 79,
-    "tick": 769
+    "tick": 770
   },
   {
     "kind": "party-moved",
     "turn": 79,
-    "tick": 770,
+    "tick": 771,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12757,7 +12765,7 @@
   {
     "kind": "party-moved",
     "turn": 79,
-    "tick": 771,
+    "tick": 772,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12773,7 +12781,7 @@
   {
     "kind": "party-moved",
     "turn": 79,
-    "tick": 772,
+    "tick": 773,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12789,7 +12797,7 @@
   {
     "kind": "party-moved",
     "turn": 79,
-    "tick": 773,
+    "tick": 774,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12805,18 +12813,18 @@
   {
     "kind": "phase-changed",
     "turn": 80,
-    "tick": 774,
+    "tick": 775,
     "phase": "day"
   },
   {
     "kind": "turn-start",
     "turn": 80,
-    "tick": 775
+    "tick": 776
   },
   {
     "kind": "party-moved",
     "turn": 80,
-    "tick": 776,
+    "tick": 777,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12827,22 +12835,6 @@
       "plane": "west-wall",
       "x": 2,
       "y": 7
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 80,
-    "tick": 777,
-    "partyId": "neutral-mice",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 2
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 3
     }
   },
   {
@@ -12853,6 +12845,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 2
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 3
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 80,
+    "tick": 779,
+    "partyId": "neutral-mice",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 3
     },
     "to": {
@@ -12864,7 +12872,7 @@
   {
     "kind": "party-moved",
     "turn": 80,
-    "tick": 779,
+    "tick": 780,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -12880,7 +12888,7 @@
   {
     "kind": "party-moved",
     "turn": 80,
-    "tick": 780,
+    "tick": 781,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -12896,12 +12904,12 @@
   {
     "kind": "turn-start",
     "turn": 81,
-    "tick": 781
+    "tick": 782
   },
   {
     "kind": "party-moved",
     "turn": 81,
-    "tick": 782,
+    "tick": 783,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12917,7 +12925,7 @@
   {
     "kind": "party-moved",
     "turn": 81,
-    "tick": 783,
+    "tick": 784,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12933,7 +12941,7 @@
   {
     "kind": "party-moved",
     "turn": 81,
-    "tick": 784,
+    "tick": 785,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -12944,22 +12952,6 @@
       "plane": "ceiling",
       "x": 6,
       "y": 4
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 81,
-    "tick": 785,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 2
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 1
     }
   },
   {
@@ -12970,6 +12962,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 2
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 81,
+    "tick": 787,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 1
     },
     "to": {
@@ -12981,12 +12989,12 @@
   {
     "kind": "turn-start",
     "turn": 82,
-    "tick": 787
+    "tick": 788
   },
   {
     "kind": "party-moved",
     "turn": 82,
-    "tick": 788,
+    "tick": 789,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -12997,22 +13005,6 @@
       "plane": "west-wall",
       "x": 1,
       "y": 8
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 82,
-    "tick": 789,
-    "partyId": "neutral-mice",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 4
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 5
     }
   },
   {
@@ -13023,6 +13015,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 4
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 5
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 82,
+    "tick": 791,
+    "partyId": "neutral-mice",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 5
     },
     "to": {
@@ -13034,7 +13042,7 @@
   {
     "kind": "party-moved",
     "turn": 82,
-    "tick": 791,
+    "tick": 792,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13050,7 +13058,7 @@
   {
     "kind": "party-moved",
     "turn": 82,
-    "tick": 792,
+    "tick": 793,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13066,7 +13074,7 @@
   {
     "kind": "party-moved",
     "turn": 82,
-    "tick": 793,
+    "tick": 794,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13082,7 +13090,7 @@
   {
     "kind": "party-moved",
     "turn": 82,
-    "tick": 794,
+    "tick": 795,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13098,12 +13106,12 @@
   {
     "kind": "turn-start",
     "turn": 83,
-    "tick": 795
+    "tick": 796
   },
   {
     "kind": "party-moved",
     "turn": 83,
-    "tick": 796,
+    "tick": 797,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13119,7 +13127,7 @@
   {
     "kind": "party-moved",
     "turn": 83,
-    "tick": 797,
+    "tick": 798,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13135,7 +13143,7 @@
   {
     "kind": "party-moved",
     "turn": 83,
-    "tick": 798,
+    "tick": 799,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13151,7 +13159,7 @@
   {
     "kind": "party-moved",
     "turn": 83,
-    "tick": 799,
+    "tick": 800,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13167,7 +13175,7 @@
   {
     "kind": "party-moved",
     "turn": 83,
-    "tick": 800,
+    "tick": 801,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13176,22 +13184,6 @@
     },
     "to": {
       "plane": "north-wall",
-      "x": 6,
-      "y": 1
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 83,
-    "tick": 801,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 0
-    },
-    "to": {
-      "plane": "ceiling",
       "x": 6,
       "y": 1
     }
@@ -13204,6 +13196,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 0
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 83,
+    "tick": 803,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 1
     },
     "to": {
@@ -13215,7 +13223,7 @@
   {
     "kind": "post-capture-started",
     "turn": 83,
-    "tick": 803,
+    "tick": 804,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -13223,7 +13231,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 83,
-    "tick": 804,
+    "tick": 805,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -13231,18 +13239,18 @@
   {
     "kind": "phase-changed",
     "turn": 84,
-    "tick": 805,
+    "tick": 806,
     "phase": "night"
   },
   {
     "kind": "turn-start",
     "turn": 84,
-    "tick": 806
+    "tick": 807
   },
   {
     "kind": "party-moved",
     "turn": 84,
-    "tick": 807,
+    "tick": 808,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13258,7 +13266,7 @@
   {
     "kind": "party-moved",
     "turn": 84,
-    "tick": 808,
+    "tick": 809,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13274,7 +13282,7 @@
   {
     "kind": "party-moved",
     "turn": 84,
-    "tick": 809,
+    "tick": 810,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13290,19 +13298,19 @@
   {
     "kind": "post-capture-aborted",
     "turn": 84,
-    "tick": 810,
+    "tick": 811,
     "postId": "soap-dish-2",
     "previousOwner": "neutral"
   },
   {
     "kind": "turn-start",
     "turn": 85,
-    "tick": 811
+    "tick": 812
   },
   {
     "kind": "party-moved",
     "turn": 85,
-    "tick": 812,
+    "tick": 813,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13318,7 +13326,7 @@
   {
     "kind": "party-moved",
     "turn": 85,
-    "tick": 813,
+    "tick": 814,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13334,7 +13342,7 @@
   {
     "kind": "party-moved",
     "turn": 85,
-    "tick": 814,
+    "tick": 815,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13350,7 +13358,7 @@
   {
     "kind": "party-moved",
     "turn": 85,
-    "tick": 815,
+    "tick": 816,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13366,7 +13374,7 @@
   {
     "kind": "party-moved",
     "turn": 85,
-    "tick": 816,
+    "tick": 817,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13382,12 +13390,12 @@
   {
     "kind": "turn-start",
     "turn": 86,
-    "tick": 817
+    "tick": 818
   },
   {
     "kind": "party-moved",
     "turn": 86,
-    "tick": 818,
+    "tick": 819,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13403,7 +13411,7 @@
   {
     "kind": "party-moved",
     "turn": 86,
-    "tick": 819,
+    "tick": 820,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13414,22 +13422,6 @@
       "plane": "ceiling",
       "x": 5,
       "y": 4
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 86,
-    "tick": 820,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 4,
-      "y": 0
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 4,
-      "y": 1
     }
   },
   {
@@ -13440,6 +13432,22 @@
     "from": {
       "plane": "ceiling",
       "x": 4,
+      "y": 0
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 4,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 86,
+    "tick": 822,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 4,
       "y": 1
     },
     "to": {
@@ -13451,7 +13459,7 @@
   {
     "kind": "post-capture-started",
     "turn": 86,
-    "tick": 822,
+    "tick": 823,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -13459,7 +13467,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 86,
-    "tick": 823,
+    "tick": 824,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -13467,12 +13475,12 @@
   {
     "kind": "turn-start",
     "turn": 87,
-    "tick": 824
+    "tick": 825
   },
   {
     "kind": "party-moved",
     "turn": 87,
-    "tick": 825,
+    "tick": 826,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13488,7 +13496,7 @@
   {
     "kind": "party-moved",
     "turn": 87,
-    "tick": 826,
+    "tick": 827,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13504,7 +13512,7 @@
   {
     "kind": "party-moved",
     "turn": 87,
-    "tick": 827,
+    "tick": 828,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13520,7 +13528,7 @@
   {
     "kind": "party-moved",
     "turn": 87,
-    "tick": 828,
+    "tick": 829,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13536,7 +13544,7 @@
   {
     "kind": "party-moved",
     "turn": 87,
-    "tick": 829,
+    "tick": 830,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13552,25 +13560,25 @@
   {
     "kind": "post-capture-aborted",
     "turn": 87,
-    "tick": 830,
+    "tick": 831,
     "postId": "soap-dish-2",
     "previousOwner": "neutral"
   },
   {
     "kind": "phase-changed",
     "turn": 88,
-    "tick": 831,
+    "tick": 832,
     "phase": "day"
   },
   {
     "kind": "turn-start",
     "turn": 88,
-    "tick": 832
+    "tick": 833
   },
   {
     "kind": "party-moved",
     "turn": 88,
-    "tick": 833,
+    "tick": 834,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13586,7 +13594,7 @@
   {
     "kind": "party-moved",
     "turn": 88,
-    "tick": 834,
+    "tick": 835,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13597,22 +13605,6 @@
       "plane": "north-wall",
       "x": 4,
       "y": 0
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 88,
-    "tick": 835,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 5,
-      "y": 0
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 5,
-      "y": 1
     }
   },
   {
@@ -13623,6 +13615,22 @@
     "from": {
       "plane": "ceiling",
       "x": 5,
+      "y": 0
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 5,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 88,
+    "tick": 837,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 5,
       "y": 1
     },
     "to": {
@@ -13634,12 +13642,12 @@
   {
     "kind": "turn-start",
     "turn": 89,
-    "tick": 837
+    "tick": 838
   },
   {
     "kind": "party-moved",
     "turn": 89,
-    "tick": 838,
+    "tick": 839,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13655,7 +13663,7 @@
   {
     "kind": "party-moved",
     "turn": 89,
-    "tick": 839,
+    "tick": 840,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13671,7 +13679,7 @@
   {
     "kind": "party-moved",
     "turn": 89,
-    "tick": 840,
+    "tick": 841,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13687,7 +13695,7 @@
   {
     "kind": "party-moved",
     "turn": 89,
-    "tick": 841,
+    "tick": 842,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13703,12 +13711,12 @@
   {
     "kind": "turn-start",
     "turn": 90,
-    "tick": 842
+    "tick": 843
   },
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 843,
+    "tick": 844,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13724,7 +13732,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 844,
+    "tick": 845,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13740,7 +13748,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 845,
+    "tick": 846,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13756,7 +13764,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 846,
+    "tick": 847,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13772,7 +13780,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 847,
+    "tick": 848,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -13788,7 +13796,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 848,
+    "tick": 849,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13804,7 +13812,7 @@
   {
     "kind": "party-moved",
     "turn": 90,
-    "tick": 849,
+    "tick": 850,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13820,7 +13828,7 @@
   {
     "kind": "post-capture-started",
     "turn": 90,
-    "tick": 850,
+    "tick": 851,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -13828,7 +13836,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 90,
-    "tick": 851,
+    "tick": 852,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -13836,12 +13844,12 @@
   {
     "kind": "turn-start",
     "turn": 91,
-    "tick": 852
+    "tick": 853
   },
   {
     "kind": "party-moved",
     "turn": 91,
-    "tick": 853,
+    "tick": 854,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13857,7 +13865,7 @@
   {
     "kind": "party-moved",
     "turn": 91,
-    "tick": 854,
+    "tick": 855,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13873,7 +13881,7 @@
   {
     "kind": "party-moved",
     "turn": 91,
-    "tick": 855,
+    "tick": 856,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13889,25 +13897,25 @@
   {
     "kind": "post-capture-aborted",
     "turn": 91,
-    "tick": 856,
+    "tick": 857,
     "postId": "soap-dish-2",
     "previousOwner": "neutral"
   },
   {
     "kind": "phase-changed",
     "turn": 92,
-    "tick": 857,
+    "tick": 858,
     "phase": "night"
   },
   {
     "kind": "turn-start",
     "turn": 92,
-    "tick": 858
+    "tick": 859
   },
   {
     "kind": "party-moved",
     "turn": 92,
-    "tick": 859,
+    "tick": 860,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13923,7 +13931,7 @@
   {
     "kind": "party-moved",
     "turn": 92,
-    "tick": 860,
+    "tick": 861,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13939,7 +13947,7 @@
   {
     "kind": "party-moved",
     "turn": 92,
-    "tick": 861,
+    "tick": 862,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -13955,7 +13963,7 @@
   {
     "kind": "party-moved",
     "turn": 92,
-    "tick": 862,
+    "tick": 863,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -13971,12 +13979,12 @@
   {
     "kind": "turn-start",
     "turn": 93,
-    "tick": 863
+    "tick": 864
   },
   {
     "kind": "party-moved",
     "turn": 93,
-    "tick": 864,
+    "tick": 865,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -13992,7 +14000,7 @@
   {
     "kind": "party-moved",
     "turn": 93,
-    "tick": 865,
+    "tick": 866,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14003,22 +14011,6 @@
       "plane": "west-wall",
       "x": 0,
       "y": 7
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 93,
-    "tick": 866,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 1
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 6,
-      "y": 0
     }
   },
   {
@@ -14029,6 +14021,22 @@
     "from": {
       "plane": "ceiling",
       "x": 6,
+      "y": 1
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 6,
+      "y": 0
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 93,
+    "tick": 868,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 6,
       "y": 0
     },
     "to": {
@@ -14040,12 +14048,12 @@
   {
     "kind": "turn-start",
     "turn": 94,
-    "tick": 868
+    "tick": 869
   },
   {
     "kind": "party-moved",
     "turn": 94,
-    "tick": 869,
+    "tick": 870,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14061,7 +14069,7 @@
   {
     "kind": "party-moved",
     "turn": 94,
-    "tick": 870,
+    "tick": 871,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14077,7 +14085,7 @@
   {
     "kind": "party-moved",
     "turn": 94,
-    "tick": 871,
+    "tick": 872,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14087,22 +14095,6 @@
     "to": {
       "plane": "north-wall",
       "x": 3,
-      "y": 1
-    }
-  },
-  {
-    "kind": "party-moved",
-    "turn": 94,
-    "tick": 872,
-    "partyId": "spiderling-3-2",
-    "from": {
-      "plane": "ceiling",
-      "x": 7,
-      "y": 0
-    },
-    "to": {
-      "plane": "ceiling",
-      "x": 7,
       "y": 1
     }
   },
@@ -14114,6 +14106,22 @@
     "from": {
       "plane": "ceiling",
       "x": 7,
+      "y": 0
+    },
+    "to": {
+      "plane": "ceiling",
+      "x": 7,
+      "y": 1
+    }
+  },
+  {
+    "kind": "party-moved",
+    "turn": 94,
+    "tick": 874,
+    "partyId": "spiderling-3-2",
+    "from": {
+      "plane": "ceiling",
+      "x": 7,
       "y": 1
     },
     "to": {
@@ -14125,12 +14133,12 @@
   {
     "kind": "turn-start",
     "turn": 95,
-    "tick": 874
+    "tick": 875
   },
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 875,
+    "tick": 876,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14146,7 +14154,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 876,
+    "tick": 877,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14162,7 +14170,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 877,
+    "tick": 878,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14178,7 +14186,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 878,
+    "tick": 879,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14194,7 +14202,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 879,
+    "tick": 880,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14210,7 +14218,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 880,
+    "tick": 881,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14226,7 +14234,7 @@
   {
     "kind": "party-moved",
     "turn": 95,
-    "tick": 881,
+    "tick": 882,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14242,18 +14250,18 @@
   {
     "kind": "phase-changed",
     "turn": 96,
-    "tick": 882,
+    "tick": 883,
     "phase": "day"
   },
   {
     "kind": "turn-start",
     "turn": 96,
-    "tick": 883
+    "tick": 884
   },
   {
     "kind": "party-moved",
     "turn": 96,
-    "tick": 884,
+    "tick": 885,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14269,7 +14277,7 @@
   {
     "kind": "party-moved",
     "turn": 96,
-    "tick": 885,
+    "tick": 886,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14285,7 +14293,7 @@
   {
     "kind": "party-moved",
     "turn": 96,
-    "tick": 886,
+    "tick": 887,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14301,7 +14309,7 @@
   {
     "kind": "party-moved",
     "turn": 96,
-    "tick": 887,
+    "tick": 888,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14317,12 +14325,12 @@
   {
     "kind": "turn-start",
     "turn": 97,
-    "tick": 888
+    "tick": 889
   },
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 889,
+    "tick": 890,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14338,7 +14346,7 @@
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 890,
+    "tick": 891,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14354,7 +14362,7 @@
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 891,
+    "tick": 892,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14370,7 +14378,7 @@
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 892,
+    "tick": 893,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14386,7 +14394,7 @@
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 893,
+    "tick": 894,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14402,7 +14410,7 @@
   {
     "kind": "party-moved",
     "turn": 97,
-    "tick": 894,
+    "tick": 895,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14418,12 +14426,12 @@
   {
     "kind": "turn-start",
     "turn": 98,
-    "tick": 895
+    "tick": 896
   },
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 896,
+    "tick": 897,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14439,7 +14447,7 @@
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 897,
+    "tick": 898,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14455,7 +14463,7 @@
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 898,
+    "tick": 899,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14471,7 +14479,7 @@
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 899,
+    "tick": 900,
     "partyId": "neutral-mice",
     "from": {
       "plane": "ceiling",
@@ -14487,7 +14495,7 @@
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 900,
+    "tick": 901,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14503,7 +14511,7 @@
   {
     "kind": "party-moved",
     "turn": 98,
-    "tick": 901,
+    "tick": 902,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14519,12 +14527,12 @@
   {
     "kind": "turn-start",
     "turn": 99,
-    "tick": 902
+    "tick": 903
   },
   {
     "kind": "party-moved",
     "turn": 99,
-    "tick": 903,
+    "tick": 904,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14540,7 +14548,7 @@
   {
     "kind": "party-moved",
     "turn": 99,
-    "tick": 904,
+    "tick": 905,
     "partyId": "neutral-cockroaches",
     "from": {
       "plane": "west-wall",
@@ -14556,7 +14564,7 @@
   {
     "kind": "party-moved",
     "turn": 99,
-    "tick": 905,
+    "tick": 906,
     "partyId": "neutral-stinkbugs",
     "from": {
       "plane": "north-wall",
@@ -14572,7 +14580,7 @@
   {
     "kind": "party-moved",
     "turn": 99,
-    "tick": 906,
+    "tick": 907,
     "partyId": "spiderling-3-2",
     "from": {
       "plane": "ceiling",
@@ -14588,7 +14596,7 @@
   {
     "kind": "post-capture-started",
     "turn": 99,
-    "tick": 907,
+    "tick": 908,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "fromOwner": "neutral"
@@ -14596,7 +14604,7 @@
   {
     "kind": "post-capture-progressed",
     "turn": 99,
-    "tick": 908,
+    "tick": 909,
     "postId": "soap-dish-2",
     "capturingFaction": "spider",
     "turnsRemaining": 1
@@ -14604,18 +14612,18 @@
   {
     "kind": "phase-changed",
     "turn": 100,
-    "tick": 909,
+    "tick": 910,
     "phase": "night"
   },
   {
     "kind": "turn-start",
     "turn": 100,
-    "tick": 910
+    "tick": 911
   },
   {
     "kind": "scenario-end",
     "turn": 100,
-    "tick": 911,
+    "tick": 912,
     "winner": "spider",
     "scoreBreakdown": {
       "ant": {

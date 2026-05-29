@@ -5356,6 +5356,22 @@
         },
         "title": "The colony tires",
         "message": "Workers retreat to the storm-drain. The queen's pheromones thin — push for the web or pull back to regroup."
+      },
+      {
+        "id": "the-web-quiets",
+        "trigger": {
+          "turn": 60
+        },
+        "title": "The web hangs heavy",
+        "message": "Movement above stills. The spider queen has settled into her web — every approach is now her hunting ground."
+      },
+      {
+        "id": "victory-hymn",
+        "trigger": {
+          "postCaptured": "spider-web"
+        },
+        "title": "The web falls",
+        "message": "The spider queen's threads snap one by one. The colony reaches the highest reach of the room — the war is yours."
       }
     ]
   }
