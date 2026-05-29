@@ -1445,6 +1445,25 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* L1-iteration #9 — promotion-hint chip above the earned-stats bars.
+ * Dim grey when the threshold isn't reached, gold-on-amber when ready. */
+.pd-promotion {
+  margin: 0.25rem 0 0.15rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  background: #efe7d4;
+  border: 1px solid #cdbf99;
+  color: #6b6258;
+}
+
+.pd-promotion.ready {
+  background: #f6efda;
+  border-color: #cbb46a;
+  color: #6e3b1a;
+  font-weight: 600;
+}
+
 /* L1-iteration #8 — earned-stats bars. Aggression / Discipline both
  * accrue 0–100; the bar fills proportionally so the player can compare
  * party "personalities" at a glance. */

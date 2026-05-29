@@ -38,6 +38,7 @@
  */
 
 import { slotsUsed } from './parties.ts';
+import { runPromotionPass } from './promotion-pass.ts';
 import type {
   GameState,
   Party,
@@ -249,45 +250,8 @@ export const applyCharismaPromotions = (
   state: GameState,
   turn: number,
   tick: () => number,
-): CharismaPromotionOutcome => {
-  const events: ReplayEvent[] = [];
-  let changedAny = false;
-  const newParties = new Map<PartyId, Party>();
-  for (const [id, party] of state.parties) {
-    if (!onHomePost(party, state.posts)) {
-      newParties.set(id, party);
-      continue;
-    }
-    let partyChanged = false;
-    const sortedUnits = [...party.units].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-    const idToPromoted = new Map<UnitId, Unit>();
-    for (const u of sortedUnits) {
-      if (!isPromotionEligible(u)) continue;
-      const toTemplateId = PROMOTION_TREE.get(u.templateId);
-      if (!toTemplateId) continue;
-      const toTemplate = state.unitTemplates.get(toTemplateId);
-      if (!toTemplate) continue;
-      const promoted = promoteUnit(u, toTemplate);
-      idToPromoted.set(u.id, promoted);
-      events.push({
-        kind: 'unit-promoted',
-        turn,
-        tick: tick(),
-        partyId: party.id,
-        unitId: u.id,
-        fromTemplate: u.templateId,
-        toTemplate: toTemplate.id,
-      });
-      partyChanged = true;
-    }
-    if (partyChanged) {
-      const newUnits = party.units.map((u) => idToPromoted.get(u.id) ?? u);
-      newParties.set(id, { ...party, units: newUnits });
-      changedAny = true;
-    } else {
-      newParties.set(id, party);
-    }
-  }
-  if (!changedAny) return { state, events };
-  return { state: { ...state, parties: newParties }, events };
-};
+): CharismaPromotionOutcome =>
+  runPromotionPass(state, turn, tick, {
+    partyGate: (party, st) => onHomePost(party, st.posts),
+    unitEligible: isPromotionEligible,
+  });
