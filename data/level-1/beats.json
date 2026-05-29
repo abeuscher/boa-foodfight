@@ -12,6 +12,12 @@
       "trigger": { "postCaptured": "wall-crack-1" },
       "title": "The Wall Crack splinters",
       "message": "Dust falls. Light spills through the fracture. The colony's reach now extends to the east wall."
+    },
+    {
+      "id": "colony-tires",
+      "trigger": { "turn": 30 },
+      "title": "The colony tires",
+      "message": "Workers retreat to the storm-drain. The queen's pheromones thin — push for the web or pull back to regroup."
     }
   ]
 }
