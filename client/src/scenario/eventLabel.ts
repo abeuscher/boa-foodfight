@@ -32,6 +32,8 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return ev.success ? 'Recruited a neutral' : 'Recruit attempt failed';
     case 'scripted-beat':
       return ev.title;
+    case 'unit-promoted':
+      return `${String(ev.fromTemplate)} → ${String(ev.toTemplate)}`;
     default:
       return ev.kind.replace(/-/g, ' ');
   }
@@ -48,6 +50,8 @@ export const pauseReasonLabel = (ev: ReplayEvent): string => {
       return 'Reinforcements';
     case 'scripted-beat':
       return ev.title;
+    case 'unit-promoted':
+      return 'Promotion';
     default:
       return ev.kind.replace(/-/g, ' ');
   }

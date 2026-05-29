@@ -5303,6 +5303,30 @@
         "effect": "jelly",
         "magnitude": 2,
         "description": "Adds +2 jelly doses to the picking-up party (capped at jelly capacity)."
+      },
+      {
+        "id": "phero-crown",
+        "name": "Phero-Crown",
+        "kind": "promotion-key",
+        "effect": "promotion",
+        "magnitude": 0,
+        "description": "A pheromone-soaked diadem. Any ant-mage in the picking-up party rises to Archmage.",
+        "promotion": {
+          "from": "ant-mage",
+          "to": "ant-archmage"
+        }
+      },
+      {
+        "id": "iron-fang",
+        "name": "Iron Fang",
+        "kind": "promotion-key",
+        "effect": "promotion",
+        "magnitude": 0,
+        "description": "A blackened spider-fang lashed to a footman's pike. Promotes every ant-footman in the party to Veteran.",
+        "promotion": {
+          "from": "ant-footman",
+          "to": "ant-veteran-footman"
+        }
       }
     ]
   },

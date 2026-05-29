@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Faction, PostId, ReplayEvent } from '../../../engine/types.ts';
+import type {
+  Faction,
+  PartyId,
+  PostId,
+  ReplayEvent,
+  UnitId,
+  UnitTemplateId,
+} from '../../../engine/types.ts';
 
 import { eventLabel, pauseReasonLabel } from './eventLabel.ts';
 
@@ -39,5 +46,19 @@ describe('pauseReasonLabel', () => {
         }),
       ),
     ).toBe('The web tightens');
+  });
+
+  it('labels unit-promoted as a Promotion pause', () => {
+    expect(
+      pauseReasonLabel(
+        ev({
+          kind: 'unit-promoted',
+          partyId: 'vanguard' as PartyId,
+          unitId: 'u1' as UnitId,
+          fromTemplate: 'ant-mage' as UnitTemplateId,
+          toTemplate: 'ant-archmage' as UnitTemplateId,
+        }),
+      ),
+    ).toBe('Promotion');
   });
 });

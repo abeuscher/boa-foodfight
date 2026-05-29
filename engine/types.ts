@@ -1417,12 +1417,19 @@ export type ReplayEvent =
        * unit per scenario. The viewer / critics can attribute the
        * stat bump (+2 hp + per-template increments) by joining
        * `fromTemplate` and `toTemplate` against the templates digest.
+       *
+       * L1-iteration #7 added a second cause: an item-gated terminal-
+       * class promotion fired during the item-discovery tick when a
+       * party picks up a `promotion-key` item. Those events carry an
+       * `itemId` so the UI can attribute the swap to the bearer item;
+       * charisma-gated promotions omit it.
        */
       readonly kind: 'unit-promoted';
       readonly partyId: PartyId;
       readonly unitId: UnitId;
       readonly fromTemplate: UnitTemplateId;
       readonly toTemplate: UnitTemplateId;
+      readonly itemId?: ItemId;
     })
   | (ReplayEventCommon & {
       /**

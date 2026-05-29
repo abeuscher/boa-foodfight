@@ -13,18 +13,43 @@ import { idSchema } from './common.ts';
  * The `effect` discriminator is used by `engine/items.ts` and the
  * combat / movement integration sites to know which buff to apply.
  */
-export const itemKindSchema = z.enum(['persistent', 'consumable']);
+export const itemKindSchema = z.enum(['persistent', 'consumable', 'promotion-key']);
 
-export const itemEffectSchema = z.enum(['attack', 'armor', 'movement', 'agility', 'heal', 'jelly']);
+export const itemEffectSchema = z.enum([
+  'attack',
+  'armor',
+  'movement',
+  'agility',
+  'heal',
+  'jelly',
+  'promotion',
+]);
 
-export const itemTemplateSchema = z.object({
-  id: idSchema,
-  name: z.string().min(1),
-  kind: itemKindSchema,
-  effect: itemEffectSchema,
-  magnitude: z.number().int().nonnegative(),
-  description: z.string().min(1),
-});
+export const itemTemplateSchema = z
+  .object({
+    id: idSchema,
+    name: z.string().min(1),
+    kind: itemKindSchema,
+    effect: itemEffectSchema,
+    magnitude: z.number().int().nonnegative(),
+    description: z.string().min(1),
+    /**
+     * L1-iteration #7 — item-gated terminal classes. A `promotion-key`
+     * item carries a promotion rule: on pickup, any unit in the party
+     * whose templateId matches `from` is promoted to `to`. Absent on
+     * all `persistent` / `consumable` items, so the existing item slate
+     * is byte-identical.
+     */
+    promotion: z
+      .object({
+        from: idSchema,
+        to: idSchema,
+      })
+      .optional(),
+  })
+  .refine((t) => t.kind !== 'promotion-key' || t.promotion !== undefined, {
+    message: 'promotion-key items must declare a `promotion` block',
+  });
 
 export const itemsFileSchema = z.object({
   version: z.literal(1),

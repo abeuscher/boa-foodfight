@@ -239,6 +239,61 @@ const healToFull = (party: Party, templates: ReadonlyMap<UnitTemplateId, UnitTem
   return { ...party, units: healed };
 };
 
+/**
+ * L1-iteration #7 — item-gated terminal class promotion. On pickup of
+ * a `promotion-key` item, scan the party's units in stable order;
+ * swap each matching `from` → `to` templateId in-place. HP is
+ * preserved (clamped to the new template's max). Returns the new
+ * party and one promotion record per swap; an empty list means no
+ * eligible units, in which case the caller leaves the spawn on the
+ * map (the item only triggers when it can do something).
+ */
+interface PromotionRule {
+  readonly from: string;
+  readonly to: string;
+}
+
+interface PromotionKeyInput {
+  readonly party: Party;
+  readonly itemTemplate: { readonly promotion?: PromotionRule | undefined };
+  readonly templates: ReadonlyMap<UnitTemplateId, UnitTemplate>;
+}
+
+interface PromotionRecord {
+  readonly unitId: Unit['id'];
+  readonly fromTemplateId: UnitTemplateId;
+  readonly toTemplateId: UnitTemplateId;
+}
+
+interface PromotionKeyResult {
+  readonly party: Party;
+  readonly events: readonly PromotionRecord[];
+}
+
+const applyPromotionKey = (input: PromotionKeyInput): PromotionKeyResult => {
+  const rule = input.itemTemplate.promotion;
+  if (!rule) return { party: input.party, events: [] };
+  const fromId = rule.from as UnitTemplateId;
+  const toId = rule.to as UnitTemplateId;
+  const toTmpl = input.templates.get(toId);
+  if (!toTmpl) return { party: input.party, events: [] };
+  const records: PromotionRecord[] = [];
+  const nextUnits = input.party.units.map((u) => {
+    if (u.templateId !== fromId) return u;
+    records.push({ unitId: u.id, fromTemplateId: fromId, toTemplateId: toId });
+    return {
+      ...u,
+      templateId: toId,
+      currentHp: Math.min(u.currentHp, toTmpl.baseStats.hp),
+    };
+  });
+  if (records.length === 0) return { party: input.party, events: [] };
+  return {
+    party: { ...input.party, units: nextUnits },
+    events: records,
+  };
+};
+
 /** Apply a consumable item's effect to the picking-up party.
  * Returns the new party + the effect tag for the replay event. If the
  * item is not a consumable, returns the party unchanged with
@@ -365,6 +420,31 @@ export const discoverItems = (
           itemId: spawn.itemId,
           effect: consumed.effect,
         });
+        continue;
+      }
+
+      if (tmpl.kind === 'promotion-key') {
+        const promoted = applyPromotionKey({
+          party: workingParty,
+          itemTemplate: tmpl,
+          templates: state.unitTemplates,
+        });
+        if (promoted.events.length === 0) continue;
+        workingParty = promoted.party;
+        spawns[i] = { ...spawn, discovered: true };
+        events.push(makeDiscoveredEvent(workingParty.id, spawn, turn, tick));
+        for (const p of promoted.events) {
+          events.push({
+            kind: 'unit-promoted',
+            turn,
+            tick: tick(),
+            partyId: workingParty.id,
+            unitId: p.unitId,
+            fromTemplate: p.fromTemplateId,
+            toTemplate: p.toTemplateId,
+            itemId: spawn.itemId,
+          });
+        }
         continue;
       }
 
