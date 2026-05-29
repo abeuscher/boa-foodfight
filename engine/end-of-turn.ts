@@ -14,6 +14,7 @@
  */
 
 import { resolveAbilityParam } from './abilities.ts';
+import { applyBehaviorPromotions } from './behavior-promotion.ts';
 import { decayCardBuffs } from './cards.ts';
 import { applyCharismaPromotions } from './charisma.ts';
 import { distance, sameCoord } from './coord.ts';
@@ -893,6 +894,15 @@ export const endOfTurn = (
   const promoOutcome = applyCharismaPromotions(working, currentTurn, tick);
   working = promoOutcome.state;
   events.push(...promoOutcome.events);
+
+  // 2b. L1-iteration #9 — behavior-gated field promotion. Runs after
+  //     the charisma pass so any unit already promoted at home is a
+  //     no-op (the `promoted` flag is shared between paths). A party
+  //     with Aggression ≥ AGGRESSION_PROMOTION_THRESHOLD field-promotes
+  //     its eligible units without the home-base detour.
+  const behaviorPromoOutcome = applyBehaviorPromotions(working, currentTurn, tick);
+  working = behaviorPromoOutcome.state;
+  events.push(...behaviorPromoOutcome.events);
 
   // 3. Royal Jelly production (silent).
   working = applyJellyProduction(working, input.jelly);

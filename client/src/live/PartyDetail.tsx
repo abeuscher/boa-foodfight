@@ -1,3 +1,5 @@
+import { AGGRESSION_PROMOTION_THRESHOLD } from '../../../engine/behavior-promotion.ts';
+import { PROMOTION_TREE } from '../../../engine/charisma.ts';
 import { postAt } from '../../../engine/posts.ts';
 import type { GameState, Party, Post, Unit, UnitId, UnitTemplate } from '../../../engine/types.ts';
 
@@ -149,6 +151,33 @@ export function PartyDetail({
         <div className="pd-stats">
           <div className="pd-sub">Composition</div>
           <div className="pd-line">{composition || '—'}</div>
+          {/* L1-iteration #9 — behavior-gated promotion hint. Surfaces
+              when the party has at least one promotable, un-promoted unit
+              so the player can read the Aggression bar as "next promotion at X".
+              The header line only renders if there's actually a candidate. */}
+          {(() => {
+            const candidates = party.units.filter(
+              (u) => u.currentHp > 0 && u.promoted !== true && PROMOTION_TREE.has(u.templateId),
+            );
+            if (candidates.length === 0) return null;
+            const aggression = party.aggression ?? 0;
+            const ready = aggression >= AGGRESSION_PROMOTION_THRESHOLD;
+            return (
+              <div className={`pd-promotion ${ready ? 'ready' : ''}`}>
+                {ready ? (
+                  <span>
+                    ★ Field promotion ready ({String(candidates.length)} unit
+                    {candidates.length === 1 ? '' : 's'})
+                  </span>
+                ) : (
+                  <span>
+                    Field promotion at Aggression {String(AGGRESSION_PROMOTION_THRESHOLD)} (
+                    {String(candidates.length)} candidate{candidates.length === 1 ? '' : 's'})
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           <div className="pd-sub">Earned stats</div>
           <div className="pd-earned">
             <span className="pd-earned-row">
