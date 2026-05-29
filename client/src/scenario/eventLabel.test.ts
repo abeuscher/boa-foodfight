@@ -61,4 +61,22 @@ describe('pauseReasonLabel', () => {
       ),
     ).toBe('Promotion');
   });
+
+  it('renders stat-earned with the signed delta and before/after values', () => {
+    const out = eventLabel(
+      ev({
+        kind: 'stat-earned',
+        partyId: 'vanguard' as PartyId,
+        stat: 'aggression',
+        delta: 1,
+        before: 4,
+        after: 5,
+        reason: 'attack-initiated',
+      }),
+    );
+    expect(out).toContain('aggression');
+    expect(out).toContain('+1');
+    expect(out).toContain('4');
+    expect(out).toContain('5');
+  });
 });

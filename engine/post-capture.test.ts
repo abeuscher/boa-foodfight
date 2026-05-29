@@ -402,4 +402,29 @@ describe('engine/post-capture', () => {
     expect(b.state.posts.get(targetPost)?.owner).toBe<Faction>('ant');
     expect(eventsOfKind(b.events, 'reinforcement-spawned')).toHaveLength(0);
   });
+
+  it('15. completing a hold credits the holding party +1 discipline', () => {
+    // L1-iteration #8 — Discipline gain. Capture completion = "holding
+    // the POST" — the ant standing on the POST when it flips gets
+    // +1 discipline, capped at 100.
+    const { state } = loadScenario(DATA_DIR, 1);
+    const ant = firstFieldAnt(state);
+    const midPost = firstMidPost(state);
+    let working = placePartyOnPost(state, ant.id, midPost);
+    const tick = makeTickClock();
+    working = resolvePostCapture(working, tick).state;
+    const b = resolvePostCapture(working, tick);
+    expect(b.state.posts.get(midPost)?.owner).toBe<Faction>('ant');
+    const statEvents = b.events.filter(
+      (e) => e.kind === 'stat-earned' && e.partyId === ant.id && e.stat === 'discipline',
+    );
+    expect(statEvents).toHaveLength(1);
+    const ev = statEvents[0];
+    if (ev?.kind === 'stat-earned') {
+      expect(ev.delta).toBe(1);
+      expect(ev.after).toBe(1);
+      expect(ev.reason).toBe('post-held');
+    }
+    expect(b.state.parties.get(ant.id)?.discipline).toBe(1);
+  });
 });

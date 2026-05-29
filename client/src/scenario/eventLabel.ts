@@ -34,6 +34,11 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return ev.title;
     case 'unit-promoted':
       return `${String(ev.fromTemplate)} → ${String(ev.toTemplate)}`;
+    case 'stat-earned': {
+      const arrow = ev.delta >= 0 ? '↑' : '↓';
+      const sign = ev.delta >= 0 ? '+' : '';
+      return `${String(ev.partyId)} ${ev.stat} ${arrow} ${sign}${String(ev.delta)} (${String(ev.before)}→${String(ev.after)})`;
+    }
     default:
       return ev.kind.replace(/-/g, ' ');
   }

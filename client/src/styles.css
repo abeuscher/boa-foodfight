@@ -1445,6 +1445,57 @@ button:disabled {
   font-size: 0.8rem;
 }
 
+/* L1-iteration #8 — earned-stats bars. Aggression / Discipline both
+ * accrue 0–100; the bar fills proportionally so the player can compare
+ * party "personalities" at a glance. */
+.pd-earned {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.pd-earned-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 32px;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.pd-earned-label {
+  color: #6b6258;
+}
+
+.pd-earned-bar {
+  position: relative;
+  height: 7px;
+  background: #efe7d4;
+  border: 1px solid #cdbf99;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pd-earned-fill {
+  display: block;
+  height: 100%;
+  transition: width 0.3s ease-out;
+}
+
+.pd-earned-fill-agg {
+  background: #c8492f;
+}
+
+.pd-earned-fill-disc {
+  background: #4a7a8a;
+}
+
+.pd-earned-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #3a2d12;
+}
+
 .pd-drill {
   border-top: 1px solid #efe9dc;
   padding-top: 0.4rem;

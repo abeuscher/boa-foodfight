@@ -191,6 +191,36 @@ const applyCaptureTick = (state: GameState, tick: () => number): PostCaptureOutc
     working = flip.state;
     events.push(...flip.events);
 
+    // L1-iteration #8 — Discipline gain. Every party of the new-owner
+    // faction sitting on the freshly-flipped POST tile is the holder;
+    // bump its discipline by +1 (clamped to EARNED_STAT_MAX=100). The
+    // common case is one party; multiple stacks of the same faction on
+    // one tile are rare but tolerated.
+    const postTile = post.location;
+    const updatedParties = new Map(working.parties);
+    let partiesChanged = false;
+    for (const [pid, party] of working.parties) {
+      if (party.faction !== newOwner) continue;
+      if (!sameCoord(party.location, postTile)) continue;
+      const before = party.discipline ?? 0;
+      const after = Math.max(0, Math.min(100, before + 1));
+      if (after === before) continue;
+      updatedParties.set(pid, { ...party, discipline: after });
+      partiesChanged = true;
+      events.push({
+        kind: 'stat-earned',
+        turn: state.turn,
+        tick: tick(),
+        partyId: pid,
+        stat: 'discipline',
+        delta: after - before,
+        before,
+        after,
+        reason: 'post-held',
+      });
+    }
+    if (partiesChanged) working = { ...working, parties: updatedParties };
+
     // §7.12 (Exchange #8) — reinforcement-at-POST. Provably inert
     // unless this scenario's roster data configured a trigger for
     // this POST: `working.reinforcements` is absent on every shipped

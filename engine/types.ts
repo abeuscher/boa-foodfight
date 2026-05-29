@@ -497,6 +497,15 @@ export interface Party {
   readonly strategyModifiers: readonly StrategyModifier[];
   readonly jellyDoses: number;
   readonly leaderless: boolean;
+  /**
+   * L1-iteration #8 — earned stats (Aggression / Discipline). Accrue
+   * from observed behavior — Aggression rises on initiating combat and
+   * falls on being defended on; Discipline rises on completing a POST
+   * hold and falls on a successful flee. Clamped to [0, 100]. Optional
+   * for backwards compatibility — missing field reads as 0.
+   */
+  readonly aggression?: number;
+  readonly discipline?: number;
   /** Round 11 — optional 5-turn neutral-recruit commit/abandon
    * decision. Only meaningful for ant parties carrying both ant-scout
    * and ant-mage. */
@@ -1444,6 +1453,22 @@ export type ReplayEvent =
       readonly oldCharisma: number;
       readonly newCharisma: number;
       readonly reason: 'underdog' | 'parity' | 'overdog' | 'flee' | 'queen-kill';
+    })
+  | (ReplayEventCommon & {
+      /**
+       * L1-iteration #8 — earned-stats event. Fires when a party's
+       * Aggression or Discipline changes via behavior accrual.
+       * `delta` is signed (positive for gains, negative for decay) and
+       * `before` / `after` carry the clamped pre/post values so the UI
+       * can render the transition without re-querying state.
+       */
+      readonly kind: 'stat-earned';
+      readonly partyId: PartyId;
+      readonly stat: 'aggression' | 'discipline';
+      readonly delta: number;
+      readonly before: number;
+      readonly after: number;
+      readonly reason: 'attack-initiated' | 'defended-on' | 'post-held' | 'fled';
     })
   | (ReplayEventCommon & {
       /**
