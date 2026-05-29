@@ -5194,6 +5194,62 @@
           },
           "posture": "fight"
         }
+      ],
+      "reinforcements": [
+        {
+          "triggerPostId": "towel-rack-1",
+          "party": {
+            "id": "north-wall-raiders",
+            "leaderClass": "scout-captain",
+            "leaderIndex": 0,
+            "slotCapacity": 6,
+            "units": [
+              {
+                "templateId": "spider-scout",
+                "count": 2
+              },
+              {
+                "templateId": "spider-soldier",
+                "count": 2
+              }
+            ],
+            "startingLocation": {
+              "plane": "north-wall",
+              "x": 5,
+              "y": 5
+            },
+            "posture": "fight"
+          }
+        },
+        {
+          "triggerPostId": "wall-crack-1",
+          "party": {
+            "id": "east-wall-raiders",
+            "leaderClass": "war-chief",
+            "leaderIndex": 0,
+            "slotCapacity": 6,
+            "units": [
+              {
+                "templateId": "spider-spinner",
+                "count": 1
+              },
+              {
+                "templateId": "spider-soldier",
+                "count": 2
+              },
+              {
+                "templateId": "spider-scout",
+                "count": 1
+              }
+            ],
+            "startingLocation": {
+              "plane": "east-wall",
+              "x": 5,
+              "y": 5
+            },
+            "posture": "fight"
+          }
+        }
       ]
     }
   ],
