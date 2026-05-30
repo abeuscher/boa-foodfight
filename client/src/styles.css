@@ -1352,22 +1352,35 @@ button:disabled {
 /* Chunk 19 — perspective splay. The cube grid reserves fixed slots for
  * the four peripherals so each one's Board can be absolutely positioned
  * inside without inflating the slot to its un-transformed footprint.
- * `perspective` on the container is what makes the 3D rotations on
- * `.cube-peripheral-stage` actually read as depth (without it,
- * rotateX/Y just shows as squashed 2D). */
+ *
+ * Chunk 19 v2 (PM feedback): the trapezoidal foreshortening needs
+ * `transform-style: preserve-3d` to propagate down the ancestor chain
+ * from `.cube` (which carries the perspective) to
+ * `.cube-peripheral-stage` (which carries the rotation). Without
+ * preserve-3d on the intermediate elements, CSS flattens the rotation
+ * into a 2D affine — the peripheral renders as a parallel-edged
+ * rectangle, just shorter. With preserve-3d, the rotation projects
+ * through the perspective and the far edge actually narrows.
+ *
+ * Sizes: peripherals are now full-Board scale (no shrink), so the
+ * inward (seam) edge of each peripheral matches the active face's
+ * edge. The slot grid sizes accommodate the rotated peripheral's
+ * visible footprint (~270 px deep at 40° tilt). gap: 0 keeps the
+ * seam tight so the vertices line up. */
 .cube {
   display: grid;
-  grid-template-columns: 200px auto 200px;
-  grid-template-rows: 180px auto 180px;
+  grid-template-columns: 270px auto 270px;
+  grid-template-rows: 270px auto 270px;
   grid-template-areas:
     '.    top    .'
     'left active right'
     '.    bottom .';
-  gap: 0.4rem;
+  gap: 0;
   justify-content: center;
   align-items: center;
-  perspective: 1500px;
+  perspective: 1000px;
   perspective-origin: center center;
+  transform-style: preserve-3d;
 }
 
 .cube-top {
@@ -1387,9 +1400,12 @@ button:disabled {
 }
 
 /* All slots are positioning anchors for the absolutely-positioned
- * stages inside their peripherals. */
+ * stages inside their peripherals. `preserve-3d` keeps the perspective
+ * context flowing from `.cube` down to `.cube-peripheral-stage`. */
 .cube-slot {
   position: relative;
+  transform-style: preserve-3d;
+  overflow: visible;
 }
 
 .cube-face {
@@ -1417,6 +1433,7 @@ button:disabled {
   inset: 0;
   cursor: pointer;
   border-radius: 6px;
+  transform-style: preserve-3d;
 }
 
 .cube-peripheral:hover {
@@ -1431,10 +1448,15 @@ button:disabled {
 }
 
 /* Chunk 19 — the stage holds the un-scaled, full-fidelity Board and
- * carries the per-slot 3D transform. Absolute positioning keeps the
+ * carries the per-slot 3D rotation. Absolute positioning keeps the
  * Board's full layout box from inflating the cube grid's fixed
  * peripheral slots. Each slot anchors the edge of the Board that meets
- * the active face; the opposite edge folds back into perspective. */
+ * the active face (the "seam"); the opposite edge folds back into
+ * perspective. No scale — the seam edge of the peripheral is the
+ * same width as the active face's matching edge, so the cube vertices
+ * align. The far edge gets foreshortened by the inherited perspective
+ * (1000 px on `.cube`, propagated via preserve-3d). 40° is the PM-
+ * named tilt; tunable to taste. */
 .cube-peripheral-stage {
   position: absolute;
   transform-style: preserve-3d;
@@ -1444,28 +1466,28 @@ button:disabled {
   left: 50%;
   bottom: 0;
   transform-origin: center bottom;
-  transform: translate(-50%, 0) scale(0.5) rotateX(38deg);
+  transform: translate(-50%, 0) rotateX(40deg);
 }
 
 .cube-bottom .cube-peripheral-stage {
   left: 50%;
   top: 0;
   transform-origin: center top;
-  transform: translate(-50%, 0) scale(0.5) rotateX(-38deg);
+  transform: translate(-50%, 0) rotateX(-40deg);
 }
 
 .cube-left .cube-peripheral-stage {
   right: 0;
   top: 50%;
   transform-origin: right center;
-  transform: translate(0, -50%) scale(0.5) rotateY(-38deg);
+  transform: translate(0, -50%) rotateY(-40deg);
 }
 
 .cube-right .cube-peripheral-stage {
   left: 0;
   top: 50%;
   transform-origin: left center;
-  transform: translate(0, -50%) scale(0.5) rotateY(38deg);
+  transform: translate(0, -50%) rotateY(40deg);
 }
 
 /* UI-02 — battle camera. The frame clips the zoomed stage to the
