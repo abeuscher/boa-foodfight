@@ -24,6 +24,36 @@ describe('eventLabel', () => {
     expect(eventLabel(ev({ kind: 'turn-start', turn: 7 }))).toBe('Turn 7 begins');
   });
 
+  it('formats in-plane party-moved with party id + coords + plane', () => {
+    const out = eventLabel(
+      ev({
+        kind: 'party-moved',
+        partyId: 'vanguard-alpha' as PartyId,
+        from: { plane: 'floor', x: 3, y: 3 },
+        to: { plane: 'floor', x: 3, y: 4 },
+      }),
+    );
+    expect(out).toContain('vanguard-alpha');
+    expect(out).toContain('(3, 3)');
+    expect(out).toContain('(3, 4)');
+    expect(out).toContain('floor');
+  });
+
+  it('flags cross-plane party-moved as a crossing (no longer reads as a teleport bug)', () => {
+    const out = eventLabel(
+      ev({
+        kind: 'party-moved',
+        partyId: 'pathfinders' as PartyId,
+        from: { plane: 'floor', x: 3, y: 3 },
+        to: { plane: 'ceiling', x: 3, y: 3 },
+      }),
+    );
+    expect(out).toContain('pathfinders');
+    expect(out).toContain('crossed');
+    expect(out).toContain('floor');
+    expect(out).toContain('ceiling');
+  });
+
   it('falls back to a humanized kind for unmapped events', () => {
     expect(eventLabel(ev({ kind: 'phase-changed' }))).toBe('phase changed');
   });

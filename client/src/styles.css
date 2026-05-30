@@ -1120,6 +1120,18 @@ button:disabled {
   border-radius: 3px;
 }
 
+/* Cross-plane party moves (ant-plane-switch ability, paired-POST
+ * traversal, edge crossing) — engine fires a single party-moved event
+ * for what's intentionally a one-step jump between faces. Tinted +
+ * bolded so the player reads it as a crossing rather than a teleport
+ * bug. Paired with the "crossed from X to Y" label in eventLabel. */
+.info-feed li.feed-cross-plane {
+  background: #eef2fb;
+  border-color: #b6c3df;
+  color: #2b3a5b;
+  font-weight: 600;
+}
+
 /* Battle play-by-play in the rolling feed. `expandEventsForFeed` fans
  * `battle-resolved` events into header + per-action + tally lines.
  * Visual hierarchy lets the player scroll back through past battles
