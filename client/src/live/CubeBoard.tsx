@@ -116,10 +116,19 @@ export function CubeBoard({
         }
       : { transform: 'scale(1) translate(0, 0)', transition: 'transform 400ms ease-in' };
 
+  // Chunk 19 — perspective splay. The peripheral renders the SAME
+  // `Board` the active face renders (full pawn glyphs, stack counts,
+  // POST labels, destination markers, marks). What was the rail-style
+  // "compact" mode is gone; the visual compression now comes from a
+  // CSS 3D transform on `.cube-peripheral-stage`, anchored to the edge
+  // that meets the active face so each peripheral reads as a wall
+  // folding back from the seam. Cube-view memo §A.1 binding: "active
+  // face orthographic, four edge-adjacent faces splayed in perspective
+  // as lower-fidelity previews" — this finally implements the splayed-
+  // in-perspective half of that rule. §A.1 also locks: peripherals are
+  // previews, never directly clickable, so cell clicks still route to
+  // `onSelectFace`, not `onClickTile`.
   const peripheral = (face: Plane): JSX.Element => (
-    // Plain div wrapper (not a button) so the Board's own cell <button>s
-    // aren't nested inside another button. Any click — label, gap, or a
-    // cell — rotates the face active; cell clicks route via onClickTile.
     <div
       className="cube-face cube-peripheral"
       title={`Rotate to ${face}`}
@@ -128,21 +137,22 @@ export function CubeBoard({
       }}
     >
       <span className="cube-label">{face}</span>
-      <Board
-        state={state}
-        plane={face}
-        selectedPartyId={selectedPartyId}
-        ordering={false}
-        destinations={destinations}
-        onClickTile={() => {
-          onSelectFace(face);
-        }}
-        fogEnabled={fogEnabled}
-        visible={visible}
-        seen={seen}
-        marks={allMarks}
-        compact
-      />
+      <div className="cube-peripheral-stage">
+        <Board
+          state={state}
+          plane={face}
+          selectedPartyId={selectedPartyId}
+          ordering={false}
+          destinations={destinations}
+          onClickTile={() => {
+            onSelectFace(face);
+          }}
+          fogEnabled={fogEnabled}
+          visible={visible}
+          seen={seen}
+          marks={allMarks}
+        />
+      </div>
     </div>
   );
 
