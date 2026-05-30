@@ -154,12 +154,20 @@ itself**:
   into a ~3×3 close-up, and the round-by-round play-by-play slides in from
   the right (into the UI-03 information rail). **Continue** slides it off
   and zooms back out.
-- **Same-turn (simultaneous) battles:** camera **pans** square-to-square
-  while staying zoomed; surfaces once; zooms out at the end.
+- **Same-turn battles on the same face (simultaneous, co-planar):** camera
+  **pans** square-to-square while staying zoomed; surfaces once; zooms out
+  at the end.
+- **Same-turn battles on different faces (simultaneous, cross-plane):**
+  camera **rotates between** the faces (the rotate-then-zoom move below)
+  *without resuming play* — they happened together, so playback stays
+  paused across the set; zooms out once at the end. ("Pan" only applies
+  within a face; you cannot slide across a fold.)
 - **Across-turn battles:** view **zooms out** and play resumes between.
 - **Off-screen / hidden faces:** the camera goes to the fight regardless —
   today it snaps to the face then zooms; after 3D it's the cube spinning
-  into place (same choreography, more drama).
+  into place (same choreography, more drama). Sequence the move
+  **rotate-to-face (~300ms) then zoom-to-region (~500ms)** — sequential,
+  so the eye registers *where* before the dive (per dev reply).
 - **Skip** ("this fight" / "all this turn") retained.
 
 **Sub-fix B0 — collision legibility (land first).** Fix how a multi-squad
@@ -369,4 +377,43 @@ Decision | counter. Specific confirms:
 - **Format note:** these are proposals in `docs/drafts/`; per the protocol
   each adopted CR becomes its own `### Exchange #N` entry in
   `docs/change-request-protocol.md` §5 when dev rules on it.
+
+---
+
+## Design sign-off (response to `docs/drafts/l1-ui-compression-dev-reply.md`)
+
+**Status:** Signed off — dev cleared to queue the implementation chunks.
+Date: 2026-05-30.
+
+All three CRs ratified as adopted. The four dev additions are **accepted**:
+
+1. **`partyTrails` client-state accumulation (UI-01).** Accepted — a fair
+   catch. The past trail reads from per-party accumulated state in
+   `useLiveScenario`, not the capped shared `recentEvents` slice. Confirms
+   accepted as given: BFS helper at `client/src/live/pathPreview.ts`,
+   ~150ms hold, 6-tile trail, ~3s fade after arrival, reset on order change.
+2. **Rotate-then-zoom ordering (UI-02).** Accepted — rotate-to-face
+   (~300ms) then zoom-to-region (~500ms), sequential. Folded into the CR
+   choreography above.
+3. **Top-of-feed pause-reason home (UI-03).** Accepted — matches our lean;
+   speed-control paused state stays on the left as redundant secondary cue.
+4. **UI-02/UI-03 coordination (rail slot).** Accepted — UI-03 ships the
+   right-rail slot using the existing `CombatPanel` overlay temporarily;
+   UI-02 wires the feed ↔ play-by-play swap on battle auto-pause.
+
+**One clarification added by design** (folded into UI-02 above, not a
+pushback): the "simultaneous = pan" rule only holds **within a face**.
+Same-turn battles on **different faces** can't be panned between — they
+need a **rotate-between** move with playback staying paused across the set
+(zoom out once at the end). This matters because the gameplay rubric
+(M1.2) actively pushes battles across multiple planes, so cross-plane
+simultaneous fights are a designed-for case, not an edge case. Dev's
+rotate-then-zoom timing covers the per-fight move; this just names the
+multi-fight cross-plane cadence so the camera state machine plans for it.
+
+**Build sequence confirmed:** B0 (collision legibility) → UI-03 (layout)
+→ UI-02 (camera) → UI-01 (path peek). Each its own PR/chunk; each becomes
+its own Exchange entry on landing. Dev's deferred-pacing note (per-event
+timing knob from PR #60, held pending OBS data) and the visual-review
+plan (`docs/test-feedback/ui-compression/`) are both endorsed.
 </content>
