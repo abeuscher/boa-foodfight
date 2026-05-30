@@ -13,7 +13,7 @@
     "typecheck:client": "tsc -p client/tsconfig.json",
     "gen:fixture": "tsx client/scripts/gen-l1-fixture.ts",
     "gen:replay": "tsx client/scripts/gen-l1-replay.ts",
-    "gen:scenario": "tsx client/scripts/gen-l1-scenario.ts",
+    "gen:scenario": "tsx client/scripts/gen-scenarios.ts",
     "dev:client": "vite client",
     "build:client": "vite build client",
     "test:client": "pnpm build:client && playwright test --config client/playwright.config.ts",
