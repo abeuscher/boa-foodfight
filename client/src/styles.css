@@ -1368,9 +1368,26 @@ button:disabled {
  * visible footprint (~270 px deep at 40° tilt). gap: 0 keeps the
  * seam tight so the vertices line up. */
 .cube {
+  /* Chunk 20 — one-knob sizing. Everything scales from `--cube-cell`
+   * (the active-face cell edge):
+   *   - the active board is the `auto` track, so it grows with the cell;
+   *   - the peripheral slots are sized to the wall's foreshortened depth
+   *     (~0.294 × active-edge at 90°) so the grid hugs the box instead of
+   *     reserving the old fixed 270 px (the dead grid space that left the
+   *     box marooned in the middle of `.scn-world`);
+   *   - `perspective` scales with the cell too, so the trapezoid
+   *     proportions and the 90° corner-meet stay identical at any size
+   *     (perspective ≈ 2.7 × active-edge keeps the foreshortening ratio
+   *     constant; a fixed perspective would blow up as the board grew).
+   * The cell clamps off `vmin`, so the box fills its container on a big
+   * screen and shrinks to fit shorter ones rather than running off-frame.
+   * active-edge = 10·cell + 30 (9×2 px gaps + 2×6 px board padding);
+   * slot = 0.2935 × active-edge = 2.935·cell + 8.8 px. */
+  --cube-cell: clamp(34px, 5vmin, 50px);
+  --cube-slot: calc(var(--cube-cell) * 2.935 + 8.8px);
   display: grid;
-  grid-template-columns: 270px auto 270px;
-  grid-template-rows: 270px auto 270px;
+  grid-template-columns: var(--cube-slot) auto var(--cube-slot);
+  grid-template-rows: var(--cube-slot) auto var(--cube-slot);
   grid-template-areas:
     '.    top    .'
     'left active right'
@@ -1389,9 +1406,26 @@ button:disabled {
    * makes every slot fill its track, so `bottom/top: 0` lands on the
    * true seam edge. */
   align-items: stretch;
-  perspective: 1000px;
+  perspective: calc(var(--cube-cell) * 27 + 81px);
   perspective-origin: center center;
   transform-style: preserve-3d;
+}
+
+/* Chunk 20 — the cube cells size off the shared knob (default `.cell`
+ * is a fixed 34 px; inside the cube it scales). Applies to active +
+ * peripheral boards alike, so the whole splay scales as one. */
+.cube .cell {
+  width: var(--cube-cell);
+  height: var(--cube-cell);
+}
+
+/* Chunk 20 — center the cube in its container and kill the asymmetric
+ * deadspace. Scoped to the live scenario so the shared `.scn-world`
+ * (briefing/other screens) is untouched. */
+.live .scn-world {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cube-top {
@@ -1465,11 +1499,42 @@ button:disabled {
   transition: border-color 120ms ease-out;
 }
 
+/* Chunk 20 — peripheral labels sit centered on each wall's OUTER edge
+ * (the box perimeter), not tucked in a corner. The slot's outer edge ≈
+ * the wall's foreshortened far edge, so anchoring to the slot edge lands
+ * the label on the box boundary. Left/right labels rotate 90° to run
+ * vertically along the sides, so they hug the box instead of reserving
+ * horizontal room. `pointer-events: none` keeps clicks falling through
+ * to the wall (rotate-to-active). */
 .cube-peripheral > .cube-label {
   position: absolute;
-  top: 2px;
-  left: 4px;
   z-index: 5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cube-top .cube-peripheral > .cube-label {
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -1.35em);
+}
+
+.cube-bottom .cube-peripheral > .cube-label {
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 1.35em);
+}
+
+.cube-left .cube-peripheral > .cube-label {
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.cube-right .cube-peripheral > .cube-label {
+  top: 50%;
+  right: 0;
+  transform: translate(50%, -50%) rotate(90deg);
 }
 
 /* Chunk 19 — the stage holds the un-scaled, full-fidelity Board and
