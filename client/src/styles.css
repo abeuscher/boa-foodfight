@@ -1377,7 +1377,18 @@ button:disabled {
     '.    bottom .';
   gap: 0;
   justify-content: center;
-  align-items: center;
+  /* Chunk 19 v3 (visual review): `stretch`, not `center`. The
+   * peripheral wrapper is `position: absolute`, so each slot has no
+   * in-flow content and — under `align-items: center` — collapsed to
+   * zero height. The top/bottom stages, anchored `bottom: 0` / `top: 0`
+   * of that collapsed slot, then pinned their seam edge to the row
+   * track's *center* instead of its inner edge, opening a ~135 px gap
+   * above and below the active face. (Left/right were unaffected:
+   * `justify-items` defaults to `stretch`, so their slots kept full
+   * column width and the seam landed on the column boundary.) Stretching
+   * makes every slot fill its track, so `bottom/top: 0` lands on the
+   * true seam edge. */
+  align-items: stretch;
   perspective: 1000px;
   perspective-origin: center center;
   transform-style: preserve-3d;
@@ -1436,8 +1447,22 @@ button:disabled {
   transform-style: preserve-3d;
 }
 
-.cube-peripheral:hover {
-  outline: 2px solid #e7c97a;
+/* Chunk 19 v3 (visual review): the old hover was a flat 2 px gold
+ * outline on the un-transformed wrapper rectangle. Once the walls splay
+ * at 90° that outline floated as a flat rectangle detached from the
+ * tilted wall — it no longer traced the thing you were hovering. Replace
+ * it with an in-place gridline tint: the board background shows through
+ * the 2 px inter-cell gaps (the "gridlines"), so warming that plus the
+ * cell borders lights up the wall's own grid, foreshortening included.
+ * A muted-gold tint signals "clickable — rotates to active". */
+.cube-peripheral:hover .board {
+  background: #5b4f30;
+  transition: background 120ms ease-out;
+}
+
+.cube-peripheral:hover .cell {
+  border-color: #6f6038;
+  transition: border-color 120ms ease-out;
 }
 
 .cube-peripheral > .cube-label {
@@ -1454,9 +1479,25 @@ button:disabled {
  * the active face (the "seam"); the opposite edge folds back into
  * perspective. No scale — the seam edge of the peripheral is the
  * same width as the active face's matching edge, so the cube vertices
- * align. The far edge gets foreshortened by the inherited perspective
- * (1000 px on `.cube`, propagated via preserve-3d). 40° is the PM-
- * named tilt; tunable to taste. */
+ * align. The far edge swings *toward* the viewer (positive Z), so the
+ * inherited perspective (1000 px on `.cube`, propagated via preserve-3d)
+ * renders it WIDER than the seam — the four walls splay outward and the
+ * scene reads as looking *into* the cube from its missing sixth face,
+ * the active face sitting as the back wall. (Earlier the angles were
+ * the other sign, folding the walls away from the viewer like the
+ * outside of an open box; reversed per PM visual review.)
+ *
+ * Tilt is 90° — the walls are true perpendicular cube walls and the
+ * perspective alone does the foreshortening. That angle is not arbitrary:
+ * a wall's far edge is `a = 185·s` half-wide and sits `b = (185 +
+ * 370·cosθ)·s` from the cube center, so adjacent walls meet exactly at
+ * their outer vertices only when `a = b`, i.e. `cosθ = 0` → θ = 90°. At
+ * 90° the four far edges close into a single outer square and the scene
+ * reads as a sealed box interior (one-point perspective). Lowering θ
+ * reopens triangular corner gaps and pushes the far edges back off-frame
+ * (at 40° the far edge landed ~250 px above the viewport); raising the
+ * `perspective` on `.cube` flattens the foreshortening. Tunable, but 90°
+ * is the only angle where the corners actually touch. */
 .cube-peripheral-stage {
   position: absolute;
   transform-style: preserve-3d;
@@ -1466,28 +1507,28 @@ button:disabled {
   left: 50%;
   bottom: 0;
   transform-origin: center bottom;
-  transform: translate(-50%, 0) rotateX(40deg);
+  transform: translate(-50%, 0) rotateX(-90deg);
 }
 
 .cube-bottom .cube-peripheral-stage {
   left: 50%;
   top: 0;
   transform-origin: center top;
-  transform: translate(-50%, 0) rotateX(-40deg);
+  transform: translate(-50%, 0) rotateX(90deg);
 }
 
 .cube-left .cube-peripheral-stage {
   right: 0;
   top: 50%;
   transform-origin: right center;
-  transform: translate(0, -50%) rotateY(-40deg);
+  transform: translate(0, -50%) rotateY(90deg);
 }
 
 .cube-right .cube-peripheral-stage {
   left: 0;
   top: 50%;
   transform-origin: left center;
-  transform: translate(0, -50%) rotateY(40deg);
+  transform: translate(0, -50%) rotateY(-90deg);
 }
 
 /* UI-02 — battle camera. The frame clips the zoomed stage to the
@@ -1530,6 +1571,21 @@ button:disabled {
 .cube-label.active {
   color: #e7c97a;
   font-weight: 700;
+}
+
+/* Chunk 19 v3 (visual review): float the active-face label like the
+ * peripheral labels so it no longer pushes the active Board down by its
+ * line-height. With the label in flow, the active Board sat ~17 px below
+ * the row-2 top edge, so the (now slot-aligned) top peripheral seam met
+ * the row boundary but missed the Board edge by that offset. Floating it
+ * lets the Board fill row 2 flush, so all four seams land on the Board's
+ * actual edges. `.cube-face-active` is already `position: relative`. */
+.cube-face-active > .cube-label.active {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* --- Party-detail inspection panel (replaces the action rail) --- */
