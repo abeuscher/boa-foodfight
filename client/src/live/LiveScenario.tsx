@@ -5,6 +5,7 @@ import { eventLabel } from '../scenario/eventLabel.ts';
 
 import { CombatPanel } from './CombatPanel.tsx';
 import { CubeBoard } from './CubeBoard.tsx';
+import { expandEventsForFeed } from './feedLines.ts';
 import type { LiveOutcome } from './liveScenario.ts';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
@@ -377,7 +378,6 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             onSelectFace={setPlane}
             marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
             cameraTarget={cameraTarget}
-            partyTrails={live.partyTrails}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">
@@ -456,10 +456,19 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
                   ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
                   : 'Ready — issue orders, then press Play.'}
               </p>
+              {/* Battle play-by-play in the feed. `battle-resolved`
+                  events fan out into header + per-action + tally lines
+                  via `expandEventsForFeed`. The cap is generous (last
+                  40 lines) so the player can scroll back through the
+                  most recent battle as it unfolds. */}
               <ul className="info-feed">
-                {live.recentEvents.slice(-12).map((e, i) => (
-                  <li key={i}>{eventLabel(e)}</li>
-                ))}
+                {expandEventsForFeed(live.recentEvents)
+                  .slice(-40)
+                  .map((line) => (
+                    <li key={line.key} className={`feed-${line.kind}`}>
+                      {line.text}
+                    </li>
+                  ))}
               </ul>
             </div>
           )}

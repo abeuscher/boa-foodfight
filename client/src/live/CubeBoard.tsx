@@ -18,12 +18,11 @@ interface Props {
   /** Active-face overlays. Peripheral faces receive the same marks
    * list — `Board` filters by plane so each peripheral only renders
    * marks on its own face. Kinds: `start` / `goal` (briefing nav
-   * pulses), `battle` (recent-combat pulse), `trail` (UI-01
-   * breadcrumbs), `peek` (UI-01 hold-peek; only rendered locally by
-   * Board, never sent through this prop). */
+   * pulses), `battle` (recent-combat pulse), `peek` (UI-01 hold-peek;
+   * only rendered locally by Board, never sent through this prop). */
   readonly marks?: readonly {
     readonly coord: TileCoord;
-    readonly kind: 'start' | 'goal' | 'battle' | 'trail' | 'peek';
+    readonly kind: 'start' | 'goal' | 'battle' | 'peek';
   }[];
   /** UI-02 — battle-camera focus point. When set, the active face
    * zooms onto the 3×3 region centered on this tile via a CSS
@@ -32,11 +31,6 @@ interface Props {
    * target's face before passing the tile here, so the cube layout
    * is always consistent. */
   readonly cameraTarget?: TileCoord | null;
-  /** UI-01 — per-party breadcrumb trails sourced from useLiveScenario.
-   * The cube flattens them into `trail` marks (any party's
-   * recent path shows). Tiles older than the cap drop naturally as
-   * the parent's sliding window slides. */
-  readonly partyTrails?: ReadonlyMap<PartyId, readonly TileCoord[]>;
 }
 
 /**
@@ -100,20 +94,9 @@ export function CubeBoard({
   onSelectFace,
   marks,
   cameraTarget,
-  partyTrails,
 }: Props): JSX.Element {
   const layout = FACE_LAYOUT[plane];
-  // UI-01 — flatten per-party trails into the shared marks list. Trail
-  // entries layer underneath start/goal/battle (the latter render later
-  // in Board's per-cell map merge), so trails show through unless a
-  // higher-priority annotation occupies the tile.
-  const trailMarks: { readonly coord: TileCoord; readonly kind: 'trail' }[] = [];
-  if (partyTrails) {
-    for (const trail of partyTrails.values()) {
-      for (const coord of trail) trailMarks.push({ coord, kind: 'trail' });
-    }
-  }
-  const allMarks = [...trailMarks, ...(marks ?? [])];
+  const allMarks = marks ?? [];
 
   // UI-02 — compute the camera transform for the active face. The
   // active-face wrapper has overflow:hidden via CSS; scale + translate

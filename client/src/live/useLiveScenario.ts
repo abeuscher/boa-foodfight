@@ -71,18 +71,7 @@ interface Snapshot {
   readonly seenEnemies: ReadonlySet<PartyId>;
   /** Battles resolved on the most recent turn (for the combat panel). */
   readonly battles: readonly BattleResult[];
-  /** L1 UI-compression CR UI-01 — per-party breadcrumb trail of recently
-   * traversed tiles. Capped at TRAIL_CAP per party (sliding window).
-   * Reset when the player issues a new `move-to` target for that party
-   * (the trail is "history toward the current destination"; new
-   * destination = new history). Driven by `party-moved` events. */
-  readonly partyTrails: ReadonlyMap<PartyId, readonly TileCoord[]>;
 }
-
-/** Max breadcrumbs retained per party. ~2 turns at default movement
- * allowance (3 tiles/turn) — the eye reads the recent path; older
- * tiles fade out as the party moves. */
-const TRAIL_CAP = 6;
 
 const initialSnapshot = (roster?: WorldRoster): Snapshot => {
   const state = createInitialState(DATA, SEED, roster);
@@ -98,28 +87,7 @@ const initialSnapshot = (roster?: WorldRoster): Snapshot => {
     // sighted" — they don't trigger a sighting pause on turn 1.
     seenEnemies: visibleNonAntPartyIds(state, visible),
     battles: [],
-    partyTrails: new Map(),
   };
-};
-
-/** UI-01 — extend per-party trails with this turn's `party-moved`
- * events. Capped at TRAIL_CAP per party, sliding window. Pure: returns
- * a new Map; never mutates the input. */
-const extendTrails = (
-  prev: ReadonlyMap<PartyId, readonly TileCoord[]>,
-  events: readonly ReplayEvent[],
-): ReadonlyMap<PartyId, readonly TileCoord[]> => {
-  let touched = false;
-  const next = new Map(prev);
-  for (const e of events) {
-    if (e.kind !== 'party-moved') continue;
-    const prior = next.get(e.partyId) ?? [];
-    const appended = [...prior, e.to];
-    const capped = appended.length > TRAIL_CAP ? appended.slice(-TRAIL_CAP) : appended;
-    next.set(e.partyId, capped);
-    touched = true;
-  }
-  return touched ? next : prev;
 };
 
 export interface LiveScenarioClock {
@@ -139,8 +107,6 @@ export interface LiveScenarioClock {
   readonly battles: readonly BattleResult[];
   /** Player move intents (destination tile, `null` = hold, absent = no opinion). */
   readonly orders: ReadonlyMap<PartyId, TileCoord | null>;
-  /** UI-01 — per-party breadcrumb trails of recently traversed tiles. */
-  readonly partyTrails: ReadonlyMap<PartyId, readonly TileCoord[]>;
   readonly play: () => void;
   readonly pause: () => void;
   readonly toggle: () => void;
@@ -229,7 +195,6 @@ export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
       seen,
       seenEnemies,
       battles: battlesFrom(result.events),
-      partyTrails: extendTrails(cur.partyTrails, result.events),
     };
     snapRef.current = next;
     setSnap(next);
@@ -277,16 +242,6 @@ export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
       else next.set(id, dest);
       return next;
     });
-    // UI-01 — issuing a fresh move-to target invalidates the existing
-    // breadcrumb history (the "trail toward the current destination").
-    // Hold / clear (dest null or undefined) also reset, since the
-    // marching context is gone.
-    setSnap((s) => {
-      if (!s.partyTrails.has(id)) return s;
-      const trails = new Map(s.partyTrails);
-      trails.delete(id);
-      return { ...s, partyTrails: trails };
-    });
   }, []);
 
   return {
@@ -304,7 +259,6 @@ export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
     seen: snap.seen,
     battles: snap.battles,
     orders,
-    partyTrails: snap.partyTrails,
     play,
     pause,
     toggle,

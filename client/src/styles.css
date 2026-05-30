@@ -421,16 +421,6 @@ body {
   }
 }
 
-/* L1 UI-compression CR UI-01 — past-trail breadcrumb. Static, faint
- * — reads as "squad walked here," not "this is a hint." No pulse;
- * doesn't fight for attention with battle / goal marks. */
-.cell .mark-trail {
-  color: #a3a89b;
-  font-size: 0.7rem;
-  font-weight: 700;
-  animation: none;
-}
-
 /* UI-01 — hold-peek provisional route tile. Dashed outline reads
  * as "best guess, not a promise." Distinct color from the trail
  * (the player sees blue=future, grey=past). Renders ONLY while
@@ -1115,6 +1105,35 @@ button:disabled {
   background: #f8f4e9;
   border: 1px solid #e5dec5;
   border-radius: 3px;
+}
+
+/* Battle play-by-play in the rolling feed. `expandEventsForFeed` fans
+ * `battle-resolved` events into header + per-action + tally lines.
+ * Visual hierarchy lets the player scroll back through past battles
+ * without losing context: header bold, actions indented, tally muted. */
+.info-feed li.feed-battle-header {
+  background: #fffaf0;
+  border-color: #d6c79a;
+  color: #3a2d12;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+.info-feed li.feed-battle-action {
+  background: #fdf8eb;
+  border-color: #e5dec5;
+  color: #5a4f33;
+  margin-left: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-feed li.feed-battle-tally {
+  background: #fdf8eb;
+  border-color: #e5dec5;
+  color: #6e3b1a;
+  margin-left: 0.65rem;
+  font-style: italic;
+  margin-bottom: 0.25rem;
 }
 
 .pcard {
