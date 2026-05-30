@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { summarizeBattle } from '../scenario/battleSummary.ts';
 
@@ -14,8 +14,19 @@ interface Props {
   readonly onSkipAll: () => void;
 }
 
-/** Wall-clock duration of one combat round (one engine sub-step = one beat). */
-const BEAT_MS = 900;
+/**
+ * Wall-clock duration between battle actions. One step = one attack.
+ *
+ * Chunk 18 (PM-directed) — switched from per-round (900 ms / beat) to
+ * per-action (500 ms / step). A round in the engine is "every alive
+ * unit on each side acts once," so a 6-unit-vs-6-unit round was firing
+ * up to 12 HP drops in one 900 ms beat — too fast to track. Per-action
+ * pacing pairs each prose line in the feed with one HP-bar tic. 500 ms
+ * is the starting figure for PM iteration; the design brief (Chunk 17)
+ * notes that the takeover surface should compose against this beat,
+ * so future presets (Slow / Normal / Fast) live here.
+ */
+const STEP_MS = 500;
 
 const roleName = (templates: Props['templates'], id: UnitTemplateId): string =>
   templates.get(id)?.name ?? id;
@@ -24,16 +35,15 @@ const roleName = (templates: Props['templates'], id: UnitTemplateId): string =>
  * Combat panel (ui-battle-mode-spec) — play-by-play of one resolved
  * battle, driven entirely by the engine's self-contained `BattleResult`
  * (participant start-HP snapshots + per-round action stream + outcome).
- * Legibility-first: each round is one beat; running HP is the start
- * snapshot minus cumulative damage; downed units grey out in place.
- * Read-only — the engine resolves combat, the panel presents it.
+ * Legibility-first: each **action** is one step; running HP is the
+ * start snapshot minus cumulative damage through the played steps;
+ * downed units grey out in place. Read-only — the engine resolves
+ * combat, the panel presents it.
  *
  * The cinematic stage (room surface / lighting) is design-gated (cube
  * memo §D); this is the structural focus surface. The per-battle
- * MODIFIER STACK (terrain / POST / card / plane / combat-modifier the
- * spec's matchup-context calls for) is NOT carried on `battle-resolved`
- * — it's an input to combat math, not surfaced in the result — so it's
- * a flagged forward dep, not invented here.
+ * MODIFIER STACK is surfaced from `result.modifierStack` (PR #60) at
+ * the bottom of the panel.
  */
 export function CombatPanel({
   result,
@@ -43,37 +53,61 @@ export function CombatPanel({
   onContinue,
   onSkipAll,
 }: Props): JSX.Element {
-  const lastBeat = result.rounds.length;
-  const [beat, setBeat] = useState(0);
-  const done = beat >= lastBeat;
+  // Flatten rounds → actions once. Each step animates one action so
+  // the HP bar tic is paired 1:1 with the prose line in the feed.
+  const allActions = useMemo(() => {
+    const flat: {
+      readonly roundIndex: number;
+      readonly attackerId: UnitId;
+      readonly defenderId: UnitId;
+      readonly damage: number;
+    }[] = [];
+    for (let r = 0; r < result.rounds.length; r++) {
+      for (const a of result.rounds[r]!.actions) {
+        flat.push({
+          roundIndex: r,
+          attackerId: a.attackerId,
+          defenderId: a.defenderId,
+          damage: a.damage,
+        });
+      }
+    }
+    return flat;
+  }, [result]);
+
+  const totalRounds = result.rounds.length;
+  const lastStep = allActions.length;
+  const [step, setStep] = useState(0);
+  const done = step >= lastStep;
 
   useEffect(() => {
     if (done) return undefined;
-    const id = setTimeout(() => setBeat((b) => b + 1), BEAT_MS);
+    const id = setTimeout(() => setStep((s) => s + 1), STEP_MS);
     return () => {
       clearTimeout(id);
     };
-  }, [beat, done]);
+  }, [step, done]);
 
-  // Running HP = start snapshot − cumulative damage through `beat` rounds.
+  // Running HP = start snapshot − cumulative damage through `step` actions.
   const damage = new Map<UnitId, number>();
-  for (let r = 0; r < beat && r < lastBeat; r++) {
-    for (const a of result.rounds[r]!.actions) {
-      damage.set(a.defenderId, (damage.get(a.defenderId) ?? 0) + a.damage);
-    }
+  for (let i = 0; i < step; i++) {
+    const a = allActions[i]!;
+    damage.set(a.defenderId, (damage.get(a.defenderId) ?? 0) + a.damage);
   }
   const hpOf = (unitId: UnitId, start: number): number =>
     Math.max(0, start - (damage.get(unitId) ?? 0));
 
-  // Damage flashes for the round just applied (beat-1).
+  // Damage flash + attacker glow for the single action just applied.
   const flashed = new Map<UnitId, number>();
   const attackers = new Set<UnitId>();
-  if (beat > 0 && beat <= lastBeat) {
-    for (const a of result.rounds[beat - 1]!.actions) {
-      flashed.set(a.defenderId, (flashed.get(a.defenderId) ?? 0) + a.damage);
-      attackers.add(a.attackerId);
-    }
+  if (step > 0) {
+    const a = allActions[step - 1]!;
+    flashed.set(a.defenderId, a.damage);
+    attackers.add(a.attackerId);
   }
+  // Current round display advances when the playhead crosses into the
+  // next round's first action.
+  const currentRound = step > 0 ? Math.min(allActions[step - 1]!.roundIndex + 1, totalRounds) : 1;
 
   const side = (which: 'attacker' | 'defender'): JSX.Element => (
     <div className={`cb-side cb-${which}`}>
@@ -166,19 +200,20 @@ export function CombatPanel({
         <div className="cb-context">
           {done ? (
             <span>
-              {lastBeat === 0 ? 'Decided in the opening volley · ' : ''}
+              {lastStep === 0 ? 'Decided in the opening volley · ' : ''}
               Casualties — {String(result.attackerPartyId)}:{' '}
               {String(result.attackerCasualties.length)} · {String(result.defenderPartyId)}:{' '}
               {String(result.defenderCasualties.length)}
             </span>
           ) : (
             <span className="hint">
-              Round {String(Math.min(beat + 1, lastBeat))} of {String(lastBeat)}
+              Round {String(currentRound)} of {String(totalRounds)} · action{' '}
+              {String(Math.min(step + 1, lastStep))} of {String(lastStep)}
             </span>
           )}
         </div>
         <div className="cb-controls">
-          {!done && <button onClick={() => setBeat(lastBeat)}>Skip this combat</button>}
+          {!done && <button onClick={() => setStep(lastStep)}>Skip this combat</button>}
           {total > 1 && <button onClick={onSkipAll}>Skip all this turn</button>}
           <button className="cb-continue" disabled={!done} onClick={onContinue}>
             Continue
