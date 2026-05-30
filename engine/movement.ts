@@ -153,8 +153,10 @@ export interface MovementOutcome {
 // Tunables (Level 1)
 // ---------------------------------------------------------------------------
 
-/** Tiles whose `movementCost` is at or above this are impassable. */
-const OBSTACLE_COST_THRESHOLD = 99;
+/** Tiles whose `movementCost` is at or above this are impassable.
+ * Exported so the client `pathPreview` helper (UI-01) can mirror the
+ * engine's passability rule without re-stating the threshold. */
+export const OBSTACLE_COST_THRESHOLD = 99;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -191,10 +193,13 @@ const postAt = (coord: TileCoord, posts: ReadonlyMap<unknown, Post>): Post | und
   return undefined;
 };
 
-const tileAt = (coord: TileCoord, tiles: ReadonlyMap<string, Tile>): Tile | undefined =>
+/** Look up a tile by coord. Exported for client preview helpers. */
+export const tileAt = (coord: TileCoord, tiles: ReadonlyMap<string, Tile>): Tile | undefined =>
   tiles.get(coordKey(coord));
 
-const isPassableTile = (tile: Tile | undefined): tile is Tile =>
+/** True iff the tile exists and is passable (movementCost below the
+ * obstacle threshold). Exported for client preview helpers. */
+export const isPassableTile = (tile: Tile | undefined): tile is Tile =>
   tile !== undefined && tile.terrain.movementCost < OBSTACLE_COST_THRESHOLD;
 
 /**
@@ -209,7 +214,7 @@ const isPassableTile = (tile: Tile | undefined): tile is Tile =>
  * regardless of `movementCost`, so tile count is the true path metric;
  * `movementCost` survives only as a tiebreak preference at each step.
  */
-const bfsDistancesFromTarget = (
+export const bfsDistancesFromTarget = (
   target: TileCoord,
   tiles: ReadonlyMap<string, Tile>,
 ): ReadonlyMap<string, number> => {

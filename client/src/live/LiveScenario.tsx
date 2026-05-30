@@ -377,6 +377,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             onSelectFace={setPlane}
             marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
             cameraTarget={cameraTarget}
+            partyTrails={live.partyTrails}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">
