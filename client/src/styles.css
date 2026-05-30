@@ -1317,6 +1317,13 @@ button:disabled {
   gap: 2px;
 }
 
+/* UI-02 — anchor the camera vignette overlay (see below) at the
+ * active face. `position: relative` so the `::after` pseudo-
+ * element's `inset: 0` lands correctly. */
+.cube-face-active {
+  position: relative;
+}
+
 .cube-peripheral {
   cursor: pointer;
   border-radius: 6px;
@@ -1325,6 +1332,37 @@ button:disabled {
 
 .cube-peripheral:hover {
   outline: 2px solid #e7c97a;
+}
+
+/* UI-02 — battle camera. The frame clips the zoomed stage to the
+ * active-face box; the stage carries the scale + translate transform
+ * applied via inline style by `CubeBoard`. When the camera is idle
+ * (`scale(1)`) the frame is a transparent passthrough. */
+.cube-camera-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.cube-camera-stage {
+  width: 100%;
+  height: 100%;
+}
+
+/* When the camera is engaged anywhere on the cube, a subtle vignette
+ * pulls the eye toward the focused face. Peripherals dim slightly so
+ * the active face reads as the focus. */
+.cube.cube-camera-active .cube-peripheral {
+  opacity: 0.45;
+  transition: opacity 300ms ease-out;
+}
+
+.cube.cube-camera-active .cube-face-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .cube-label {
@@ -1595,44 +1633,40 @@ button:disabled {
   min-height: 1.5rem;
 }
 
-/* --- Combat panel (full-attention focus surface) --- */
-
-.combat-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(16, 18, 22, 0.78);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-}
+/* --- Combat panel (UI-02 — now lives in the right rail slot, not as
+ *     a full-screen overlay) --- */
 
 .combat {
-  width: min(760px, 92vw);
+  width: auto;
+  max-width: 100%;
   background: #20242b;
   color: #e8e2d4;
   border: 1px solid #3a4049;
-  border-radius: 10px;
-  padding: 1rem;
+  border-radius: 8px;
+  padding: 0.6rem 0.65rem;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.5rem;
+  font-size: 0.78rem;
 }
 
 .cb-strip {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: #9a958a;
 }
 
 .cb-stage {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 1rem;
-  align-items: center;
-  min-height: 180px;
+  /* Stacked layout for the rail's narrow column: attacker / VS /
+   * defender in a single column rather than three across. */
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 0.4rem;
+  align-items: stretch;
+  min-height: auto;
   background: #2a2f37;
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 6px;
+  padding: 0.55rem;
 }
 
 .cb-side {
@@ -1642,14 +1676,15 @@ button:disabled {
 }
 
 .cb-defender {
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .cb-vs {
   font-weight: 700;
   text-align: center;
   color: #e7c97a;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  padding: 0.1rem 0;
 }
 
 .cb-unit {
@@ -1657,11 +1692,12 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  min-width: 8rem;
-  padding: 0.3rem 0.5rem;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
   border: 1px solid #3a4049;
-  border-radius: 5px;
+  border-radius: 4px;
   background: #333a44;
+  font-size: 0.74rem;
 }
 
 .cb-defender .cb-unit {

@@ -65,16 +65,23 @@ const statusWord = (
  *     Step / speeds). Actions stay co-located with the squad they
  *     belong to; clicking Inspect does NOT swap this rail away.
  *   - **Center = the world**: the splayed cube board (taller now that
- *     the bottom log band is reclaimed).
+ *     the bottom log band is reclaimed). UI-02 layers a camera zoom
+ *     on top of the active face during battles.
  *   - **Right rail = information** (everything read): pause-reason /
- *     turn-status header pinned at top; below it, one of {running
- *     play-by-play feed, PartyDetail read-out when inspecting, combat
- *     play-by-play when paused on a battle (UI-02 wires that swap;
- *     this CR ships the slot reserved as a passthrough to today's
- *     overlay)}.
+ *     turn-status header pinned at top; below it, one of {combat
+ *     play-by-play while paused on a battle (UI-02), PartyDetail
+ *     read-out when inspecting, running play-by-play feed}.
  *
- * The cinematic cube render is design-gated (cube memo §D); the board
- * is the functional structural grid.
+ * UI-02 (battle camera): when the engine auto-pauses on `battle-
+ * resolved`, this component derives a camera target (the defender's
+ * tile) from the battle queue, auto-rotates the cube to that face if
+ * needed (cut-then-zoom for v1; smoother rotation needs a 3D cube
+ * upgrade), zooms the active face onto the contested 3×3 region, and
+ * renders the play-by-play in the right rail's slot (replaces the
+ * feed). Cross-plane simultaneous battles → rotate-between with
+ * playback staying paused across the set, per the design sign-off.
+ * Skipping / Continuing advances the queue. Queue empty → cameraTarget
+ * clears, feed restores.
  */
 export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
   const live = useLiveScenario(roster);
@@ -141,6 +148,31 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
   // The inspected party fell out of state (shouldn't happen on L1) — close.
   const inspectingOpen = inspecting && selected !== null;
+
+  // UI-02 — camera target. Derived from the current battleQueue entry:
+  // the defender's tile is the collision tile both parties co-located on
+  // when the engine resolved the battle. While the queue is active, the
+  // cube auto-rotates to the target's face and zooms onto the tile; the
+  // right rail shows the play-by-play instead of the feed.
+  const currentBattle = battleQueue?.battles[battleQueue.index] ?? null;
+  const cameraTarget: TileCoord | null = (() => {
+    if (!currentBattle) return null;
+    const defender = state.parties.get(currentBattle.defenderPartyId);
+    const attacker = state.parties.get(currentBattle.attackerPartyId);
+    return defender?.location ?? attacker?.location ?? null;
+  })();
+
+  // Auto-rotate to the target's face. For v1 this is a face cut (the
+  // cube has no 3D rotation animation yet); the visual review will
+  // tell us if it needs a transition. The dev-reply timing recommendation
+  // (rotate ~300ms then zoom ~500ms) sequences against CSS transitions
+  // on the active-face wrapper — the rotate phase is currently a swap
+  // and the CSS handles the zoom phase smoothly.
+  useEffect(() => {
+    if (cameraTarget && cameraTarget.plane !== plane) {
+      setPlane(cameraTarget.plane);
+    }
+  }, [cameraTarget?.plane]);
 
   const selectParty = (id: PartyId): void => {
     setSelectedId(id);
@@ -344,6 +376,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             seen={live.seen}
             onSelectFace={setPlane}
             marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
+            cameraTarget={cameraTarget}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">
@@ -368,12 +401,14 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           )}
         </div>
 
-        {/* RIGHT RAIL — information. Status pinned at top; body is the
-            running feed by default, swapped for PartyDetail when
-            inspecting. UI-02 adds the third case (combat play-by-play
-            during battle auto-pause); for now the combat panel keeps
-            its overlay placement (the `combat-overlay` div below) and
-            UI-02 relocates it into the slot reserved below. */}
+        {/* RIGHT RAIL — information. Status pinned at top. Body is one
+            of three things in priority order:
+              1. Combat play-by-play (UI-02) — when battleQueue active.
+              2. PartyDetail — when inspecting.
+              3. Running feed — default.
+            Combat wins over Inspect because the player needs to see
+            what the engine is doing right now; Inspect resumes after
+            the player Continues / Skips through the battle queue. */}
         <aside className="info-rail">
           <div className={`info-status ${live.pauseReason ? 'paused' : ''}`}>
             {live.pauseReason
@@ -382,7 +417,27 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
                 ? `Turn ${String(live.turnsPlayed)} · Playing…`
                 : `Turn ${String(live.turnsPlayed)} · Paused`}
           </div>
-          {inspectingOpen ? (
+          {battleQueue && currentBattle ? (
+            <CombatPanel
+              key={`${String(currentBattle.attackerPartyId)}-${String(
+                currentBattle.defenderPartyId,
+              )}-${String(battleQueue.index)}`}
+              result={currentBattle}
+              templates={state.unitTemplates}
+              index={battleQueue.index + 1}
+              total={battleQueue.battles.length}
+              onContinue={() => {
+                setBattleQueue((q) => {
+                  if (!q) return null;
+                  const next = q.index + 1;
+                  return next >= q.battles.length ? null : { ...q, index: next };
+                });
+              }}
+              onSkipAll={() => {
+                setBattleQueue(null);
+              }}
+            />
+          ) : inspectingOpen ? (
             <PartyDetail
               state={state}
               party={selected}
@@ -395,8 +450,6 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
             />
           ) : (
             <div className="info-body">
-              {/* UI-02 slot — combat play-by-play renders here when paused
-                  on a battle. UI-03 ships the slot; UI-02 wires the swap. */}
               <p className="info-now">
                 {live.recentEvents.length > 0
                   ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
@@ -411,30 +464,6 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           )}
         </aside>
       </div>
-
-      {battleQueue && (
-        <div className="combat-overlay">
-          <CombatPanel
-            key={`${String(battleQueue.battles[battleQueue.index]!.attackerPartyId)}-${String(
-              battleQueue.battles[battleQueue.index]!.defenderPartyId,
-            )}-${String(battleQueue.index)}`}
-            result={battleQueue.battles[battleQueue.index]!}
-            templates={state.unitTemplates}
-            index={battleQueue.index + 1}
-            total={battleQueue.battles.length}
-            onContinue={() => {
-              setBattleQueue((q) => {
-                if (!q) return null;
-                const next = q.index + 1;
-                return next >= q.battles.length ? null : { ...q, index: next };
-              });
-            }}
-            onSkipAll={() => {
-              setBattleQueue(null);
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }
