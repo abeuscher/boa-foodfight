@@ -42,6 +42,30 @@ export interface FeedLine {
   readonly kind: 'event' | 'battle-header' | 'battle-action' | 'battle-tally';
 }
 
+/**
+ * Per-action line in plain English. Format:
+ *   - Normal hit:  "Round N: A attacks B for D damage (H/Max HP)."
+ *   - Killing hit: "Round N: A attacks B for D damage. B is killed."
+ * Matches the narration style of the original text-mode replay logs
+ * the PM remembered — "this unit attacks this unit for N points of
+ * damage" — using the same `summarizeBattle` data (PR #57's per-
+ * action stream + PR #60's running HP).
+ */
+const actionLine = (action: {
+  readonly roundIndex: number;
+  readonly attackerLabel: string;
+  readonly defenderLabel: string;
+  readonly damage: number;
+  readonly killed: boolean;
+  readonly defenderHpAfter: number;
+  readonly defenderMaxHp: number;
+}): string => {
+  const round = action.roundIndex + 1;
+  const lead = `Round ${String(round)}: ${action.attackerLabel} attacks ${action.defenderLabel} for ${String(action.damage)} damage`;
+  if (action.killed) return `${lead}. ${action.defenderLabel} is killed.`;
+  return `${lead} (${String(action.defenderHpAfter)}/${String(action.defenderMaxHp)} HP).`;
+};
+
 const expandBattle = (
   event: Extract<ReplayEvent, { kind: 'battle-resolved' }>,
 ): readonly FeedLine[] => {
@@ -49,21 +73,23 @@ const expandBattle = (
   const out: FeedLine[] = [];
   out.push({
     key: `t${String(event.tick)}-h`,
-    text: `⚔ ${summary.attackerPartyId} → ${summary.defenderPartyId}`,
+    text: `⚔ Combat: ${summary.attackerPartyId} attack ${summary.defenderPartyId}.`,
     kind: 'battle-header',
   });
   for (let i = 0; i < summary.actions.length; i++) {
     const a = summary.actions[i]!;
-    const kill = a.killed ? ' ✕' : '';
     out.push({
       key: `t${String(event.tick)}-a${String(i)}`,
-      text: `R${String(a.roundIndex + 1)}: ${a.attackerLabel} → ${a.defenderLabel} −${String(a.damage)} (${String(a.defenderHpAfter)}/${String(a.defenderMaxHp)})${kill}`,
+      text: actionLine(a),
       kind: 'battle-action',
     });
   }
+  // `winnerLabel` is already prose-shaped ("vanguard (defender) won"
+  // / "Draw"). Wrap with closing punctuation so the tally line reads
+  // as a complete sentence.
   out.push({
     key: `t${String(event.tick)}-t`,
-    text: `↳ ${summary.winnerLabel}`,
+    text: `Combat ends — ${summary.winnerLabel}.`,
     kind: 'battle-tally',
   });
   return out;

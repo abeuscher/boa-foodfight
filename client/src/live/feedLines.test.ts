@@ -81,21 +81,37 @@ describe('expandEventsForFeed', () => {
     expect(out[0]!.text).toContain('Turn 5');
   });
 
-  it('expands battle-resolved into header + per-action + tally', () => {
+  it('expands battle-resolved into header + per-action + tally in prose', () => {
     const ev: ReplayEvent = { kind: 'battle-resolved', turn: 3, tick: 42, result: battle };
     const out = expandEventsForFeed([ev]);
     // 1 header + 2 actions + 1 tally = 4 lines.
     expect(out).toHaveLength(4);
+
+    // Header reads "Combat: raiders attack vanguard."
     expect(out[0]!.kind).toBe('battle-header');
     expect(out[0]!.text).toContain('raiders');
     expect(out[0]!.text).toContain('vanguard');
+
+    // Non-killing action: "Round 1: Spider elite attacks Ant footman for 3 damage (3/6 HP)."
     expect(out[1]!.kind).toBe('battle-action');
+    expect(out[1]!.text).toContain('Round 1');
     expect(out[1]!.text).toContain('Spider elite');
+    expect(out[1]!.text).toContain('attacks');
     expect(out[1]!.text).toContain('Ant footman');
-    expect(out[1]!.text).toContain('−3');
+    expect(out[1]!.text).toContain('3 damage');
+    expect(out[1]!.text).toContain('3/6 HP');
+
+    // Killing action: "Round 1: Ant footman attacks Spider elite for 8 damage. Spider elite is killed."
     expect(out[2]!.kind).toBe('battle-action');
-    expect(out[2]!.text).toContain('✕'); // killed marker on the lethal hit
+    expect(out[2]!.text).toContain('Ant footman');
+    expect(out[2]!.text).toContain('attacks');
+    expect(out[2]!.text).toContain('Spider elite');
+    expect(out[2]!.text).toContain('8 damage');
+    expect(out[2]!.text).toContain('is killed');
+
+    // Tally
     expect(out[3]!.kind).toBe('battle-tally');
+    expect(out[3]!.text).toContain('Combat ends');
   });
 
   it('produces unique keys across lines (stable per tick)', () => {
