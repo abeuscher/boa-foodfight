@@ -1164,18 +1164,27 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   font-size: 0.95rem;
   font-weight: 700;
 }
 
+/* L1-iteration UI CR-02 Sub-fix B0 — collision legibility. Per-glyph
+ * coloring (the old `.pawn.f-ant` selector still works for single-
+ * faction tiles where the legacy cube fallback renders `f-` on the
+ * outer pawn, but new code paths render one .pawn-glyph per faction
+ * present). */
+.cell .pawn-glyph.f-ant,
 .cell .pawn.f-ant {
   color: #f0c060;
 }
 
+.cell .pawn-glyph.f-spider,
 .cell .pawn.f-spider {
   color: #e88080;
 }
 
+.cell .pawn-glyph.f-neutral,
 .cell .pawn.f-neutral {
   color: #c8c2b4;
 }
@@ -1187,6 +1196,13 @@ button:disabled {
   font-size: 0.5rem;
   font-style: normal;
   color: #e8e2d4;
+}
+
+/* B0 — contested cell: ant + spider co-located. Red outline reads
+ * as "a fight is brewing here" before the engine resolves it. */
+.cell.contested {
+  outline: 2px solid #c8492f;
+  outline-offset: -2px;
 }
 
 .cell .dest {

@@ -109,21 +109,40 @@ export function Board({
       // Explored terrain/POSTs persist (dim); live actors only when visible.
       const post = cellSeen ? postByCell.get(k) : undefined;
       const parties = cellVisible ? (partyByCell.get(k) ?? []) : [];
-      const lead = parties[0];
-      const selectedHere = lead !== undefined && lead.id === selectedPartyId;
+      // L1-iteration UI CR-02 sub-fix B0 — collision legibility.
+      // The cell was rendering only the stack lead's faction + a faction-
+      // blind `+N`, so a mixed-faction stack was invisible *as* mixed and
+      // selection only highlighted the lead. Surface every distinct
+      // faction present, mark ant-vs-spider tiles as `contested`, and
+      // match selection against ANY party on the tile.
+      const factionsHere: Party['faction'][] = [];
+      for (const p of parties) {
+        if (!factionsHere.includes(p.faction)) factionsHere.push(p.faction);
+      }
+      factionsHere.sort();
+      const isContested = factionsHere.includes('ant') && factionsHere.includes('spider');
+      const selectedHere =
+        selectedPartyId !== null && parties.some((p) => p.id === selectedPartyId);
       const destHere = destByCell.has(k);
       const classes = ['cell', `t-${terrain}`];
       if (!cellSeen) classes.push('fog-unseen');
       else if (!cellVisible) classes.push('fog-seen');
       if (ordering && !isObstacle) classes.push('targetable');
       if (selectedHere) classes.push('sel');
+      if (isContested) classes.push('contested');
+      const stackTitle =
+        cellVisible && post
+          ? `${post.name} (${post.owner})`
+          : parties.length > 0
+            ? parties.map((p) => String(p.id)).join(' · ')
+            : '';
       cells.push(
         <button
           key={k}
           type="button"
           className={classes.join(' ')}
           disabled={ordering && isObstacle}
-          title={cellVisible && post ? `${post.name} (${post.owner})` : (lead?.id ?? '')}
+          title={stackTitle}
           onClick={() => {
             onClickTile({ plane, x, y });
           }}
@@ -136,11 +155,15 @@ export function Board({
               ) : null}
             </span>
           )}
-          {lead && (
-            <span className={`pawn f-${lead.faction}`}>
-              {factionGlyph[lead.faction] ?? '?'}
-              {parties.length > 1 ? (
-                <em className="stack">{`+${String(parties.length - 1)}`}</em>
+          {parties.length > 0 && (
+            <span className="pawn">
+              {factionsHere.map((f) => (
+                <span key={f} className={`pawn-glyph f-${f}`}>
+                  {factionGlyph[f] ?? '?'}
+                </span>
+              ))}
+              {parties.length > factionsHere.length ? (
+                <em className="stack">{`+${String(parties.length - factionsHere.length)}`}</em>
               ) : null}
             </span>
           )}
