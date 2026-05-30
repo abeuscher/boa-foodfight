@@ -20,12 +20,11 @@ interface Props {
   /** Tile-anchored visual marks rendered on top of the cell grid.
    *   - `start` / `goal` — briefing pulses (top-down navigation hints)
    *   - `battle` — recent-combat tile highlight (lingers ~8s)
-   *   - `trail` — UI-01 past-trail breadcrumb (squad walked here)
    *   - `peek` — UI-01 hold-peek provisional route tile (dashed)
    * Board filters by plane, so the same list can be passed to all faces. */
   readonly marks?: readonly {
     readonly coord: TileCoord;
-    readonly kind: 'start' | 'goal' | 'battle' | 'trail' | 'peek';
+    readonly kind: 'start' | 'goal' | 'battle' | 'peek';
   }[];
   /** Peripheral/preview rendering: smaller cells, dot-glyph actors. The
    * splayed cube faces use this; clicks route to face-activation. */
@@ -138,12 +137,11 @@ export function Board({
     const k = cellKey(dest.x, dest.y);
     destByCell.set(k, destByCell.get(k) === true || pid === selectedPartyId);
   }
-  const markByCell = new Map<string, 'start' | 'goal' | 'battle' | 'trail' | 'peek'>();
-  // Trail / battle / start / goal come from the parent's marks list.
-  // Peek tiles are computed locally and overlay last (so they win at
-  // any tile that also has a trail dot — peek is the player's active
-  // intent, trail is history). Final-tile-of-peek doubles as the
-  // destination indicator, but only if no real `dest` marker is there.
+  const markByCell = new Map<string, 'start' | 'goal' | 'battle' | 'peek'>();
+  // External marks (battle / start / goal) come from the parent.
+  // Peek tiles are computed locally and overlay last so they win on
+  // any tile that also has a battle pulse — the peek is the player's
+  // active intent, transient and high-priority.
   for (const m of marks ?? []) {
     if (m.coord.plane === plane) markByCell.set(cellKey(m.coord.x, m.coord.y), m.kind);
   }
@@ -153,11 +151,10 @@ export function Board({
     }
   }
 
-  const markGlyph = (kind: 'start' | 'goal' | 'battle' | 'trail' | 'peek'): string => {
+  const markGlyph = (kind: 'start' | 'goal' | 'battle' | 'peek'): string => {
     if (kind === 'start') return 'S';
     if (kind === 'goal') return 'G';
     if (kind === 'battle') return '⚔';
-    if (kind === 'trail') return '·';
     return '·'; // peek
   };
 
