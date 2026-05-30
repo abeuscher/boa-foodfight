@@ -1421,11 +1421,14 @@ button:disabled {
 
 /* Chunk 20 — center the cube in its container and kill the asymmetric
  * deadspace. Scoped to the live scenario so the shared `.scn-world`
- * (briefing/other screens) is untouched. */
+ * (briefing/other screens) is untouched. The container shrink-wraps the
+ * cube, so this padding is the gutter that sits between the box (and its
+ * edge labels) and the container border — 25 px all round per PM. */
 .live .scn-world {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 25px;
 }
 
 .cube-top {
@@ -1499,41 +1502,57 @@ button:disabled {
   transition: border-color 120ms ease-out;
 }
 
-/* Chunk 20 — peripheral labels sit centered on each wall's OUTER edge
- * (the box perimeter), not tucked in a corner. The slot's outer edge ≈
- * the wall's foreshortened far edge, so anchoring to the slot edge lands
- * the label on the box boundary. Left/right labels rotate 90° to run
- * vertically along the sides, so they hug the box instead of reserving
- * horizontal room. `pointer-events: none` keeps clicks falling through
- * to the wall (rotate-to-active). */
-.cube-peripheral > .cube-label {
+/* Chunk 20 — flat label overlay. `.cube-frame` wraps the cube + the
+ * overlay; the overlay is a sibling of `.cube`, so it lives OUTSIDE the
+ * perspective/preserve-3d context and is never 3D-sorted behind a wall.
+ * `.cube` hugs the box (slots = wall depth), so the frame edges are the
+ * box edges and the labels pin to each edge. Click-through so the walls
+ * remain the rotate-to-active target. */
+.cube-frame {
+  position: relative;
+}
+
+.cube-labels {
   position: absolute;
-  z-index: 5;
-  white-space: nowrap;
+  inset: 0;
+  z-index: 10;
   pointer-events: none;
 }
 
-.cube-top .cube-peripheral > .cube-label {
+.cube-edge-label {
+  position: absolute;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+  white-space: nowrap;
+  /* legible over either the dark wall or the gutter */
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95),
+    0 0 2px rgba(0, 0, 0, 0.95);
+}
+
+.cube-edge-top {
   top: 0;
   left: 50%;
-  transform: translate(-50%, -1.35em);
+  transform: translate(-50%, -1.5em);
 }
 
-.cube-bottom .cube-peripheral > .cube-label {
+.cube-edge-bottom {
   bottom: 0;
   left: 50%;
-  transform: translate(-50%, 1.35em);
+  transform: translate(-50%, 1.5em);
 }
 
-.cube-left .cube-peripheral > .cube-label {
+.cube-edge-left {
   top: 50%;
-  left: 0;
+  left: -0.7em;
   transform: translate(-50%, -50%) rotate(-90deg);
 }
 
-.cube-right .cube-peripheral > .cube-label {
+.cube-edge-right {
   top: 50%;
-  right: 0;
+  right: -0.7em;
   transform: translate(50%, -50%) rotate(90deg);
 }
 

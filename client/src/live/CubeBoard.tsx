@@ -136,7 +136,11 @@ export function CubeBoard({
         onSelectFace(face);
       }}
     >
-      <span className="cube-label">{face}</span>
+      {/* Chunk 20 — the peripheral label moved OUT to `.cube-labels`, a
+          flat overlay above the cube. Inside this `preserve-3d` subtree a
+          label can't reliably sit in front of its wall (the wall's far
+          edge is physically closer in Z, so it wins regardless of
+          z-index); the flat overlay sidesteps 3D sorting entirely. */}
       <div className="cube-peripheral-stage">
         <Board
           state={state}
@@ -157,32 +161,47 @@ export function CubeBoard({
   );
 
   return (
-    <div className={`cube ${cameraTarget ? 'cube-camera-active' : ''}`}>
-      <div className="cube-slot cube-top">{peripheral(layout.top)}</div>
-      <div className="cube-slot cube-left">{peripheral(layout.left)}</div>
-      <div className="cube-slot cube-active">
-        <div className="cube-face cube-face-active">
-          <span className="cube-label active">{plane}</span>
-          <div className="cube-camera-frame">
-            <div className="cube-camera-stage" style={cameraStyle}>
-              <Board
-                state={state}
-                plane={plane}
-                selectedPartyId={selectedPartyId}
-                ordering={ordering}
-                destinations={destinations}
-                onClickTile={onClickTile}
-                fogEnabled={fogEnabled}
-                visible={visible}
-                seen={seen}
-                marks={allMarks}
-              />
+    <div className="cube-frame">
+      <div className={`cube ${cameraTarget ? 'cube-camera-active' : ''}`}>
+        <div className="cube-slot cube-top">{peripheral(layout.top)}</div>
+        <div className="cube-slot cube-left">{peripheral(layout.left)}</div>
+        <div className="cube-slot cube-active">
+          <div className="cube-face cube-face-active">
+            <span className="cube-label active">{plane}</span>
+            <div className="cube-camera-frame">
+              <div className="cube-camera-stage" style={cameraStyle}>
+                <Board
+                  state={state}
+                  plane={plane}
+                  selectedPartyId={selectedPartyId}
+                  ordering={ordering}
+                  destinations={destinations}
+                  onClickTile={onClickTile}
+                  fogEnabled={fogEnabled}
+                  visible={visible}
+                  seen={seen}
+                  marks={allMarks}
+                />
+              </div>
             </div>
           </div>
         </div>
+        <div className="cube-slot cube-right">{peripheral(layout.right)}</div>
+        <div className="cube-slot cube-bottom">{peripheral(layout.bottom)}</div>
       </div>
-      <div className="cube-slot cube-right">{peripheral(layout.right)}</div>
-      <div className="cube-slot cube-bottom">{peripheral(layout.bottom)}</div>
+
+      {/* Chunk 20 — flat label overlay, a sibling of `.cube` so it lives
+          outside the perspective/3D context. `.cube` hugs the box (slots
+          are sized to the wall depth), so the frame edges are the box
+          edges; the labels pin to each edge, left/right rotated 90°. The
+          overlay is click-through (pointer-events:none) so the walls
+          underneath stay the rotate-to-active target. */}
+      <div className="cube-labels" aria-hidden="true">
+        <span className="cube-edge-label cube-edge-top">{layout.top}</span>
+        <span className="cube-edge-label cube-edge-bottom">{layout.bottom}</span>
+        <span className="cube-edge-label cube-edge-left">{layout.left}</span>
+        <span className="cube-edge-label cube-edge-right">{layout.right}</span>
+      </div>
     </div>
   );
 }
