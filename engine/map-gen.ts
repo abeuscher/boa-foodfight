@@ -186,13 +186,14 @@ const generatePosts = (rng: Rng): { posts: PostDraft[]; mainPostTiles: ReadonlyS
   ];
   for (const { plane, type } of MANDATORY_PLACEMENTS) placeOfType(type, [plane]);
 
-  // Phase 2: 2-4 extras (was 0-2), picking types uniformly from the
-  // FULL pool — including the L1-iteration #4 typed POSTs (sanctum,
-  // gold-mine). Extras can land on any plane (subject to
-  // MAX_POSTS_PER_PLANE = 3) and push the total mid-POST count to 8-10,
-  // landing M2.1 (12-16 total POSTs incl. fixed) on average and meeting
-  // M2.2 (≥ 2 POSTs per combat-relevant plane).
-  const extras = 2 + rng.int(3); // 2 | 3 | 4
+  // Phase 2: 3-5 extras (was 2-4 → bumped in Chunk 7a per playtest F4),
+  // picking types uniformly from the FULL pool — including the
+  // L1-iteration #4 typed POSTs (sanctum, gold-mine). Extras can land
+  // on any plane (subject to MAX_POSTS_PER_PLANE = 3) and push the
+  // total mid-POST count to 9-11. With 2 fixed (storm-drain +
+  // spider-web), total POSTs lands at 11-13 → into the M2.1 target band
+  // (12-16) while still respecting M2.2 (≥ 2 POSTs per combat plane).
+  const extras = 3 + rng.int(3); // 3 | 4 | 5
   for (let i = 0; i < extras; i++) {
     const type = MID_POST_TYPES[rng.int(MID_POST_TYPES.length)];
     if (type) placeOfType(type);

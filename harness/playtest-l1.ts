@@ -23,9 +23,9 @@
 
 import path from 'node:path';
 
-import { baselinePlayer } from '../ai/baseline.ts';
+import { baselineV2 } from '../ai/baseline-v2.ts';
 import { neutralPlayer } from '../ai/neutral.ts';
-import { spiderL1 } from '../ai/spider-l1.ts';
+import { spiderL1V2 } from '../ai/spider-l1-v2.ts';
 import { createTickClock } from '../engine/replay.ts';
 import { createRng } from '../engine/rng.ts';
 import { loadScenario } from '../engine/state.ts';
@@ -328,18 +328,18 @@ const runSeed = (seed: number): RunMetrics => {
     maxTurns: 100,
     policies: [
       {
-        name: 'baseline',
-        faction: 'ant',
-        decide: (state, scenario, rng) => baselinePlayer.decide(state, scenario, rng),
+        name: baselineV2.name,
+        faction: baselineV2.faction,
+        decide: (state, scenario, rng) => baselineV2.decide(state, scenario, rng),
       },
       {
-        name: 'spider-l1',
-        faction: 'spider',
-        decide: (state, scenario, rng) => spiderL1.decide(state, scenario, rng),
+        name: spiderL1V2.name,
+        faction: spiderL1V2.faction,
+        decide: (state, scenario, rng) => spiderL1V2.decide(state, scenario, rng),
       },
       {
-        name: 'neutral',
-        faction: 'neutral',
+        name: neutralPlayer.name,
+        faction: neutralPlayer.faction,
         decide: (state, scenario, rng) => neutralPlayer.decide(state, scenario, rng),
       },
     ],
@@ -364,14 +364,14 @@ const main = (): void => {
   const seeds = [1, 2, 3, 4, 5];
   const runs = seeds.map((s) => runSeed(s));
   const out: string[] = [];
-  out.push('# L1 playtest measurement — post-Chunk-6');
+  out.push('# L1 playtest measurement');
   out.push('');
   out.push(
     `**Generated:** ${new Date().toISOString().slice(0, 10)} via \`pnpm tsx harness/playtest-l1.ts\`.`,
   );
   out.push('');
   out.push(
-    `**Run config:** ${String(seeds.length)} seeds (${seeds.join(', ')}), canned baseline ant AI vs spider-l1, neutral AI for non-aligned parties. Each scenario capped at 100 turns.`,
+    `**Run config:** ${String(seeds.length)} seeds (${seeds.join(', ')}), ant policy \`${baselineV2.name}\` vs spider policy \`${spiderL1V2.name}\`, neutral AI for non-aligned parties. Each scenario capped at 100 turns.`,
   );
   out.push('');
   out.push(

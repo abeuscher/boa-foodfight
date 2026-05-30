@@ -13,6 +13,7 @@ import { baselineL6Player } from './baseline-l6.ts';
 import { baselineL8Player } from './baseline-l8.ts';
 import { baselineL9Player } from './baseline-l9.ts';
 import { baselineTutorialPlayer } from './baseline-tutorial.ts';
+import { baselineV2 } from './baseline-v2.ts';
 import { baselinePlayer } from './baseline.ts';
 import { divePlayer } from './dive.ts';
 import { escortL2Player } from './escort-l2.ts';
@@ -20,6 +21,7 @@ import { flankPlayer } from './flank.ts';
 import { jellyRushPlayer } from './jelly-rush.ts';
 import { neutralPlayer } from './neutral.ts';
 import { rushPlayer } from './rush.ts';
+import { spiderL1V2 } from './spider-l1-v2.ts';
 import { spiderL1 } from './spider-l1.ts';
 import { spiderL10 } from './spider-l10.ts';
 import { spiderL2 } from './spider-l2.ts';
@@ -86,6 +88,16 @@ export const SCENARIO_PLAYER_AIS: Readonly<Record<string, AIPolicy>> = {
   'baseline-l8': baselineL8Player,
   'baseline-l9': baselineL9Player,
   'baseline-l10': baselineL10Player,
+  // Chunk 7a — opt-in L1 v2 policies that exercise post-Chunk-6 surface
+  // (items, walls, opportunistic POSTs). Locked PLAYER_AIS / gate-29
+  // diversity sweep is untouched; the playtest harness explicitly opts in.
+  'baseline-v2': baselineV2,
+};
+
+/** L1-iteration Chunk 7a — opt-in spider variants. Same load-bearing
+ * "OUT of PLAYER_AIS so gate-29 diversity is byte-identical" rule. */
+export const SCENARIO_ENEMY_AIS: Readonly<Record<string, AIPolicy>> = {
+  'spider-l1-v2': spiderL1V2,
 };
 
 /**

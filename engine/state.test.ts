@@ -17,12 +17,12 @@ describe('loadScenario(level-1)', () => {
     expect(state.queenUltimateCharge).toBe(0);
   });
 
-  it('loads fixed start + finish + 8-10 random mid-POSTs with correct ownership', () => {
+  it('loads fixed start + finish + 9-11 random mid-POSTs with correct ownership', () => {
     const { state } = loadScenario(DATA_DIR, 1);
-    // 2 fixed (storm-drain, spider-web) + 8-10 mid-POSTs (L1-iteration
-    // §9 density bump: 6 mandatory one-per-non-fixed-plane + 2-4 extras).
-    expect(state.posts.size).toBeGreaterThanOrEqual(10);
-    expect(state.posts.size).toBeLessThanOrEqual(12);
+    // 2 fixed (storm-drain, spider-web) + 9-11 mid-POSTs (Chunk 7a F4:
+    // 6 mandatory one-per-non-fixed-plane + 3-5 extras, was 2-4).
+    expect(state.posts.size).toBeGreaterThanOrEqual(11);
+    expect(state.posts.size).toBeLessThanOrEqual(13);
     const stormDrain = state.posts.get('storm-drain' as PostId);
     const spiderWeb = state.posts.get('spider-web' as PostId);
     expect(stormDrain?.owner).toBe('ant');
