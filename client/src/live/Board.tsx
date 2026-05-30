@@ -1,5 +1,9 @@
+import { useRef, useState } from 'react';
+
 import { coordKey } from '../../../engine/coord.ts';
 import type { GameState, Party, PartyId, Plane, Post, TileCoord } from '../../../engine/types.ts';
+
+import { previewPath } from './pathPreview.ts';
 
 interface Props {
   readonly state: GameState;
@@ -13,18 +17,26 @@ interface Props {
   readonly visible: ReadonlySet<string>;
   /** Ever-seen tile keys (coordKey) — explored terrain stays dim. */
   readonly seen: ReadonlySet<string>;
-  /** Orientation markers (briefing): START / GOAL pulses on the active
-   * plane. `battle` markers are the recent-combat tile highlight added
-   * during L1 iteration — they linger a few seconds after a battle
-   * resolves so the player can see where it happened. */
+  /** Tile-anchored visual marks rendered on top of the cell grid.
+   *   - `start` / `goal` — briefing pulses (top-down navigation hints)
+   *   - `battle` — recent-combat tile highlight (lingers ~8s)
+   *   - `trail` — UI-01 past-trail breadcrumb (squad walked here)
+   *   - `peek` — UI-01 hold-peek provisional route tile (dashed)
+   * Board filters by plane, so the same list can be passed to all faces. */
   readonly marks?: readonly {
     readonly coord: TileCoord;
-    readonly kind: 'start' | 'goal' | 'battle';
+    readonly kind: 'start' | 'goal' | 'battle' | 'trail' | 'peek';
   }[];
   /** Peripheral/preview rendering: smaller cells, dot-glyph actors. The
    * splayed cube faces use this; clicks route to face-activation. */
   readonly compact?: boolean;
 }
+
+/** UI-01 — hold-duration threshold (ms) for the path peek gesture.
+ * Quick taps (< this) commit / select via the existing click path;
+ * presses past this draw the provisional route to the held tile and
+ * suppress the click on release. */
+const HOLD_PEEK_THRESHOLD_MS = 150;
 
 const factionGlyph: Record<string, string> = { ant: 'A', spider: 'S', neutral: 'N' };
 
@@ -66,6 +78,45 @@ export function Board({
 }: Props): JSX.Element {
   const { w, h } = planeDims(state, plane);
 
+  // UI-01 — hold-peek gesture. Stateful pieces:
+  //   - holdTimer / pressedTile: timer + tile pressed (synchronous refs
+  //     because the click handler needs to read them without re-render
+  //     lag).
+  //   - peekTile (React state): the tile that triggered an active peek;
+  //     also drives the rendered preview path. Null when no peek.
+  //   - swallowClick: when the gesture activated peek mode, set true so
+  //     the subsequent click event (browsers fire click after a long
+  //     pointerdown+up cycle) doesn't re-fire `onClickTile`.
+  const holdTimer = useRef<number | null>(null);
+  const swallowClick = useRef(false);
+  const [peekTile, setPeekTile] = useState<TileCoord | null>(null);
+
+  const selectedParty = selectedPartyId !== null ? state.parties.get(selectedPartyId) : undefined;
+  // Peek is only meaningful while ordering with a selected party.
+  const peekActive = ordering && selectedParty !== undefined && peekTile !== null;
+  const peekPath: readonly TileCoord[] =
+    peekActive && peekTile && selectedParty
+      ? previewPath(selectedParty.location, peekTile, state.tiles)
+      : [];
+
+  const beginHold = (coord: TileCoord): void => {
+    if (!ordering || !selectedParty || compact) return;
+    if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
+    holdTimer.current = window.setTimeout(() => {
+      setPeekTile(coord);
+      swallowClick.current = true;
+      holdTimer.current = null;
+    }, HOLD_PEEK_THRESHOLD_MS);
+  };
+
+  const endHold = (): void => {
+    if (holdTimer.current !== null) {
+      window.clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+    setPeekTile(null);
+  };
+
   const postByCell = new Map<string, Post>();
   for (const post of state.posts.values()) {
     if (post.location.plane === plane)
@@ -87,13 +138,28 @@ export function Board({
     const k = cellKey(dest.x, dest.y);
     destByCell.set(k, destByCell.get(k) === true || pid === selectedPartyId);
   }
-  const markByCell = new Map<string, 'start' | 'goal' | 'battle'>();
+  const markByCell = new Map<string, 'start' | 'goal' | 'battle' | 'trail' | 'peek'>();
+  // Trail / battle / start / goal come from the parent's marks list.
+  // Peek tiles are computed locally and overlay last (so they win at
+  // any tile that also has a trail dot — peek is the player's active
+  // intent, trail is history). Final-tile-of-peek doubles as the
+  // destination indicator, but only if no real `dest` marker is there.
   for (const m of marks ?? []) {
     if (m.coord.plane === plane) markByCell.set(cellKey(m.coord.x, m.coord.y), m.kind);
   }
+  if (peekActive) {
+    for (const c of peekPath) {
+      if (c.plane === plane) markByCell.set(cellKey(c.x, c.y), 'peek');
+    }
+  }
 
-  const markGlyph = (kind: 'start' | 'goal' | 'battle'): string =>
-    kind === 'start' ? 'S' : kind === 'goal' ? 'G' : '⚔';
+  const markGlyph = (kind: 'start' | 'goal' | 'battle' | 'trail' | 'peek'): string => {
+    if (kind === 'start') return 'S';
+    if (kind === 'goal') return 'G';
+    if (kind === 'battle') return '⚔';
+    if (kind === 'trail') return '·';
+    return '·'; // peek
+  };
 
   const rows: JSX.Element[] = [];
   for (let y = 0; y < h; y++) {
@@ -143,7 +209,16 @@ export function Board({
           className={classes.join(' ')}
           disabled={ordering && isObstacle}
           title={stackTitle}
+          onPointerDown={() => {
+            beginHold({ plane, x, y });
+          }}
+          onPointerUp={endHold}
+          onPointerLeave={endHold}
           onClick={() => {
+            if (swallowClick.current) {
+              swallowClick.current = false;
+              return;
+            }
             onClickTile({ plane, x, y });
           }}
         >

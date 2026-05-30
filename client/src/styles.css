@@ -421,6 +421,29 @@ body {
   }
 }
 
+/* L1 UI-compression CR UI-01 — past-trail breadcrumb. Static, faint
+ * — reads as "squad walked here," not "this is a hint." No pulse;
+ * doesn't fight for attention with battle / goal marks. */
+.cell .mark-trail {
+  color: #a3a89b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  animation: none;
+}
+
+/* UI-01 — hold-peek provisional route tile. Dashed outline reads
+ * as "best guess, not a promise." Distinct color from the trail
+ * (the player sees blue=future, grey=past). Renders ONLY while
+ * the player holds a destination during ordering. */
+.cell .mark-peek {
+  color: #7aa7d6;
+  font-size: 0.7rem;
+  font-weight: 700;
+  outline: 1px dashed #7aa7d6;
+  outline-offset: -2px;
+  animation: none;
+}
+
 @keyframes markpulse {
   from {
     opacity: 0.5;
