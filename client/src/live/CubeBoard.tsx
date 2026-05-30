@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { Board } from './Board.tsx';
 
 import type { GameState, PartyId, Plane, TileCoord } from '../../../engine/types.ts';
@@ -14,11 +16,21 @@ interface Props {
   readonly seen: ReadonlySet<string>;
   readonly onSelectFace: (plane: Plane) => void;
   /** Active-face overlays (recent-battle pulses, briefing START/GOAL).
-   * Peripheral faces never receive marks. */
+   * Peripheral faces receive the same marks list — `Board` filters by
+   * plane so each peripheral only renders marks on its own face. The
+   * UI-02 lift here means an off-screen battle still pulses on the
+   * peripheral that holds it. */
   readonly marks?: readonly {
     readonly coord: TileCoord;
     readonly kind: 'start' | 'goal' | 'battle';
   }[];
+  /** UI-02 — battle-camera focus point. When set, the active face
+   * zooms onto the 3×3 region centered on this tile via a CSS
+   * transform (scale + translate); when null, the face renders flat.
+   * The parent (`LiveScenario`) sets the active plane to match the
+   * target's face before passing the tile here, so the cube layout
+   * is always consistent. */
+  readonly cameraTarget?: TileCoord | null;
 }
 
 /**
@@ -42,7 +54,19 @@ const FACE_LAYOUT: Record<Plane, { top: Plane; bottom: Plane; left: Plane; right
   'west-wall': { top: 'ceiling', bottom: 'floor', left: 'south-wall', right: 'north-wall' },
 };
 
-const EMPTY_MARKS: readonly never[] = [];
+/**
+ * Grid dimension assumed by the board (10×10). Used by the UI-02
+ * camera to compute the translate% that centers the target tile. If
+ * the board grid ever varies per scenario, lift this off `state`.
+ */
+const BOARD_GRID = 10;
+
+/**
+ * Camera zoom factor when a battle is being surfaced. 2.5× scales a
+ * 10×10 grid up to feel like a 3×3 close-up (the design's "~3×3 zoom"
+ * note). Tuned with the visual-review agent's screenshots in mind.
+ */
+const CAMERA_ZOOM = 2.5;
 
 /**
  * The splayed cube view (ui-main-screen-spec "active face + four splayed
@@ -69,8 +93,28 @@ export function CubeBoard({
   seen,
   onSelectFace,
   marks,
+  cameraTarget,
 }: Props): JSX.Element {
   const layout = FACE_LAYOUT[plane];
+  const allMarks = marks ?? [];
+
+  // UI-02 — compute the camera transform for the active face. The
+  // active-face wrapper has overflow:hidden via CSS; scale + translate
+  // centers the target tile inside the visible window. Translate is in
+  // percent of the (pre-scale) face size so the math is grid-size
+  // agnostic. Only applies when cameraTarget is on the active plane —
+  // off-face targets are handled by LiveScenario rotating the active
+  // plane first.
+  const cameraStyle: CSSProperties =
+    cameraTarget && cameraTarget.plane === plane
+      ? {
+          transform: `scale(${String(CAMERA_ZOOM)}) translate(${String(
+            ((BOARD_GRID / 2 - 0.5 - cameraTarget.x) / BOARD_GRID) * 100,
+          )}%, ${String(((BOARD_GRID / 2 - 0.5 - cameraTarget.y) / BOARD_GRID) * 100)}%)`,
+          transformOrigin: 'center center',
+          transition: 'transform 500ms ease-out',
+        }
+      : { transform: 'scale(1) translate(0, 0)', transition: 'transform 400ms ease-in' };
 
   const peripheral = (face: Plane): JSX.Element => (
     // Plain div wrapper (not a button) so the Board's own cell <button>s
@@ -96,31 +140,35 @@ export function CubeBoard({
         fogEnabled={fogEnabled}
         visible={visible}
         seen={seen}
-        marks={EMPTY_MARKS}
+        marks={allMarks}
         compact
       />
     </div>
   );
 
   return (
-    <div className="cube">
+    <div className={`cube ${cameraTarget ? 'cube-camera-active' : ''}`}>
       <div className="cube-slot cube-top">{peripheral(layout.top)}</div>
       <div className="cube-slot cube-left">{peripheral(layout.left)}</div>
       <div className="cube-slot cube-active">
         <div className="cube-face cube-face-active">
           <span className="cube-label active">{plane}</span>
-          <Board
-            state={state}
-            plane={plane}
-            selectedPartyId={selectedPartyId}
-            ordering={ordering}
-            destinations={destinations}
-            onClickTile={onClickTile}
-            fogEnabled={fogEnabled}
-            visible={visible}
-            seen={seen}
-            marks={marks ?? EMPTY_MARKS}
-          />
+          <div className="cube-camera-frame">
+            <div className="cube-camera-stage" style={cameraStyle}>
+              <Board
+                state={state}
+                plane={plane}
+                selectedPartyId={selectedPartyId}
+                ordering={ordering}
+                destinations={destinations}
+                onClickTile={onClickTile}
+                fogEnabled={fogEnabled}
+                visible={visible}
+                seen={seen}
+                marks={allMarks}
+              />
+            </div>
+          </div>
         </div>
       </div>
       <div className="cube-slot cube-right">{peripheral(layout.right)}</div>
