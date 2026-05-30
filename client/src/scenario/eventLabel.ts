@@ -10,8 +10,19 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return 'Scenario over';
     case 'turn-start':
       return `Turn ${String(ev.turn)} begins`;
-    case 'party-moved':
-      return 'A party moved';
+    case 'party-moved': {
+      // Chunk 16 — give every party-moved event a real, readable label
+      // including which squad moved, from where, to where. Cross-plane
+      // steps (ant-plane-switch ability, paired-POST traversal, or
+      // edge crossing) get an explicit "→ <plane>" tag so the player
+      // doesn't read the engine's intentional one-step jump as a bug.
+      const fromTxt = `(${String(ev.from.x)}, ${String(ev.from.y)})`;
+      const toTxt = `(${String(ev.to.x)}, ${String(ev.to.y)})`;
+      if (ev.from.plane !== ev.to.plane) {
+        return `${String(ev.partyId)} crossed from ${ev.from.plane} ${fromTxt} to ${ev.to.plane} ${toTxt}`;
+      }
+      return `${String(ev.partyId)} moved ${fromTxt} → ${toTxt} on ${ev.from.plane}`;
+    }
     case 'battle-resolved':
       return 'Battle resolved';
     case 'post-capture-started':

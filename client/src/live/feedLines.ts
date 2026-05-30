@@ -36,10 +36,15 @@ export interface FeedLine {
   readonly text: string;
   /** Drives the CSS class for visual hierarchy:
    *   - `event` — default per-event log line
-   *   - `battle-header` — bold "⚔ attacker → defender" intro
+   *   - `cross-plane` — Chunk 16 — party-moved event whose `from.plane`
+   *     differs from `to.plane`. Highlighted so the player reads the
+   *     engine's one-step plane jump (ant-plane-switch ability, edge
+   *     adjacency, paired-POST traversal) as a *crossing*, not a
+   *     teleport bug.
+   *   - `battle-header` — bold "⚔ Combat: A attack B." intro
    *   - `battle-action` — indented per-round action
    *   - `battle-tally` — indented closing winner + casualties */
-  readonly kind: 'event' | 'battle-header' | 'battle-action' | 'battle-tally';
+  readonly kind: 'event' | 'cross-plane' | 'battle-header' | 'battle-action' | 'battle-tally';
 }
 
 /**
@@ -106,13 +111,19 @@ export const expandEventsForFeed = (events: readonly ReplayEvent[]): readonly Fe
   for (const e of events) {
     if (e.kind === 'battle-resolved') {
       for (const line of expandBattle(e)) out.push(line);
-    } else {
-      out.push({
-        key: `t${String(e.tick)}-e`,
-        text: eventLabel(e),
-        kind: 'event',
-      });
+      continue;
     }
+    // Chunk 16 — surface cross-plane moves as their own line kind so
+    // the eye picks them up. The engine fires a single party-moved
+    // event for an ant-plane-switch teleport / paired-POST traversal /
+    // edge crossing; without a visual call-out it reads as the squad
+    // skipping out of one face.
+    const isCrossPlane = e.kind === 'party-moved' && e.from.plane !== e.to.plane;
+    out.push({
+      key: `t${String(e.tick)}-e`,
+      text: eventLabel(e),
+      kind: isCrossPlane ? 'cross-plane' : 'event',
+    });
   }
   return out;
 };
