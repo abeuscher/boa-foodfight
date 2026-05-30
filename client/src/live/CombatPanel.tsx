@@ -17,16 +17,17 @@ interface Props {
 /**
  * Wall-clock duration between battle actions. One step = one attack.
  *
- * Chunk 18 (PM-directed) — switched from per-round (900 ms / beat) to
- * per-action (500 ms / step). A round in the engine is "every alive
- * unit on each side acts once," so a 6-unit-vs-6-unit round was firing
- * up to 12 HP drops in one 900 ms beat — too fast to track. Per-action
- * pacing pairs each prose line in the feed with one HP-bar tic. 500 ms
- * is the starting figure for PM iteration; the design brief (Chunk 17)
- * notes that the takeover surface should compose against this beat,
- * so future presets (Slow / Normal / Fast) live here.
+ * Chunk 18 — switched from per-round (900 ms / beat) to per-action so
+ * each prose line in the feed pairs with one HP-bar tic. 500 ms was
+ * the first cut; readable but PM reported it still ran a bit hot once
+ * the splay landed.
+ *
+ * Chunk 21 (PM-directed) — +50% to 750 ms. Goal is to give the eye
+ * time to land on each action before the next fires. Iterate from
+ * here based on play; the eventual Slow / Normal / Fast preset
+ * selector lives here without touching the playback algorithm.
  */
-const STEP_MS = 500;
+const STEP_MS = 750;
 
 const roleName = (templates: Props['templates'], id: UnitTemplateId): string =>
   templates.get(id)?.name ?? id;
