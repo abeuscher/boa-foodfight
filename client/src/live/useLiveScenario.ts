@@ -4,7 +4,7 @@ import { DEFAULT_AUTO_PAUSE_KINDS, type Speed } from '../clock/clock.ts';
 import { scenarioDataFor } from '../fixture.ts';
 import { pauseReasonLabel } from '../scenario/eventLabel.ts';
 
-import { buildHumanPolicy } from './humanPolicy.ts';
+import { buildHumanPolicy, type PartyIntent } from './humanPolicy.ts';
 import {
   MAX_TURNS,
   advanceOneTurn,
@@ -103,16 +103,23 @@ export interface LiveScenarioClock {
   readonly visible: ReadonlySet<string>;
   readonly seen: ReadonlySet<string>;
   readonly battles: readonly BattleResult[];
-  /** Player move intents (destination tile, `null` = hold, absent = no opinion). */
-  readonly orders: ReadonlyMap<PartyId, TileCoord | null>;
+  /** Move destinations only — the Board uses this to paint destination
+   * markers. Derived from the richer `intents` map; non-move intents
+   * (hold, recruit) don't get a tile marker. */
+  readonly orders: ReadonlyMap<PartyId, TileCoord>;
+  /** Full per-party intent map for the action panel (so the rail can
+   * surface "Recruiting <neutral>" or "Holding" state in addition to
+   * march destinations). Chunk 24. */
+  readonly intents: ReadonlyMap<PartyId, PartyIntent>;
   readonly play: () => void;
   readonly pause: () => void;
   readonly toggle: () => void;
   readonly setSpeed: (s: Speed) => void;
   readonly step: () => void;
   readonly toggleFog: () => void;
-  /** Set (coord), hold (null), or clear (undefined) a party's order. */
-  readonly setOrder: (id: PartyId, dest: TileCoord | null | undefined) => void;
+  /** Set a party's intent (move/hold/recruit) or pass `null` to clear
+   * (revert to "no opinion"). */
+  readonly setOrder: (id: PartyId, intent: PartyIntent | null) => void;
 }
 
 /**
@@ -131,7 +138,7 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(1);
   const [fogEnabled, setFogEnabled] = useState(true);
-  const [orders, setOrders] = useState<ReadonlyMap<PartyId, TileCoord | null>>(() => new Map());
+  const [intents, setIntents] = useState<ReadonlyMap<PartyId, PartyIntent>>(() => new Map());
 
   const rngRef = useRef(createRng(SEED));
   const tickRef = useRef(0);
@@ -139,8 +146,8 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
   // re-subscribing on every state change.
   const snapRef = useRef(snap);
   snapRef.current = snap;
-  const ordersRef = useRef(orders);
-  ordersRef.current = orders;
+  const intentsRef = useRef(intents);
+  intentsRef.current = intents;
   const fogRef = useRef(fogEnabled);
   fogRef.current = fogEnabled;
 
@@ -154,7 +161,7 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
       setPlaying(false);
       return;
     }
-    const player = buildHumanPolicy(ordersRef.current);
+    const player = buildHumanPolicy(intentsRef.current);
     const result = advanceOneTurn(
       cur.state,
       data,
@@ -198,18 +205,24 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     snapRef.current = next;
     setSnap(next);
 
-    // Chunk 23 — drop orders for parties that no longer have any
-    // living units. Engine doesn't delete dead parties from
-    // `state.parties` (they stay so post-mortem UI can still look
-    // them up), so a stale entry in `orders` would keep painting a
-    // destination marker on the board for a squad that's already
-    // gone. Prune here, right after the turn resolves, so the next
-    // render is clean.
-    setOrders((prev) => {
+    // Post-turn intent housekeeping. Two cleanups, combined to avoid
+    // two state updates:
+    //
+    // Chunk 23 — drop intents for parties that no longer have any
+    // living units. Engine keeps dead parties in `state.parties` so
+    // post-mortem UI can still look them up, but a stale entry in
+    // intents would keep painting a destination marker on the board
+    // for a squad that's already gone.
+    //
+    // Chunk 24 — recruit intents are one-shot. The engine fired the
+    // ability this turn (success or fail); leaving the intent would
+    // re-fire it next turn, polluting the event stream.
+    setIntents((prev) => {
       let pruned = prev;
-      for (const id of prev.keys()) {
+      for (const [id, intent] of prev) {
         const party = result.state.parties.get(id);
-        if (party && party.units.some((u) => u.currentHp > 0)) continue;
+        const alive = party !== undefined && party.units.some((u) => u.currentHp > 0);
+        if (alive && intent.kind !== 'recruit') continue;
         if (pruned === prev) pruned = new Map(prev);
         pruned.delete(id);
       }
@@ -253,14 +266,21 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
   const toggleFog = useCallback(() => {
     setFogEnabled((f) => !f);
   }, []);
-  const setOrder = useCallback((id: PartyId, dest: TileCoord | null | undefined) => {
-    setOrders((prev) => {
+  const setOrder = useCallback((id: PartyId, intent: PartyIntent | null) => {
+    setIntents((prev) => {
       const next = new Map(prev);
-      if (dest === undefined) next.delete(id);
-      else next.set(id, dest);
+      if (intent === null) next.delete(id);
+      else next.set(id, intent);
       return next;
     });
   }, []);
+
+  // Move-destination view derived from `intents` — Board paints
+  // destination markers only for parties whose intent is `move`.
+  const orders = new Map<PartyId, TileCoord>();
+  for (const [id, intent] of intents) {
+    if (intent.kind === 'move') orders.set(id, intent.dest);
+  }
 
   return {
     state: snap.state,
@@ -277,6 +297,7 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     seen: snap.seen,
     battles: snap.battles,
     orders,
+    intents,
     play,
     pause,
     toggle,

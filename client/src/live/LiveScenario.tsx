@@ -10,7 +10,9 @@ import type { LiveOutcome } from './liveScenario.ts';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
 
+import { partyHasAbility } from '../../../engine/abilities.ts';
 import type {
+  AbilityId,
   BattleResult,
   Party,
   Plane,
@@ -19,6 +21,11 @@ import type {
   UnitId,
 } from '../../../engine/types.ts';
 import type { WorldRoster } from '../../../engine/world-state.ts';
+
+const RECRUIT_ABILITY: AbilityId = 'recruit' as AbilityId;
+
+const sameTile = (a: TileCoord, b: TileCoord): boolean =>
+  a.plane === b.plane && a.x === b.x && a.y === b.y;
 
 interface Props {
   /** 0-based campaign position — routes the live engine to
@@ -152,6 +159,20 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
 
   const selected = selectedId !== null ? (state.parties.get(selectedId) ?? null) : null;
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
+  // Chunk 24 — surface a "Try to recruit" action when the selected
+  // ant party carries the `recruit` ability AND shares a tile with a
+  // neutral party. Engine handles the 25%-per-attempt roll
+  // (`recruitNeutral` in `engine/abilities.ts`); the UI just exposes
+  // the trigger.
+  const recruitTarget: Party | null =
+    selected !== null &&
+    partyAlive(selected) &&
+    partyHasAbility(selected, RECRUIT_ABILITY, state.unitTemplates)
+      ? ([...state.parties.values()].find(
+          (p) =>
+            p.faction === 'neutral' && partyAlive(p) && sameTile(p.location, selected.location),
+        ) ?? null)
+      : null;
   // The inspected party fell out of state (shouldn't happen on L1) — close.
   const inspectingOpen = inspecting && selected !== null;
 
@@ -208,7 +229,7 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     // clicking any tile with no friendly party, commits the order.
     if (ordering && selectedId !== null && canMove) {
       if (!hit || hit.id === selectedId) {
-        live.setOrder(selectedId, coord);
+        live.setOrder(selectedId, { kind: 'move', dest: coord });
         setOrdering(false);
         return;
       }
@@ -290,18 +311,30 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                     <button
                       disabled={!canMove}
                       onClick={() => {
-                        live.setOrder(selected.id, null);
+                        live.setOrder(selected.id, { kind: 'hold' });
                       }}
                     >
                       Hold position
                     </button>
                     <button
                       onClick={() => {
-                        live.setOrder(selected.id, undefined);
+                        live.setOrder(selected.id, null);
                       }}
                     >
                       Clear order
                     </button>
+                    {recruitTarget && (
+                      <button
+                        onClick={() => {
+                          live.setOrder(selected.id, {
+                            kind: 'recruit',
+                            target: recruitTarget.id,
+                          });
+                        }}
+                      >
+                        Try to recruit {recruitTarget.id}
+                      </button>
+                    )}
                   </>
                 )}
                 <button
@@ -322,7 +355,7 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                     <button
                       disabled={!canMove}
                       onClick={() => {
-                        live.setOrder(selected.id, null);
+                        live.setOrder(selected.id, { kind: 'hold' });
                         setOrdering(false);
                       }}
                     >
