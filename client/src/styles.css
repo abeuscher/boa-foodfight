@@ -1079,7 +1079,20 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  /* Take any slack vertical space so the feed below grows; when
+   * CombatPanel / PartyDetail sit above, the feed still gets the
+   * remaining height. */
+  flex: 1 1 0;
   min-height: 0;
+}
+
+/* When CombatPanel or PartyDetail render above the feed, the rail
+ * gets crowded — add a divider above the feed body for visual
+ * separation from whatever sits above. */
+.info-rail > .combat + .info-body,
+.info-rail > .pdetail + .info-body {
+  padding-top: 0.4rem;
+  border-top: 1px dashed #cdd6cd;
 }
 
 .info-now {
