@@ -197,6 +197,25 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     };
     snapRef.current = next;
     setSnap(next);
+
+    // Chunk 23 — drop orders for parties that no longer have any
+    // living units. Engine doesn't delete dead parties from
+    // `state.parties` (they stay so post-mortem UI can still look
+    // them up), so a stale entry in `orders` would keep painting a
+    // destination marker on the board for a squad that's already
+    // gone. Prune here, right after the turn resolves, so the next
+    // render is clean.
+    setOrders((prev) => {
+      let pruned = prev;
+      for (const id of prev.keys()) {
+        const party = result.state.parties.get(id);
+        if (party && party.units.some((u) => u.currentHp > 0)) continue;
+        if (pruned === prev) pruned = new Map(prev);
+        pruned.delete(id);
+      }
+      return pruned;
+    });
+
     if (pauseReason !== null || ended) setPlaying(false);
   }, [data]);
 
