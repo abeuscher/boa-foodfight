@@ -41,6 +41,10 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return 'Royal jelly applied';
     case 'recruit-attempted':
       return ev.success ? 'Recruited a neutral' : 'Recruit attempt failed';
+    case 'recruit-attempted-neutral':
+      return ev.success
+        ? `Converted neutral ${String(ev.targetId)}`
+        : `Recruit attempt on ${String(ev.targetId)} failed`;
     case 'scripted-beat':
       return ev.title;
     case 'unit-promoted':

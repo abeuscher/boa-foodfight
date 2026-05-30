@@ -79,7 +79,7 @@ describe('live engine-in-browser core', () => {
       x: movable!.location.x + 1,
       y: movable!.location.y,
     };
-    const player = buildHumanPolicy(new Map([[movable!.id, dest]]));
+    const player = buildHumanPolicy(new Map([[movable!.id, { kind: 'move', dest }]]));
     const rng = createRng(SEED);
     let tick = 0;
     const res = advanceOneTurn(state, DATA, player, 0, rng, () => (tick += 1));
@@ -98,7 +98,7 @@ describe('live engine-in-browser core', () => {
     const movable = [...state.parties.values()].find(
       (p) => p.faction === 'ant' && p.id !== ('queen-guard' as PartyId),
     )!;
-    const player = buildHumanPolicy(new Map([[movable.id, null]]));
+    const player = buildHumanPolicy(new Map([[movable.id, { kind: 'hold' }]]));
     const rng = createRng(SEED);
     let tick = 0;
     const res = advanceOneTurn(state, DATA, player, 0, rng, () => (tick += 1));
