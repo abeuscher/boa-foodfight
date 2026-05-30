@@ -402,14 +402,23 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           )}
         </div>
 
-        {/* RIGHT RAIL — information. Status pinned at top. Body is one
-            of three things in priority order:
-              1. Combat play-by-play (UI-02) — when battleQueue active.
-              2. PartyDetail — when inspecting.
-              3. Running feed — default.
-            Combat wins over Inspect because the player needs to see
-            what the engine is doing right now; Inspect resumes after
-            the player Continues / Skips through the battle queue. */}
+        {/* RIGHT RAIL — information. Status pinned at top. The body
+            stacks three slots, all always-rendered when present:
+              1. Combat play-by-play panel (UI-02) — when battleQueue
+                 is active. The animated spectacle view of the current
+                 fight.
+              2. PartyDetail — when inspecting. The squad read-out.
+              3. Activity feed — ALWAYS visible at the bottom, expanded
+                 with battle play-by-play text via `expandEventsForFeed`
+                 (Chunk 12). The feed is the persistent text log: it
+                 stays visible during battle so the player can read the
+                 narration even while the CombatPanel animates above,
+                 and scrolls back through past combats / captures /
+                 beats without dismissing anything.
+            The rail's `overflow-y: auto` lets long stacks scroll
+            cleanly. The feed gets `flex: 1 1 0` so it consumes any
+            slack height; the CombatPanel / PartyDetail above it
+            size to their content. */}
         <aside className="info-rail">
           <div className={`info-status ${live.pauseReason ? 'paused' : ''}`}>
             {live.pauseReason
@@ -418,7 +427,7 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
                 ? `Turn ${String(live.turnsPlayed)} · Playing…`
                 : `Turn ${String(live.turnsPlayed)} · Paused`}
           </div>
-          {battleQueue && currentBattle ? (
+          {battleQueue && currentBattle && (
             <CombatPanel
               key={`${String(currentBattle.attackerPartyId)}-${String(
                 currentBattle.defenderPartyId,
@@ -438,7 +447,8 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
                 setBattleQueue(null);
               }}
             />
-          ) : inspectingOpen ? (
+          )}
+          {inspectingOpen && (
             <PartyDetail
               state={state}
               party={selected}
@@ -449,29 +459,23 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
                 setUnitId(null);
               }}
             />
-          ) : (
-            <div className="info-body">
-              <p className="info-now">
-                {live.recentEvents.length > 0
-                  ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
-                  : 'Ready — issue orders, then press Play.'}
-              </p>
-              {/* Battle play-by-play in the feed. `battle-resolved`
-                  events fan out into header + per-action + tally lines
-                  via `expandEventsForFeed`. The cap is generous (last
-                  40 lines) so the player can scroll back through the
-                  most recent battle as it unfolds. */}
-              <ul className="info-feed">
-                {expandEventsForFeed(live.recentEvents)
-                  .slice(-40)
-                  .map((line) => (
-                    <li key={line.key} className={`feed-${line.kind}`}>
-                      {line.text}
-                    </li>
-                  ))}
-              </ul>
-            </div>
           )}
+          <div className="info-body">
+            <p className="info-now">
+              {live.recentEvents.length > 0
+                ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
+                : 'Ready — issue orders, then press Play.'}
+            </p>
+            <ul className="info-feed">
+              {expandEventsForFeed(live.recentEvents)
+                .slice(-40)
+                .map((line) => (
+                  <li key={line.key} className={`feed-${line.kind}`}>
+                    {line.text}
+                  </li>
+                ))}
+            </ul>
+          </div>
         </aside>
       </div>
     </div>
