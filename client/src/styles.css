@@ -992,18 +992,106 @@ button:disabled {
 .live-mid {
   flex: 1;
   display: grid;
-  /* Right rail widened from 200px to 240px to host the playback
-   * controls (play/pause/step + speeds + status) above the action
-   * buttons — see `.rail-controls`. */
-  grid-template-columns: 180px 1fr 240px;
+  /* UI-03 column layout: control (left) | world (center) | information
+   * (right). Left widens to fit roster + actions + playback (all the
+   * eye-touched verbs); right widens to give the feed / inspect /
+   * combat panel breathing room. The bottom log band is gone; the
+   * world cube uses the reclaimed vertical space. */
+  grid-template-columns: 220px 1fr 300px;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
-.roster {
+/* --- UI-03: control rail (left) --- */
+
+.control-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.control-roster {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+.control-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed #cdd6cd;
+}
+
+.control-playback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.4rem;
+  margin-top: auto;
+  border-top: 1px dashed #cdd6cd;
+}
+
+/* --- UI-03: information rail (right) --- */
+
+.info-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.info-status {
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  background: #eef2ee;
+  border: 1px solid #cdd6cd;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.info-status.paused {
+  background: #f6efda;
+  border-color: #cbb46a;
+  color: #6e3b1a;
+}
+
+.info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
+.info-now {
+  margin: 0;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: #4a4135;
+}
+
+.info-feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: #4a4135;
+}
+
+.info-feed li {
+  padding: 0.2rem 0.4rem;
+  background: #f8f4e9;
+  border: 1px solid #e5dec5;
+  border-radius: 3px;
 }
 
 .pcard {
@@ -1030,42 +1118,15 @@ button:disabled {
   color: #6b6258;
 }
 
-.rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
 .rail-head {
   font-weight: 700;
   font-size: 0.9rem;
 }
 
-/* L1-iteration PR-58 follow-up: playback controls moved into the
- * top of the right rail. Stack the play/pause + speeds rows tight
- * so they don't push the action panel down too far. */
-.rail-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.rail-controls .hud-pod {
+/* `.control-actions .hud-pod` wraps when the speed row needs more
+ * width than the rail provides. */
+.control-playback .hud-pod {
   flex-wrap: wrap;
-}
-
-.rail-notif {
-  margin-left: 0;
-  min-width: 0;
-  text-align: left;
-  font-size: 0.78rem;
-}
-
-.rail-sep {
-  border: 0;
-  border-top: 1px dashed #cdd6cd;
-  margin: 0.25rem 0;
-  width: 100%;
 }
 
 .board {
@@ -1217,12 +1278,6 @@ button:disabled {
 .cell .dest.mine {
   color: #e7c97a;
   font-weight: 700;
-}
-
-.log-band {
-  flex: 0 0 auto;
-  margin-top: 0.75rem;
-  min-height: auto;
 }
 
 /* --- Splayed cube view: active face + 4 edge-docked peripherals --- */

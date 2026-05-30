@@ -54,12 +54,27 @@ const statusWord = (
 };
 
 /**
- * Live engine-in-browser scenario view: the real turn engine runs in the
- * browser (player issues orders → `runTurn` → board animates), replacing
- * the canned replay. Structural chrome per the main-screen spec — left
- * roster, center board (active "face"), right action rail, bottom HUD
- * pod + notification strip. The cinematic cube render is design-gated
- * (cube memo §D); the board is the functional structural grid.
+ * Live engine-in-browser scenario view.
+ *
+ * Layout follows the L1 UI-compression design (CR UI-03, dev-reply
+ * Chunk 7c §UI-03). Three columns, no bottom band:
+ *
+ *   - **Left rail = control** (everything touched): squad roster, the
+ *     selected squad's action verbs (Move / Hold / Clear / Inspect, or
+ *     the ordering shortcuts), and playback controls (Play / Pause /
+ *     Step / speeds). Actions stay co-located with the squad they
+ *     belong to; clicking Inspect does NOT swap this rail away.
+ *   - **Center = the world**: the splayed cube board (taller now that
+ *     the bottom log band is reclaimed).
+ *   - **Right rail = information** (everything read): pause-reason /
+ *     turn-status header pinned at top; below it, one of {running
+ *     play-by-play feed, PartyDetail read-out when inspecting, combat
+ *     play-by-play when paused on a battle (UI-02 wires that swap;
+ *     this CR ships the slot reserved as a passthrough to today's
+ *     overlay)}.
+ *
+ * The cinematic cube render is design-gated (cube memo §D); the board
+ * is the functional structural grid.
  */
 export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
   const live = useLiveScenario(roster);
@@ -198,26 +213,124 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
       </header>
 
       <div className="live-mid">
-        <aside className="roster">
-          {antParties.map((p) => {
-            const dest = live.orders.get(p.id);
-            return (
-              <button
-                key={p.id}
-                className={`pcard ${p.id === selectedId ? 'sel' : ''}`}
-                onClick={() => {
-                  selectParty(p.id);
-                }}
-              >
-                <span className="pname">{p.id}</span>
-                <span className="pmeta">
-                  {p.location.plane} · {statusWord(p, dest)}
-                </span>
+        {/* LEFT RAIL — control. Roster + selected-squad actions +
+            playback controls. Inspect does NOT swap this away; the
+            inspect read-out lives in the right rail instead. */}
+        <aside className="control-rail">
+          <div className="control-roster">
+            {antParties.map((p) => {
+              const dest = live.orders.get(p.id);
+              return (
+                <button
+                  key={p.id}
+                  className={`pcard ${p.id === selectedId ? 'sel' : ''}`}
+                  onClick={() => {
+                    selectParty(p.id);
+                  }}
+                >
+                  <span className="pname">{p.id}</span>
+                  <span className="pmeta">
+                    {p.location.plane} · {statusWord(p, dest)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="control-actions">
+            {selected === null && <p className="hint">Select a party — Move is pre-armed.</p>}
+            {selected !== null && !ordering && (
+              <>
+                <div className="rail-head">{selected.id}</div>
+                {selected.id === QUEEN_GUARD ? (
+                  <p className="hint">The Queen holds the hill — immobile.</p>
+                ) : (
+                  <>
+                    <button disabled={!canMove} onClick={() => setOrdering(true)}>
+                      Move
+                    </button>
+                    <button
+                      disabled={!canMove}
+                      onClick={() => {
+                        live.setOrder(selected.id, null);
+                      }}
+                    >
+                      Hold position
+                    </button>
+                    <button
+                      onClick={() => {
+                        live.setOrder(selected.id, undefined);
+                      }}
+                    >
+                      Clear order
+                    </button>
+                  </>
+                )}
+                <button
+                  className={inspecting ? 'active' : ''}
+                  onClick={() => setInspecting((v) => !v)}
+                >
+                  {inspecting ? '✓ Inspecting' : 'Inspect'}
+                </button>
+              </>
+            )}
+            {ordering && (
+              <>
+                <div className="rail-head">{selected?.id ?? 'Move'} — pick destination</div>
+                <p className="hint">Click a tile on the board (or another squad to switch).</p>
+                <button onClick={() => setOrdering(false)}>Cancel</button>
+                {selected !== null && (
+                  <>
+                    <button
+                      disabled={!canMove}
+                      onClick={() => {
+                        live.setOrder(selected.id, null);
+                        setOrdering(false);
+                      }}
+                    >
+                      Hold position
+                    </button>
+                    <button
+                      className={inspecting ? 'active' : ''}
+                      onClick={() => setInspecting((v) => !v)}
+                    >
+                      {inspecting ? '✓ Inspecting' : 'Inspect'}
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="control-playback">
+            <div className="hud-pod">
+              <button onClick={live.toggle} disabled={live.atEnd}>
+                {live.playing ? '⏸ Pause' : '⏵ Play'}
               </button>
-            );
-          })}
+              <button onClick={live.step} disabled={live.playing || live.atEnd}>
+                Step
+              </button>
+            </div>
+            <div className="hud-pod">
+              <span className="speeds">
+                {SPEEDS.map((sp) => (
+                  <button
+                    key={sp}
+                    className={live.speed === sp ? 'active' : ''}
+                    onClick={() => {
+                      live.setSpeed(sp);
+                    }}
+                  >
+                    {sp}×
+                  </button>
+                ))}
+              </span>
+            </div>
+          </div>
         </aside>
 
+        {/* CENTER — the world. Cube board. Bottom band reclaimed for
+            extra height. */}
         <div className="scn-world">
           <CubeBoard
             state={state}
@@ -255,122 +368,48 @@ export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
           )}
         </div>
 
-        {inspectingOpen ? (
-          <PartyDetail
-            state={state}
-            party={selected}
-            selectedUnitId={unitId}
-            onSelectUnit={setUnitId}
-            onClose={() => {
-              setInspecting(false);
-              setUnitId(null);
-            }}
-          />
-        ) : (
-          <aside className="rail">
-            {/* L1-iteration PR-58 follow-up: playback controls moved
-                from the bottom HUD into the right rail so they're
-                reachable while the board is in view. */}
-            <div className="rail-controls">
-              <div className="hud-pod">
-                <button onClick={live.toggle} disabled={live.atEnd}>
-                  {live.playing ? '⏸ Pause' : '⏵ Play'}
-                </button>
-                <button onClick={live.step} disabled={live.playing || live.atEnd}>
-                  Step
-                </button>
-              </div>
-              <div className="hud-pod">
-                <span className="speeds">
-                  {SPEEDS.map((sp) => (
-                    <button
-                      key={sp}
-                      className={live.speed === sp ? 'active' : ''}
-                      onClick={() => {
-                        live.setSpeed(sp);
-                      }}
-                    >
-                      {sp}×
-                    </button>
-                  ))}
-                </span>
-              </div>
-              <div className={`scn-notif rail-notif ${live.pauseReason ? 'paused' : ''}`}>
-                {live.pauseReason
-                  ? `⏸ ${live.pauseReason}`
-                  : live.playing
-                    ? `Turn ${String(live.turnsPlayed)} · Playing…`
-                    : `Turn ${String(live.turnsPlayed)} · Paused`}
-              </div>
+        {/* RIGHT RAIL — information. Status pinned at top; body is the
+            running feed by default, swapped for PartyDetail when
+            inspecting. UI-02 adds the third case (combat play-by-play
+            during battle auto-pause); for now the combat panel keeps
+            its overlay placement (the `combat-overlay` div below) and
+            UI-02 relocates it into the slot reserved below. */}
+        <aside className="info-rail">
+          <div className={`info-status ${live.pauseReason ? 'paused' : ''}`}>
+            {live.pauseReason
+              ? `⏸ Paused — ${live.pauseReason}`
+              : live.playing
+                ? `Turn ${String(live.turnsPlayed)} · Playing…`
+                : `Turn ${String(live.turnsPlayed)} · Paused`}
+          </div>
+          {inspectingOpen ? (
+            <PartyDetail
+              state={state}
+              party={selected}
+              selectedUnitId={unitId}
+              onSelectUnit={setUnitId}
+              onClose={() => {
+                setInspecting(false);
+                setUnitId(null);
+              }}
+            />
+          ) : (
+            <div className="info-body">
+              {/* UI-02 slot — combat play-by-play renders here when paused
+                  on a battle. UI-03 ships the slot; UI-02 wires the swap. */}
+              <p className="info-now">
+                {live.recentEvents.length > 0
+                  ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
+                  : 'Ready — issue orders, then press Play.'}
+              </p>
+              <ul className="info-feed">
+                {live.recentEvents.slice(-12).map((e, i) => (
+                  <li key={i}>{eventLabel(e)}</li>
+                ))}
+              </ul>
             </div>
-            <hr className="rail-sep" />
-            {selected === null && <p className="hint">Select a party — Move is pre-armed.</p>}
-            {selected !== null && !ordering && (
-              <>
-                <div className="rail-head">{selected.id}</div>
-                {selected.id === QUEEN_GUARD ? (
-                  <p className="hint">The Queen holds the hill — immobile.</p>
-                ) : (
-                  <>
-                    <button disabled={!canMove} onClick={() => setOrdering(true)}>
-                      Move
-                    </button>
-                    <button
-                      disabled={!canMove}
-                      onClick={() => {
-                        live.setOrder(selected.id, null);
-                      }}
-                    >
-                      Hold position
-                    </button>
-                    <button
-                      onClick={() => {
-                        live.setOrder(selected.id, undefined);
-                      }}
-                    >
-                      Clear order
-                    </button>
-                  </>
-                )}
-                <button onClick={() => setInspecting(true)}>Inspect</button>
-              </>
-            )}
-            {ordering && (
-              <>
-                <div className="rail-head">{selected?.id ?? 'Move'} — pick destination</div>
-                <p className="hint">Click a tile on the board (or another squad to switch).</p>
-                <button onClick={() => setOrdering(false)}>Cancel</button>
-                {selected !== null && (
-                  <>
-                    <button
-                      disabled={!canMove}
-                      onClick={() => {
-                        live.setOrder(selected.id, null);
-                        setOrdering(false);
-                      }}
-                    >
-                      Hold position
-                    </button>
-                    <button onClick={() => setInspecting(true)}>Inspect</button>
-                  </>
-                )}
-              </>
-            )}
-          </aside>
-        )}
-      </div>
-
-      <div className="scn-world log-band">
-        <p className="scn-now">
-          {live.recentEvents.length > 0
-            ? eventLabel(live.recentEvents[live.recentEvents.length - 1]!)
-            : 'Ready — issue orders, then press Play.'}
-        </p>
-        <ul className="scn-log">
-          {live.recentEvents.slice(-6).map((e, i) => (
-            <li key={i}>{eventLabel(e)}</li>
-          ))}
-        </ul>
+          )}
+        </aside>
       </div>
 
       {battleQueue && (
