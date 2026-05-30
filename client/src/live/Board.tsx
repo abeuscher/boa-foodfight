@@ -26,9 +26,6 @@ interface Props {
     readonly coord: TileCoord;
     readonly kind: 'start' | 'goal' | 'battle' | 'peek';
   }[];
-  /** Peripheral/preview rendering: smaller cells, dot-glyph actors. The
-   * splayed cube faces use this; clicks route to face-activation. */
-  readonly compact?: boolean;
 }
 
 /** UI-01 — hold-duration threshold (ms) for the path peek gesture.
@@ -73,7 +70,6 @@ export function Board({
   visible,
   seen,
   marks,
-  compact = false,
 }: Props): JSX.Element {
   const { w, h } = planeDims(state, plane);
 
@@ -99,7 +95,7 @@ export function Board({
       : [];
 
   const beginHold = (coord: TileCoord): void => {
-    if (!ordering || !selectedParty || compact) return;
+    if (!ordering || !selectedParty) return;
     if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
     holdTimer.current = window.setTimeout(() => {
       setPeekTile(coord);
@@ -255,5 +251,5 @@ export function Board({
     );
   }
 
-  return <div className={`board${compact ? ' compact' : ''}`}>{rows}</div>;
+  return <div className="board">{rows}</div>;
 }

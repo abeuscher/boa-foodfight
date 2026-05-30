@@ -1349,9 +1349,16 @@ button:disabled {
 
 /* --- Splayed cube view: active face + 4 edge-docked peripherals --- */
 
+/* Chunk 19 — perspective splay. The cube grid reserves fixed slots for
+ * the four peripherals so each one's Board can be absolutely positioned
+ * inside without inflating the slot to its un-transformed footprint.
+ * `perspective` on the container is what makes the 3D rotations on
+ * `.cube-peripheral-stage` actually read as depth (without it,
+ * rotateX/Y just shows as squashed 2D). */
 .cube {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: 200px auto 200px;
+  grid-template-rows: 180px auto 180px;
   grid-template-areas:
     '.    top    .'
     'left active right'
@@ -1359,6 +1366,8 @@ button:disabled {
   gap: 0.4rem;
   justify-content: center;
   align-items: center;
+  perspective: 1500px;
+  perspective-origin: center center;
 }
 
 .cube-top {
@@ -1377,6 +1386,12 @@ button:disabled {
   grid-area: bottom;
 }
 
+/* All slots are positioning anchors for the absolutely-positioned
+ * stages inside their peripherals. */
+.cube-slot {
+  position: relative;
+}
+
 .cube-face {
   display: flex;
   flex-direction: column;
@@ -1391,14 +1406,66 @@ button:disabled {
   position: relative;
 }
 
+/* Chunk 19 — peripheral wrapper fills its slot and provides a
+ * positioning context for the absolutely-placed stage + the floating
+ * label. The whole wrapper is the click target (rotate-to-active);
+ * §A.1 binding rule that peripherals are never individually
+ * tile-clickable holds because `Board.onClickTile` for peripherals is
+ * wired to `onSelectFace` in `CubeBoard`. */
 .cube-peripheral {
+  position: absolute;
+  inset: 0;
   cursor: pointer;
   border-radius: 6px;
-  padding: 2px;
 }
 
 .cube-peripheral:hover {
   outline: 2px solid #e7c97a;
+}
+
+.cube-peripheral > .cube-label {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 5;
+}
+
+/* Chunk 19 — the stage holds the un-scaled, full-fidelity Board and
+ * carries the per-slot 3D transform. Absolute positioning keeps the
+ * Board's full layout box from inflating the cube grid's fixed
+ * peripheral slots. Each slot anchors the edge of the Board that meets
+ * the active face; the opposite edge folds back into perspective. */
+.cube-peripheral-stage {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.cube-top .cube-peripheral-stage {
+  left: 50%;
+  bottom: 0;
+  transform-origin: center bottom;
+  transform: translate(-50%, 0) scale(0.5) rotateX(38deg);
+}
+
+.cube-bottom .cube-peripheral-stage {
+  left: 50%;
+  top: 0;
+  transform-origin: center top;
+  transform: translate(-50%, 0) scale(0.5) rotateX(-38deg);
+}
+
+.cube-left .cube-peripheral-stage {
+  right: 0;
+  top: 50%;
+  transform-origin: right center;
+  transform: translate(0, -50%) scale(0.5) rotateY(-38deg);
+}
+
+.cube-right .cube-peripheral-stage {
+  left: 0;
+  top: 50%;
+  transform-origin: left center;
+  transform: translate(0, -50%) scale(0.5) rotateY(38deg);
 }
 
 /* UI-02 — battle camera. The frame clips the zoomed stage to the
@@ -1441,54 +1508,6 @@ button:disabled {
 .cube-label.active {
   color: #e7c97a;
   font-weight: 700;
-}
-
-/* Compact peripheral boards: small cells, dot actors, no fine detail. */
-.board.compact {
-  padding: 3px;
-  gap: 1px;
-}
-
-.board.compact .board-row {
-  gap: 1px;
-}
-
-.board.compact .cell {
-  width: 14px;
-  height: 14px;
-  border-width: 1px;
-}
-
-.board.compact .pawn {
-  font-size: 0;
-}
-
-.board.compact .pawn::after {
-  content: '';
-  display: block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.board.compact .pawn .stack {
-  display: none;
-}
-
-.board.compact .post {
-  font-size: 0.5rem;
-  top: 0;
-  left: 1px;
-}
-
-.board.compact .post .pip {
-  display: none;
-}
-
-.board.compact .dest {
-  font-size: 0.6rem;
-  right: 0;
 }
 
 /* --- Party-detail inspection panel (replaces the action rail) --- */
