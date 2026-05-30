@@ -94,6 +94,7 @@ export function App(): JSX.Element {
   if (view === 'live') {
     return (
       <LiveScenario
+        scenarioIndex={state.scenarioIndex}
         roster={state.roster}
         onExit={goHill}
         onEnd={(o) => {

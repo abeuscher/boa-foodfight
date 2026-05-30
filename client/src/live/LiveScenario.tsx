@@ -21,6 +21,11 @@ import type {
 import type { WorldRoster } from '../../../engine/world-state.ts';
 
 interface Props {
+  /** 0-based campaign position — routes the live engine to
+   * `data/level-{scenarioIndex + 1}` via `scenarioDataFor`. Chunk B2
+   * added this so a Hill-state `scenarioIndex` past 0 actually loads
+   * a different map. */
+  readonly scenarioIndex: number;
   /** The Hill roster to field; injected over the scenario scaffold. */
   readonly roster?: WorldRoster;
   /** Abandon mid-scenario back to the Hill (no outcome applied). */
@@ -84,8 +89,8 @@ const statusWord = (
  * Skipping / Continuing advances the queue. Queue empty → cameraTarget
  * clears, feed restores.
  */
-export function LiveScenario({ roster, onExit, onEnd }: Props): JSX.Element {
-  const live = useLiveScenario(roster);
+export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): JSX.Element {
+  const live = useLiveScenario(scenarioIndex, roster);
   const { state } = live;
 
   const antParties = [...state.parties.values()]

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import scenarioData from '../fixtures/scenario-l1-data.json';
-
 import { DEFAULT_AUTO_PAUSE_KINDS, type Speed } from '../clock/clock.ts';
+import { scenarioDataFor } from '../fixture.ts';
 import { pauseReasonLabel } from '../scenario/eventLabel.ts';
 
 import { buildHumanPolicy } from './humanPolicy.ts';
@@ -16,7 +15,6 @@ import {
 import { computeVisibleTiles, visibleNonAntPartyIds } from './visibility.ts';
 
 import { createRng } from '../../../engine/rng.ts';
-import type { ScenarioData } from '../../../engine/state.ts';
 import type {
   BattleResult,
   Faction,
@@ -38,14 +36,14 @@ const SEED = 1;
 /** Wall-clock duration of one resolved turn at 1× speed. */
 export const MS_PER_TURN = 700;
 
-const DATA = scenarioData as unknown as ScenarioData;
-
-/** Build the L1 scenario initial state (optionally injecting a carried
- * roster). Shared by the live hook and the Briefing preview so both
- * render the identical deterministic board (same seed + roster → same
- * inject). */
-export const buildScenarioState = (roster?: WorldRoster): GameState =>
-  createInitialState(DATA, SEED, roster);
+/** Build the scenario initial state for `scenarioIndex` (optionally
+ * injecting a carried roster). Shared by the live hook and the
+ * Briefing preview so both render the identical deterministic board
+ * (same seed + roster + scenario data → same inject). Chunk B2 added
+ * the scenarioIndex routing; before that the L1 data was a compile-
+ * time import. */
+export const buildScenarioState = (scenarioIndex: number, roster?: WorldRoster): GameState =>
+  createInitialState(scenarioDataFor(scenarioIndex), SEED, roster);
 
 const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => {
   const out = new Set(a);
@@ -73,8 +71,8 @@ interface Snapshot {
   readonly battles: readonly BattleResult[];
 }
 
-const initialSnapshot = (roster?: WorldRoster): Snapshot => {
-  const state = createInitialState(DATA, SEED, roster);
+const initialSnapshot = (scenarioIndex: number, roster?: WorldRoster): Snapshot => {
+  const state = createInitialState(scenarioDataFor(scenarioIndex), SEED, roster);
   const visible = computeVisibleTiles(state);
   return {
     state,
@@ -127,8 +125,9 @@ export interface LiveScenarioClock {
  * event-keyed trigger (`post-captured` / `battle-resolved` / …) or — when
  * fog is on — surfaces a `newly-visible-enemy` (auto-pause draft §3d).
  */
-export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
-  const [snap, setSnap] = useState<Snapshot>(() => initialSnapshot(roster));
+export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): LiveScenarioClock {
+  const data = scenarioDataFor(scenarioIndex);
+  const [snap, setSnap] = useState<Snapshot>(() => initialSnapshot(scenarioIndex, roster));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(1);
   const [fogEnabled, setFogEnabled] = useState(true);
@@ -158,7 +157,7 @@ export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
     const player = buildHumanPolicy(ordersRef.current);
     const result = advanceOneTurn(
       cur.state,
-      DATA,
+      data,
       player,
       cur.turnsPlayed,
       rngRef.current,
@@ -199,7 +198,7 @@ export function useLiveScenario(roster?: WorldRoster): LiveScenarioClock {
     snapRef.current = next;
     setSnap(next);
     if (pauseReason !== null || ended) setPlaying(false);
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     if (!playing) return undefined;

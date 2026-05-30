@@ -19,6 +19,42 @@ const EMPTY_SET: ReadonlySet<string> = new Set();
 const NO_DEST = new Map();
 const ORIENT_MS = 2200;
 
+/** Per-scenario briefing copy. Chunk B2 — the title was hardcoded
+ * "L1 — The Bathroom" and Antonio's body text was bathroom-flavored;
+ * now keyed by `scenarioIndex` with a generic fallback so adding L3+
+ * is one entry per scenario. Body remains placeholder per the
+ * existing `ui-briefing-spec` note (per-scenario voice library is a
+ * forward dep). */
+interface BriefingCopy {
+  readonly title: string;
+  readonly body: readonly string[];
+}
+
+const BRIEFINGS: Record<number, BriefingCopy> = {
+  0: {
+    title: 'L1 — The Bathroom',
+    body: [
+      'Recruits! The porcelain expanse before us is no place for the timid.',
+      'Eight-legged occupiers have dug in across the tiles and claimed the high ground. We march, we hold, we take what is ours — for the colony, for the Queen.',
+      'Form up. Antonio does not deploy cowards.',
+    ],
+  },
+  1: {
+    title: 'L2 — The Pipe',
+    body: [
+      "Listen up. The wall pipe is our highway to the kitchen — and Aunt Ant rides with us. She doesn't fight; she's the colony's next queen-in-waiting.",
+      'Escort her end-to-end. Spiders will hold the pinch points; flank through the skylight or push straight through, but get her to the pipe exit.',
+      'Lose her and the campaign ends here. No pressure.',
+    ],
+  },
+};
+
+const briefingFor = (scenarioIndex: number): BriefingCopy =>
+  BRIEFINGS[scenarioIndex] ?? {
+    title: `Scenario ${String(scenarioIndex + 1)}`,
+    body: ['(Briefing copy not yet authored for this scenario.)'],
+  };
+
 interface Spot {
   readonly loc: TileCoord;
   readonly name: string;
@@ -32,11 +68,26 @@ const startSpot = (preview: GameState): Spot | null => {
   return ant ? { loc: ant.location, name: 'the colony' } : null;
 };
 
-const goalSpot = (preview: GameState): Spot | null => {
+interface Goal {
+  readonly loc: TileCoord;
+  readonly name: string;
+  /** The action verb the briefing uses: "Capture" vs "Escort to" vs … */
+  readonly verb: string;
+}
+
+const goalSpot = (preview: GameState): Goal | null => {
   const vc = preview.victoryCondition;
-  if (vc && vc.kind === 'capture-post') {
+  if (!vc) return null;
+  if (vc.kind === 'capture-post') {
     const post = preview.posts.get(vc.postId);
-    if (post) return { loc: post.location, name: post.name };
+    if (post) return { loc: post.location, name: post.name, verb: 'Capture' };
+  }
+  if (vc.kind === 'escort') {
+    // L2 — escort the escortee unit to `exitPostId`. The post location
+    // doubles as the briefing's GOAL pulse so the player sees where
+    // they're heading, same as a capture-post objective.
+    const post = preview.posts.get(vc.exitPostId);
+    if (post) return { loc: post.location, name: post.name, verb: 'Escort to' };
   }
   return null;
 };
@@ -50,9 +101,12 @@ const goalSpot = (preview: GameState): Spot | null => {
  * moment is the simplified direction-only beat (no path preview, §A.3).
  */
 export function Briefing({ state, onBegin, onCancel }: Props): JSX.Element {
-  const [preview] = useState<GameState>(() => buildScenarioState(state.roster));
+  const [preview] = useState<GameState>(() =>
+    buildScenarioState(state.scenarioIndex, state.roster),
+  );
   const [phase, setPhase] = useState<'reading' | 'orienting'>('reading');
 
+  const copy = briefingFor(state.scenarioIndex);
   const start = startSpot(preview);
   const goal = goalSpot(preview);
   const plane = start?.loc.plane ?? 'floor';
@@ -69,7 +123,7 @@ export function Briefing({ state, onBegin, onCancel }: Props): JSX.Element {
   }, [phase, onBegin]);
 
   const goalLine = goal
-    ? `Capture ${goal.name}${goal.loc.plane !== plane ? ` (${goal.loc.plane})` : ''}.`
+    ? `${goal.verb} ${goal.name}${goal.loc.plane !== plane ? ` (${goal.loc.plane})` : ''}.`
     : 'Hold the line.';
 
   return (
@@ -111,14 +165,11 @@ export function Briefing({ state, onBegin, onCancel }: Props): JSX.Element {
             <span className="bp-name">Sgt. Antonio</span>
           </div>
           <div className="bp-body-col">
-            <h2 className="bp-title">L1 — The Bathroom</h2>
+            <h2 className="bp-title">{copy.title}</h2>
             <div className="bp-body">
-              <p>Recruits! The porcelain expanse before us is no place for the timid.</p>
-              <p>
-                Eight-legged occupiers have dug in across the tiles and claimed the high ground. We
-                march, we hold, we take what is ours — for the colony, for the Queen.
-              </p>
-              <p>Form up. Antonio does not deploy cowards.</p>
+              {copy.body.map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
               <p className="bp-placeholder">
                 (Briefing copy is placeholder — authored per scenario.)
               </p>
