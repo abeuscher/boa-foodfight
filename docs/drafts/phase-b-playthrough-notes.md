@@ -94,6 +94,69 @@ scenario).
 
 ---
 
+## 4. Cross-plane targeting silently stalls (no UI feedback)
+
+**Symptom:** PM clicks a tile on the ceiling from a ground squad (or
+across any two opposite planes — north↔south, east↔west). The UI
+accepts the destination marker, but the squad never moves. No
+warning, no "no path" indicator. Player sees a broken pathfinder.
+
+**Root cause (engine-correct, UI-side gap):** Per
+`engine/movement.ts:300-328` `tryPlaneTransition`, a cross-plane
+order resolves only via one of three routes:
+
+1. **`ant-plane-switch` ability** — same-(x, y) teleport (ant-mage in
+   the party).
+2. **Edge adjacency** — current plane shares a fold-edge with the
+   target plane (floor↔any wall, wall↔adjacent wall, ceiling↔any
+   wall).
+3. **Paired POST traversal** — party stands on a POST whose
+   `pairedWith` partner is on the target plane.
+
+Opposite faces (floor↔ceiling, north↔south, east↔west) are **not
+adjacent** — no shared edge. Without an ant-mage or a floor↔ceiling
+paired-POST, the engine has no one-step route and `break`s the
+movement loop (line 424 — "Order stalls; will retry next turn").
+The party sits forever while the order sits in their queue.
+
+Multi-turn cross-plane paths (floor → wall on turn N → ceiling on
+turn N+1) work, but the engine's greedy per-turn BFS only commits to
+the next step, so the player has to manually re-order the squad
+each turn — which doesn't match the click-and-go model elsewhere.
+
+**PM proposal candidates** (none implemented yet — naming for the
+chunk that picks this up):
+
+- **A — Reject the click** if no route exists. Compute
+  `partyHasPlaneSwitch || edgeAnchor || pairedPostChain` against the
+  selected party + target plane; if none, suppress the order and
+  surface a brief "no path" hint. Cleanest UX, cheapest to build.
+- **B — Show "stalled" feedback** on the destination marker when
+  the previous turn's movement loop hit the `break`. Engine already
+  decides this; client just doesn't surface it. Pairs well with A
+  (catches the rare case where an order was issued before the path
+  closed).
+- **C — Multi-turn pathfinding in the UI**. Pre-compute the floor →
+  wall → ceiling path at order-time and queue the intermediate
+  destination. Bigger lift; defers to Path-PA work.
+
+Recommend **A + B** as the production pair: fail fast on the click,
+label any in-flight stalls.
+
+**Engine notes:**
+
+- The check needs `partyHasPlaneSwitch(party, templates)`,
+  `edgeNeighbor(party.location, targetPlane)`, and POST-pair
+  inspection. All three helpers already exist in
+  `engine/movement.ts` / `engine/edges.ts`.
+- No engine change needed — pure client-side reachability check.
+
+**Affects:** `LiveScenario.tsx` (the order-commit path at the click
+handler) and possibly a new shared `client/src/live/reachability.ts`
+helper so the same predicate can drive the path-peek preview later.
+
+---
+
 ## Recording protocol
 
 When dev picks one of these up, file it as its own chunk PR
