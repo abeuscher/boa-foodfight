@@ -1,7 +1,8 @@
 # Design session — battle in-zoom composition (round 2)
 
-**From / To / Status:** Design (UX) → Dev (Gameplay/UX) / **PM-approved —
-A-1 picked, ready for dev pickup.** Round-2 of the battle-screen conversation;
+**From / To / Status:** Design (UX) → Dev (Gameplay/UX) / **Ratified by
+dev (Chunk 27 reply) — A-1 picked, pick-up ready; held for the reassess
+gate.** Round-2 of the battle-screen conversation;
 narrows `l1-battle-screen-design-brief.md` (round-1 / Chunk 17 / PR #76)
 to the *in-zoom phase only*. Filed for dev pickup after Phase B's L2 lap
 and the reassess gate (`phase-b-through-l2-plan.md`).
@@ -209,9 +210,14 @@ moves into the dimmed peripheral gutters so the fight *frames* the tile.
   the current action's line ("Round 2: footman attacks soldier for 3
   (4/7 HP)"), and (b) the `-3` damage flash + HP-bar tic land **on the
   card of the struck unit, in whichever flanking panel takes the hit** —
-  left when an ant is hit, right when a spider is hit. Because the action
-  stream alternates attacker/defender, the flash **ping-pongs left↔right**
-  — the sense of volley the PM called out, present in every reference.
+  left when an ant is hit, right when a spider is hit. The action stream
+  is **agility-ordered across both sides** (dev-confirmed: `combat.ts`
+  `computeAgilityOrder`, front row then back), so the flash moves
+  **side-to-side as an initiative-paced exchange** — mostly opposite-side
+  beat to beat, with occasional 2–3 same-side runs when one side has more
+  units in a row or higher agility. That initiative rhythm is the volley
+  the PM called out, and it matches the references (units fire by
+  initiative, not forced alternation) better than a strict rally would.
   Center banner + side flash sit in one eyespan (the banner is between
   the two adjacent panels), so the round-1 #2 goal is satisfied *and*
   the directionality reads.
@@ -444,11 +450,13 @@ Nothing in §5 requires new engine data. The two non-engine flags:
    `participant.templateId` (or party id), not just `side`. Client
    already knows it (the A/S glyphs); small client-side map, no engine
    change. Drop if PM keeps attacker-always-left.
-4. **Back-and-forth volley legibility (C3)** assumes the action stream
-   interleaves attacker/defender attacks rather than batching one side
-   then the other. Confirm against `result.rounds[].actions[]` ordering
-   at build — if actions are grouped by side, the ping-pong is coarser
-   (still moves to the struck side, just in runs). Verify, don't assume.
+4. **Back-and-forth volley legibility (C3)** — **CONFIRMED** (dev,
+   Chunk 27). The stream is agility-ordered across both sides (front then
+   back), not strictly alternating: mostly opposite-side beat to beat,
+   with occasional 2–3 same-side runs. Reads as an initiative-paced
+   exchange, as designed. If runs feel long at build, the cheap softener
+   is +150 ms on same-side beats (base 750 ms on alternation) — an
+   implementation-time tuning call, not a design change.
 
 All are dev-side build calls, not design forward-deps on the engine.
 
