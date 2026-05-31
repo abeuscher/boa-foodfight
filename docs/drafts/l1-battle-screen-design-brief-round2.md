@@ -136,6 +136,47 @@ grey-out).
 
 ---
 
+## 4b. Structure decision — overlay, not a new view (PM-asked)
+
+The PM asked whether this is a **new view** or an **overlay**, open to
+either. **Recommend: overlay** — a *flat, top-level battle layer* that
+dims the whole scenario screen (cube + both rails) beneath it and hosts
+the composition over the full play-area width. Rationale:
+
+- **Keeps the spatial anchor.** The dimmed cube shows through behind the
+  overlay, so *where* the fight is (the contested `A`/`S` tile) stays
+  visible. A routed new view tears the scenario screen down and would
+  have to re-render a board to recover the "where" we already have. This
+  is the Nephilim model the PM flagged as the closest map: two panels
+  over a dimmed world.
+- **Threads the round-2 constraint.** "Not a full takeover, keep
+  continuity" — an overlay over a still-visible (dimmed) world honors
+  that; a new view is the round-1 takeover we stepped back from.
+- **Cheap + reversible.** The scenario stays mounted and auto-paused
+  underneath; Continue / Skip dismiss the overlay — no routing, no
+  teardown. The existing `battleQueue` / `cameraTarget` lifecycle in
+  `LiveScenario.tsx` already gates exactly this.
+
+**Build form (load-bearing):** the overlay must be a **flat layer in its
+own stacking context above the cube**, *not* panels re-parented into the
+cube's peripheral slots. The splay is a `preserve-3d` subtree and z-sorting
+inside it already bit us once (Chunk-20 floated the face labels out to a
+flat overlay for this reason — `CubeBoard.tsx`). The battle layer sits
+above the whole 3D tree the same way: no sorting fight, full width for the
+centered play-by-play.
+
+This re-frames A-1 below: read "left gutter / right gutter" as **the
+overlay's left and right regions over the dimmed scene**, not docks inside
+the cube's 3D slots.
+
+**Side assignment (open sub-call):** today the panel keys off engine
+*attacker/defender*, so the player's ants flip sides per battle (in the
+screenshot the spider is top because it's the attacker). **Recommend ants
+always left, spiders always right** — player faction is constant (Ogre
+Battle keeps your army bottom-left). Faction is read from the A/S glyph
+the client already renders; it's a tiny client-side mapping, not engine
+data. Pending PM confirm; alternative is attacker-always-left.
+
 ## 5. Proposals
 
 Three Template-A variants against C1–C9. **Recommended: A-1 (Framed
@@ -147,31 +188,41 @@ trade is explicit.
 The contested tile stays center as a **stage**; the battle composition
 moves into the dimmed peripheral gutters so the fight *frames* the tile.
 
-- **C1 — Hierarchy.** Stage (zoomed contested tile, kept) and the two
-  unit panels are **co-equal foreground**. Prose ticker is secondary.
-  Modifier card and cube periphery recede. The zoomed tile is demoted
-  from "the information" to "the where" — it's the spatial anchor, not
-  the read surface.
-- **C2 — Unit panels.** Attacker column docks in the **left gutter**,
-  defender column in the **right gutter** (matching the engine's
+- **C1 — Hierarchy.** Three co-equal foreground elements arranged
+  left → center → right: **attacker panel · center stage + play-by-play ·
+  defender panel**. The center stage is the zoomed contested tile (kept
+  as spatial anchor — *where* the fight is) with the live play-by-play
+  banner riding over it. Modifier card and cube periphery recede. The
+  zoomed tile is demoted from "the information" to "the where."
+- **C2 — Unit panels.** Attacker roster docks in the **left gutter**,
+  defender roster in the **right gutter** (matching the engine's
   attacker/defender sides and the existing `cb-attacker`/`cb-defender`
-  split). They flank the zoomed tile so the eye reads **attacker →
-  contested tile → defender** on one line. Each keeps today's card:
-  ★-leader mark, role label, HP bar, HP numbers, `-N` flash, `acting`
-  glow, `down` grey-out. Equal width, equal weight.
-- **C3 — HP↔prose.** The live prose line sits in the **bottom gutter,
-  directly under the zoomed frame**, centered between the two flanking
-  panels. When "Round 2: footman attacks soldier for 3 (4/7 HP)" prints,
-  the defender card's HP bar tics and the `-3` flashes on the *same
-  beat*, and the panel, the tile, and the line are all within one
-  eyespan — the round-1 #2 goal, finally satisfied.
-- **C4 — Prose.** **Live beat = one large centered line** under the
+  split), **facing each other across the center stage** (the Nephilim /
+  Ogre Battle dual-panel pattern — see §6). The eye reads **attacker →
+  contested tile → defender** on one horizontal line. Each keeps today's
+  card: ★-leader mark, role label, HP bar, HP numbers, `-N` flash,
+  `acting` glow, `down` grey-out. Equal width, equal weight — neither
+  side is "the main one."
+- **C3 — HP↔prose, centered + back-and-forth (PM-directed).** The live
+  prose line is a **centered banner over the center stage** (the FF4
+  "Preemptive strike!" position — §6), not a side or bottom strip. Each
+  750-ms step, two things fire on the *same beat*: (a) the banner swaps to
+  the current action's line ("Round 2: footman attacks soldier for 3
+  (4/7 HP)"), and (b) the `-3` damage flash + HP-bar tic land **on the
+  card of the struck unit, in whichever flanking panel takes the hit** —
+  left when an ant is hit, right when a spider is hit. Because the action
+  stream alternates attacker/defender, the flash **ping-pongs left↔right**
+  — the sense of volley the PM called out, present in every reference.
+  Center banner + side flash sit in one eyespan (the banner is between
+  the two adjacent panels), so the round-1 #2 goal is satisfied *and*
+  the directionality reads.
+- **C4 — Prose.** **Live beat = one large centered banner line** over the
   stage (the current action only), swapped each 750-ms step. **Persistent
   scrollback stays in the right rail** but visually recedes during the
   zoom phase (it's there for "what just happened / scroll back," not the
   live read). This kills the clipping failure: the live line gets the
-  full bottom-gutter width instead of 100 px. Source: `summarizeBattle()`
-  lines, unchanged.
+  full center width instead of 100 px. Source: `summarizeBattle()` lines,
+  unchanged.
 - **C5 — Modifiers.** **Collapse to a corner card** (top-left or
   top-right gutter), labelled by plane, showing the attacker/defender
   ±axis rows. Default collapsed to a one-line summary ("Modifiers:
@@ -207,6 +258,23 @@ moves into the dimmed peripheral gutters so the fight *frames* the tile.
   Skip-all only when `total > 1`; Continue enabled on `done` (all
   unchanged from today's logic).
 
+**Layout sketch:**
+
+```
+              [ Combat n of m · Ant vs Spider ]      ← top-center strip
+┌──────────────┐                            ┌──────────────┐
+│ ANT (atkr)   │      ╭──────────────╮      │ SPIDER (def) │
+│ ★ footman ▓▓ │      │  contested   │      │   soldier ▓▓ │
+│   scout   ▓▓ │      │  tile (stage)│      │ ★ raider  ▓▓ │
+│   mage  -3🔺│ ⚔ ← "footman → soldier, 3" → │   spinner ▓▓│
+└──────────────┘      ╰──────────────╯      └──────────────┘
+   [mod card]       centered play-by-play       [skip · continue]
+                       banner over stage
+```
+
+Flash `-3` lands on the struck side (here the ant mage took a hit, left);
+next beat it pops on the spider side — the volley ping-pong.
+
 **Why recommended:** maximal legibility for the least new surface — it
 reuses every existing piece (`CombatPanel` columns, `summarizeBattle`
 lines, modifier rows, the zoom, the dim) and just *re-anchors* them into
@@ -214,13 +282,14 @@ the dead gutter space. It satisfies C3 (the headline goal) directly, and
 it's the closest of the three to the Ogre Battle dual-panel reference
 without any takeover.
 
-**Build note / forward dep (flagged, not assumed):** A-1 relocates
-`CombatPanel`'s subtrees out of the rail into gutter-anchored regions
-around `.cube-camera-frame`. That is a **layout/DOM re-parent + CSS**
-job, not an engine job — but it does mean the combat panel stops being a
-rail child and becomes an overlay positioned against the cube frame. If
-that's a heavier lift than dev wants for the L2 lap, A-2 is the drop-in
-fallback.
+**Build note / forward dep (flagged, not assumed):** A-1 lifts
+`CombatPanel`'s subtrees out of the rail into a **flat top-level overlay
+layer** over the dimmed scene (§4b) — its own stacking context above the
+cube's 3D tree, not docked into the cube slots. That is a **layout/DOM +
+CSS** job, not an engine job (the panel stops being a rail child and
+becomes an overlay sibling, mounted by `LiveScenario.tsx` when
+`battleQueue` is active). If the full overlay is heavier than dev wants
+for the L2 lap, A-2 is the drop-in fallback.
 
 ### Template-A-2 — "Inflated Band" *(cheap fallback)*
 
@@ -294,16 +363,62 @@ From `l1-battle-screen-design-brief.md` §3 + `docs/ogre-battle-extract/`:
   not L1/L2; don't compose for it now, but A-1's top gutter is where it
   would land later.
 
-### 6b. PM-supplied SNES references — *pending*
+### 6b. PM-supplied references (round-2 session)
 
-The session prompt notes the PM will share SNES-era tactical battle
-screens at session start to anchor the structural target. **They are not
-yet in the repo.** When dropped (suggest
-`docs/test-feedback/battle-screen/round2-*.png`), this section gets the
-import/skip annotation pass and the proposals above are reconciled
-against them — in particular which reference confirms *flanking* (A-1)
-vs *stacked-below* (A-2) unit panels. Until then the proposals lean on
-the round-1 Ogre Battle anchor, which already points at A-1.
+Five references supplied. The fork — *flanking* (A-1) vs *stacked-below*
+(A-2) — is **settled flanking**: every reference the PM favors faces the
+two rosters across a center, none stacks them. Suggest stashing the shots
+at `docs/test-feedback/battle-screen/round2-{ogre,nephilim-a,nephilim-b,
+ff4,chrono}.png` so this section cites them directly.
+
+**Ogre Battle — March of the Black Queen (PM: "placement + skew-morph
+board") — IMPORT:**
+- Two HP-summary panels in **opposite corners** (enemy top-right, ally
+  bottom-left), equal weight, each a stack of {small unit glyph · HP bar ·
+  HP number}, leader marked (†). → confirms A-1's flanking rosters.
+- **Skewed/perspective board as the center stage**, with the damage number
+  ("15") flashing **on the board over the struck unit**. → our zoomed cube
+  *already* carries perspective (the Chunk-19 splay); it is the skew board.
+- PM note: rendered as plain **CSS circles/glyphs** it still reads as the
+  units "even without the details." → confirms no sprites needed (matches
+  §D-deferred art + round-1's "no troop sprites").
+- **SKIP:** literal isometric grass terrain; units *arrayed across the
+  field*. Our combatants are co-located on one contested tile — we can't
+  spread them over a battlefield, so the rosters live in the flanking
+  panels, not scattered on the stage.
+
+**Symphony of War: Nephilim Saga (PM: "maps almost exactly onto what we
+have") — IMPORT (≈1:1 with today's `CombatPanel`):**
+- **Two large squad panels side-by-side**, each a formation grid of unit
+  glyphs with per-unit HP bar + HP number. → this *is* our attacker/
+  defender columns; inflate them out of the rail and flank.
+- **Crossed-swords VS marker dead-center** between the panels. → our
+  existing `cb-vs` element; place it center.
+- Leader marked (L); **downed unit = darkened glyph at 0 HP** (img-A shows
+  `0/246`, `0/281`, `0/215` greyed). → matches our `down` grey-out exactly.
+- **Per-unit event flash inside the affected panel** ("LEVEL UP!" in
+  img-A). → our `-N` damage flash + `acting` glow, fired on the struck
+  side — the back-and-forth (C3).
+- **"WINNER ⚔" banner on the victor's panel** at resolution. → maps to our
+  `winnerLabel` / `done` state; consider moving the win callout from the
+  center VS onto the winning roster's header.
+- **SKIP:** the panel-footer **Threat / Morale** fields — *not in our
+  engine's `BattleResult`*. Do not invent them (forward dep, flag-don't-
+  assume). Our footer keeps Leader + casualties, which we have.
+
+**Final Fantasy IV (banner reference) — IMPORT one move:**
+- **Top-center message banner** ("Preemptive strike!") = the single live
+  play-by-play line, centered and prominent. → this is the model for the
+  PM's "play-by-play in the middle of the screen" (C3/C4). **SKIP** the
+  rest (command menus, ATB rows — not our interaction model).
+
+**Chrono Trigger — ANTI-PATTERN (kept as the cautionary case):**
+- Single bottom bar: enemy name shoved left, party HP list shoved right,
+  no flanking, no per-side back-and-forth. This is structurally close to
+  **today's rail/bottom failure** — HP and narration pushed off to the
+  sides. The PM didn't favor it; it validates the diagnosis (§2) that
+  prose+HP to one side is the thing we're escaping. **IMPORT nothing;**
+  cite it as what *not* to do.
 
 ---
 
@@ -311,29 +426,44 @@ the round-1 Ogre Battle anchor, which already points at A-1.
 
 Nothing in §5 requires new engine data. The two non-engine flags:
 
-1. **A-1 re-parents `CombatPanel` out of the rail** into gutter-anchored
-   overlays around `.cube-camera-frame`. Layout/CSS work, not engine —
-   but a real refactor of where the panel mounts (`LiveScenario.tsx`
-   info-rail slot → cube-frame overlay). If too heavy for the L2 lap,
-   A-2 keeps it a single band and is near-drop-in.
+1. **A-1 lifts `CombatPanel` out of the rail** into a flat top-level
+   overlay layer over the dimmed scene (§4b). Layout/CSS work, not engine
+   — a refactor of where the panel mounts (`LiveScenario.tsx` info-rail
+   slot → top-level overlay sibling). If too heavy for the L2 lap, A-2
+   keeps it a single band and is near-drop-in.
 2. **Contested-tile outline pulse on the acting beat (C6)** wants the
    `CombatPanel` to know which board tile is the stage. The camera
    already computes `cameraTarget`; the panel would need that coord
    passed in. Trivial prop, no engine change — flagged only because it
    crosses the panel/board boundary.
+3. **Ants-always-left side mapping (§4b)** needs faction derivable from
+   `participant.templateId` (or party id), not just `side`. Client
+   already knows it (the A/S glyphs); small client-side map, no engine
+   change. Drop if PM keeps attacker-always-left.
+4. **Back-and-forth volley legibility (C3)** assumes the action stream
+   interleaves attacker/defender attacks rather than batching one side
+   then the other. Confirm against `result.rounds[].actions[]` ordering
+   at build — if actions are grouped by side, the ping-pong is coarser
+   (still moves to the struck side, just in runs). Verify, don't assume.
 
-Both are dev-side build calls, not design forward-deps on the engine.
+All are dev-side build calls, not design forward-deps on the engine.
 
 ---
 
 ## 8. Handoff
 
-- **Pick:** A-1 (Framed Contest), with A-2 as the named cheap fallback if
-  the re-parent is too heavy for the L2 lap.
-- **Deliverable status:** Template-A ×3 + refined C1–C9 rubric, filed for
-  dev ratify after the reassess gate.
-- **Open for PM:** drop the SNES references so §6b gets annotated and the
-  flanking-vs-stacked question (A-1 vs A-2) is settled against them.
+- **Pick:** A-1 (Framed Contest) as a **flat overlay over the dimmed
+  scene** (§4b), with A-2 as the named cheap fallback if the overlay is
+  too heavy for the L2 lap.
+- **Settled this session:** structure = overlay, not new view (§4b);
+  flanking rosters, not stacked (refs, §6b); live play-by-play centered,
+  not railed (C3/C4, PM-directed); per-action flash on the struck side
+  for the volley back-and-forth (C3, PM-directed).
+- **Deliverable status:** Template-A ×3 + refined C1–C9 rubric +
+  reference annotations, filed for dev ratify after the reassess gate.
+- **Open for PM:** side assignment — ants-always-left (recommended) vs
+  attacker-always-left (§4b).
 - **Dev action when picked up:** ratify / push-back / request-revision per
   the change-request protocol; engine-truth confirmation on C6's
-  tile-coord prop and the leader-death pacing delta.
+  tile-coord prop, the leader-death pacing delta, and the action-stream
+  interleaving for the volley (forward-dep §7.4).
