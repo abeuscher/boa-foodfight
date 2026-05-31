@@ -1484,6 +1484,29 @@ button:disabled {
   transform-style: preserve-3d;
 }
 
+/* Chunk B4 — placeholder for a perimeter slot that has no face
+ * behind it (L2: no walls, only floor + ceiling). The slot still
+ * occupies its grid track so the cube's shape stays consistent;
+ * dimmed + "no face" label make it read as void, not broken. Not
+ * clickable. */
+.cube-peripheral-absent {
+  cursor: default;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.cube-absent-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #6f6a60;
+  letter-spacing: 0.04em;
+}
+
 /* Chunk 19 v3 (visual review): the old hover was a flat 2 px gold
  * outline on the un-transformed wrapper rectangle. Once the walls splay
  * at 90° that outline floated as a flat rectangle detached from the

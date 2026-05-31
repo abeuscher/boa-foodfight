@@ -31,6 +31,13 @@ interface Props {
    * target's face before passing the tile here, so the cube layout
    * is always consistent. */
   readonly cameraTarget?: TileCoord | null;
+  /** Chunk B4 — set of planes that actually exist in this scenario.
+   * L2 only ships floor + ceiling (no 4 walls), so peripherals that
+   * point at absent planes render as a placeholder ("no face here")
+   * rather than an empty grid. L1 ships all six; this set lets the
+   * cube degrade gracefully across both. Omitted ⇒ assume all six
+   * exist (L1 fallback). */
+  readonly existingPlanes?: ReadonlySet<Plane>;
 }
 
 /**
@@ -94,9 +101,14 @@ export function CubeBoard({
   onSelectFace,
   marks,
   cameraTarget,
+  existingPlanes,
 }: Props): JSX.Element {
   const layout = FACE_LAYOUT[plane];
   const allMarks = marks ?? [];
+  // Chunk B4 — null-or-undefined means we're on L1 / 6-plane (the
+  // backward-compatible path); a passed Set is the L2+ degrade where
+  // some perimeter slots have no face behind them.
+  const isExistingFace = (face: Plane): boolean => !existingPlanes || existingPlanes.has(face);
 
   // UI-02 — compute the camera transform for the active face. The
   // active-face wrapper has overflow:hidden via CSS; scale + translate
@@ -128,37 +140,53 @@ export function CubeBoard({
   // in-perspective half of that rule. §A.1 also locks: peripherals are
   // previews, never directly clickable, so cell clicks still route to
   // `onSelectFace`, not `onClickTile`.
-  const peripheral = (face: Plane): JSX.Element => (
-    <div
-      className="cube-face cube-peripheral"
-      title={`Rotate to ${face}`}
-      onClick={() => {
-        onSelectFace(face);
-      }}
-    >
-      {/* Chunk 20 — the peripheral label moved OUT to `.cube-labels`, a
+  const peripheral = (face: Plane): JSX.Element => {
+    // Chunk B4 — absent face on this scenario. Render an inert
+    // placeholder (no click, no Board) so the cube grid keeps its
+    // shape and the player can see "the room doesn't extend that
+    // way." Class `cube-peripheral-absent` lets CSS dim it / mark
+    // the slot as void without redoing the splay transforms.
+    if (!isExistingFace(face)) {
+      return (
+        <div className="cube-face cube-peripheral cube-peripheral-absent" aria-disabled="true">
+          <div className="cube-peripheral-stage">
+            <div className="cube-absent-marker">no face</div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div
+        className="cube-face cube-peripheral"
+        title={`Rotate to ${face}`}
+        onClick={() => {
+          onSelectFace(face);
+        }}
+      >
+        {/* Chunk 20 — the peripheral label moved OUT to `.cube-labels`, a
           flat overlay above the cube. Inside this `preserve-3d` subtree a
           label can't reliably sit in front of its wall (the wall's far
           edge is physically closer in Z, so it wins regardless of
           z-index); the flat overlay sidesteps 3D sorting entirely. */}
-      <div className="cube-peripheral-stage">
-        <Board
-          state={state}
-          plane={face}
-          selectedPartyId={selectedPartyId}
-          ordering={false}
-          destinations={destinations}
-          onClickTile={() => {
-            onSelectFace(face);
-          }}
-          fogEnabled={fogEnabled}
-          visible={visible}
-          seen={seen}
-          marks={allMarks}
-        />
+        <div className="cube-peripheral-stage">
+          <Board
+            state={state}
+            plane={face}
+            selectedPartyId={selectedPartyId}
+            ordering={false}
+            destinations={destinations}
+            onClickTile={() => {
+              onSelectFace(face);
+            }}
+            fogEnabled={fogEnabled}
+            visible={visible}
+            seen={seen}
+            marks={allMarks}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="cube-frame">
@@ -197,10 +225,21 @@ export function CubeBoard({
           overlay is click-through (pointer-events:none) so the walls
           underneath stay the rotate-to-active target. */}
       <div className="cube-labels" aria-hidden="true">
-        <span className="cube-edge-label cube-edge-top">{layout.top}</span>
-        <span className="cube-edge-label cube-edge-bottom">{layout.bottom}</span>
-        <span className="cube-edge-label cube-edge-left">{layout.left}</span>
-        <span className="cube-edge-label cube-edge-right">{layout.right}</span>
+        {/* Chunk B4 — hide perimeter labels for absent faces so an L2
+            cube doesn't claim "north-wall" / etc. for slots that
+            actually render as "no face here". */}
+        {isExistingFace(layout.top) && (
+          <span className="cube-edge-label cube-edge-top">{layout.top}</span>
+        )}
+        {isExistingFace(layout.bottom) && (
+          <span className="cube-edge-label cube-edge-bottom">{layout.bottom}</span>
+        )}
+        {isExistingFace(layout.left) && (
+          <span className="cube-edge-label cube-edge-left">{layout.left}</span>
+        )}
+        {isExistingFace(layout.right) && (
+          <span className="cube-edge-label cube-edge-right">{layout.right}</span>
+        )}
       </div>
     </div>
   );
