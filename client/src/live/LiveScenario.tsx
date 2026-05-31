@@ -107,6 +107,17 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     .filter((p) => p.faction === 'ant')
     .sort((a, b) => (a.id < b.id ? -1 : 1));
 
+  // Chunk B4 — which planes actually exist in this scenario. L1 has
+  // all six, L2 only floor + ceiling. Derived from `state.tiles` so
+  // it stays correct for whatever scenario index is active without
+  // a per-scenario constant.
+  const existingPlanes: ReadonlySet<Plane> = (() => {
+    const out = new Set<Plane>();
+    for (const tile of state.tiles.values()) out.add(tile.coord.plane);
+    return out;
+  })();
+  const visiblePlanes = PLANES.filter((p) => existingPlanes.has(p));
+
   const [selectedId, setSelectedId] = useState<PartyId | null>(null);
   const [ordering, setOrdering] = useState(false);
   const [inspecting, setInspecting] = useState(false);
@@ -210,6 +221,16 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     }
   }, [cameraTarget?.plane]);
 
+  // Chunk B4 — snap `plane` to a valid one if the current value
+  // points at a face the active scenario doesn't have. The default
+  // `useState<Plane>('floor')` works for L1 and L2 (both ship a
+  // floor), but if a future scenario doesn't, this guard catches it.
+  useEffect(() => {
+    if (!existingPlanes.has(plane) && visiblePlanes[0]) {
+      setPlane(visiblePlanes[0]);
+    }
+  }, [existingPlanes, plane, visiblePlanes]);
+
   const selectParty = (id: PartyId): void => {
     setSelectedId(id);
     setUnitId(null); // switching party clears unit drill-down
@@ -263,7 +284,7 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
         </button>
         <span className="scn-title">L1 — live (engine in browser): issue orders, then Play</span>
         <span className="planes">
-          {PLANES.map((pl) => (
+          {visiblePlanes.map((pl) => (
             <button
               key={pl}
               className={plane === pl ? 'active' : ''}
@@ -425,6 +446,7 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
             onSelectFace={setPlane}
             marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
             cameraTarget={cameraTarget}
+            existingPlanes={existingPlanes}
           />
           {live.atEnd && live.terminal && (
             <div className="scn-end">
