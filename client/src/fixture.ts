@@ -8,7 +8,7 @@ import type { ScenarioData } from '../../engine/state.ts';
 import type { ItemTemplate } from '../../engine/schemas/items.ts';
 import type { RecruitsFile } from '../../engine/schemas/recruits.ts';
 import type { ShopCatalogFile } from '../../engine/schemas/shop-catalog.ts';
-import type { ReplayEvent, UnitTemplate } from '../../engine/types.ts';
+import type { PartyId, ReplayEvent, UnitTemplate } from '../../engine/types.ts';
 import type { WorldState } from '../../engine/world-state.ts';
 
 import raw from './fixtures/l1.json';
@@ -64,4 +64,32 @@ export const scenarioDataFor = (scenarioIndex: number): ScenarioData => {
       `[0, ${String(SCENARIO_DATA.length)}); falling back to last shipped scenario`,
   );
   return SCENARIO_DATA[SCENARIO_DATA.length - 1]!;
+};
+
+/**
+ * Chunk B3 — per-scenario "preserve verbatim" ant party ids, indexed
+ * by `scenarioIndex`. These are scenario-provided ant parties that
+ * `injectWorldRoster` must keep as-is rather than rebuild from the
+ * carried roster. Without preserving, an L2 boot from an L1 carry
+ * silently DROPS Aunt Ant's `escort-column` party (the carried
+ * roster has no assignment for that id), which makes the escort
+ * scenario unwinnable.
+ *
+ * Source of truth: `harness/world-loop.ts:L2_ESCORT_PARTY`. The
+ * harness has been doing this for the AI runs since L2 shipped; the
+ * client just wasn't passing the option through.
+ */
+const SCENARIO_PRESERVE: readonly ReadonlySet<PartyId>[] = [
+  new Set<PartyId>(), // L1 — no scenario-provided ant parties to preserve.
+  new Set<PartyId>(['escort-column' as PartyId]), // L2 — Aunt Ant escort.
+];
+
+/** Look up the set of party ids the scenario provides that must be
+ * preserved verbatim through `injectWorldRoster`. Empty set is the
+ * safe default (= the pre-B3 behavior). */
+export const scenarioPreserveFor = (scenarioIndex: number): ReadonlySet<PartyId> => {
+  if (scenarioIndex >= 0 && scenarioIndex < SCENARIO_PRESERVE.length) {
+    return SCENARIO_PRESERVE[scenarioIndex]!;
+  }
+  return new Set<PartyId>();
 };

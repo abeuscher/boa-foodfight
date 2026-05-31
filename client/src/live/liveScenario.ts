@@ -29,7 +29,7 @@ import { scoreScenario, winnerFromScore, type ScoreBreakdown } from '../../../en
 import { buildInitialStateWithEvents, type ScenarioData } from '../../../engine/state.ts';
 import { runTurn } from '../../../engine/turn.ts';
 import { DEFAULT_VICTORY_CONDITION } from '../../../engine/types.ts';
-import type { Faction, GameState, ReplayEvent, Rng } from '../../../engine/types.ts';
+import type { Faction, GameState, PartyId, ReplayEvent, Rng } from '../../../engine/types.ts';
 import { injectWorldRoster, scaffoldFromState } from '../../../engine/world-inject.ts';
 import type { WorldRoster } from '../../../engine/world-state.ts';
 
@@ -52,10 +52,18 @@ export const createInitialState = (
   scenario: ScenarioData,
   seed: number,
   roster?: WorldRoster,
+  /** Chunk B3 — scenario-provided ant party ids to preserve verbatim
+   * through `injectWorldRoster`. L2's `escort-column` (Aunt Ant) is the
+   * concrete case; without preserving, the carried-roster rebuild would
+   * silently drop the escortee since the L1 carry has no assignment for
+   * that id. Omitted / empty = original behavior. */
+  preserveScenarioPartyIds?: ReadonlySet<PartyId>,
 ): GameState => {
   const base = buildInitialStateWithEvents(scenario, seed).state;
   if (!roster) return base;
-  return injectWorldRoster(base, roster, scaffoldFromState(base)).state;
+  return injectWorldRoster(base, roster, scaffoldFromState(base), {
+    preserveScenarioPartyIds: preserveScenarioPartyIds ?? new Set(),
+  }).state;
 };
 
 export interface Terminal {

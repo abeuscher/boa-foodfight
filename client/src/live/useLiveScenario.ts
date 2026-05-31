@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_AUTO_PAUSE_KINDS, type Speed } from '../clock/clock.ts';
-import { scenarioDataFor } from '../fixture.ts';
+import { scenarioDataFor, scenarioPreserveFor } from '../fixture.ts';
 import { pauseReasonLabel } from '../scenario/eventLabel.ts';
 
 import { buildHumanPolicy, type PartyIntent } from './humanPolicy.ts';
@@ -43,7 +43,12 @@ export const MS_PER_TURN = 700;
  * the scenarioIndex routing; before that the L1 data was a compile-
  * time import. */
 export const buildScenarioState = (scenarioIndex: number, roster?: WorldRoster): GameState =>
-  createInitialState(scenarioDataFor(scenarioIndex), SEED, roster);
+  createInitialState(
+    scenarioDataFor(scenarioIndex),
+    SEED,
+    roster,
+    scenarioPreserveFor(scenarioIndex),
+  );
 
 const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): Set<T> => {
   const out = new Set(a);
@@ -72,7 +77,12 @@ interface Snapshot {
 }
 
 const initialSnapshot = (scenarioIndex: number, roster?: WorldRoster): Snapshot => {
-  const state = createInitialState(scenarioDataFor(scenarioIndex), SEED, roster);
+  const state = createInitialState(
+    scenarioDataFor(scenarioIndex),
+    SEED,
+    roster,
+    scenarioPreserveFor(scenarioIndex),
+  );
   const visible = computeVisibleTiles(state);
   return {
     state,
