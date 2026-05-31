@@ -43,8 +43,21 @@ export interface FeedLine {
    *     teleport bug.
    *   - `battle-header` — bold "⚔ Combat: A attack B." intro
    *   - `battle-action` — indented per-round action
-   *   - `battle-tally` — indented closing winner + casualties */
-  readonly kind: 'event' | 'cross-plane' | 'battle-header' | 'battle-action' | 'battle-tally';
+   *   - `battle-tally` — indented closing winner + casualties
+   *   - `recruit-success` — Chunk 29 — neutral converted to ant. Pops
+   *     in green so the player's explicit Try-to-Recruit click reads
+   *     as a clear win in the feed (it auto-pauses too).
+   *   - `recruit-failure` — Chunk 29 — neutral recruit failed (the
+   *     75% case at a single attempt). Muted red so the player sees
+   *     "yes, we tried, no, it didn't land — try again." */
+  readonly kind:
+    | 'event'
+    | 'cross-plane'
+    | 'battle-header'
+    | 'battle-action'
+    | 'battle-tally'
+    | 'recruit-success'
+    | 'recruit-failure';
 }
 
 /**
@@ -119,10 +132,23 @@ export const expandEventsForFeed = (events: readonly ReplayEvent[]): readonly Fe
     // edge crossing; without a visual call-out it reads as the squad
     // skipping out of one face.
     const isCrossPlane = e.kind === 'party-moved' && e.from.plane !== e.to.plane;
+    // Chunk 29 — recruit-attempted-neutral gets its own tinted kind so
+    // the player can spot the outcome of an explicit Try-to-Recruit
+    // click without combing the feed. Pairs with the auto-pause we
+    // added in clock.ts: clock halts, banner names success/failure,
+    // feed line is colored.
+    let kind: FeedLine['kind'];
+    if (isCrossPlane) {
+      kind = 'cross-plane';
+    } else if (e.kind === 'recruit-attempted-neutral') {
+      kind = e.success ? 'recruit-success' : 'recruit-failure';
+    } else {
+      kind = 'event';
+    }
     out.push({
       key: `t${String(e.tick)}-e`,
       text: eventLabel(e),
-      kind: isCrossPlane ? 'cross-plane' : 'event',
+      kind,
     });
   }
   return out;

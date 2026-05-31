@@ -353,18 +353,41 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                     >
                       Clear order
                     </button>
-                    {recruitTarget && (
-                      <button
-                        onClick={() => {
-                          live.setOrder(selected.id, {
-                            kind: 'recruit',
-                            target: recruitTarget.id,
-                          });
-                        }}
-                      >
-                        Try to recruit {recruitTarget.id}
-                      </button>
-                    )}
+                    {recruitTarget &&
+                      (() => {
+                        // Chunk 29 — reflect the pending recruit intent
+                        // in the button itself so the player gets
+                        // immediate click feedback. The intent is
+                        // one-shot (pruned in `useLiveScenario:advance`
+                        // after the next turn resolves), so the button
+                        // flips back to "Try to recruit" after the
+                        // attempt fires.
+                        const pendingIntent = live.intents.get(selected.id);
+                        const pending =
+                          pendingIntent?.kind === 'recruit' &&
+                          pendingIntent.target === recruitTarget.id;
+                        return (
+                          <button
+                            className={pending ? 'active' : ''}
+                            disabled={pending}
+                            title={
+                              pending
+                                ? 'Recruit attempt queued — advance the turn to resolve'
+                                : `Attempt to recruit ${recruitTarget.id} (25% per attempt)`
+                            }
+                            onClick={() => {
+                              live.setOrder(selected.id, {
+                                kind: 'recruit',
+                                target: recruitTarget.id,
+                              });
+                            }}
+                          >
+                            {pending
+                              ? `✓ Recruiting ${recruitTarget.id}… (advance turn)`
+                              : `Try to recruit ${recruitTarget.id}`}
+                          </button>
+                        );
+                      })()}
                   </>
                 )}
                 <button

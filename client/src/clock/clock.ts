@@ -48,10 +48,20 @@ export const MS_PER_EVENT = DEFAULT_MS_PER_EVENT;
 
 /** Default auto-pause triggers: the event-keyed subset of the contract.
  * `scripted-beat` joins as the L1-iteration narrative hook; `unit-promoted`
- * joins so the player sees the item-gated terminal-class swap (#7). */
+ * joins so the player sees the item-gated terminal-class swap (#7);
+ * `recruit-attempted-neutral` joins (Chunk 29) so the player can't miss
+ * the success/failure read after explicitly clicking Try to Recruit
+ * (PM playtest: "the button doesn't feel like it is getting clicked"). */
 export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Set<
   ReplayEvent['kind']
->(['post-captured', 'reinforcement-spawned', 'battle-resolved', 'scripted-beat', 'unit-promoted']);
+>([
+  'post-captured',
+  'reinforcement-spawned',
+  'battle-resolved',
+  'scripted-beat',
+  'unit-promoted',
+  'recruit-attempted-neutral',
+]);
 
 export interface ClockState {
   readonly events: readonly ReplayEvent[];
