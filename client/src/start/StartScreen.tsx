@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 
 interface Props {
-  /** The only live item this pass — initializes a fresh campaign and
-   * routes into the first scenario (route A: straight into live L1,
-   * skipping the Hill; the Briefing slots in ahead of the scenario once
-   * it's built). */
+  /** Fresh campaign → Briefing → scenario (route A, Exchange #13 §7.17). */
   readonly onNewGame: () => void;
+  /** Chunk B5 — present iff a save is available at boot. Picking
+   * Continue routes into the Hill against the loaded state. Omit (or
+   * pass undefined) to keep the menu item disabled with the stub
+   * "no save yet" hint. */
+  readonly onContinue?: () => void;
 }
 
 interface MenuItem {
@@ -27,9 +29,11 @@ const VERSION = 'v0.0.0 · dev';
  * settings surface). No Quit — it's a browser client. Visual treatment is
  * §D-deferred; this is the structural menu + selection model.
  */
-export function StartScreen({ onNewGame }: Props): JSX.Element {
+export function StartScreen({ onNewGame, onContinue }: Props): JSX.Element {
   const items: readonly MenuItem[] = [
-    { label: 'Continue', enabled: false, soon: 'no save yet' },
+    onContinue !== undefined
+      ? { label: 'Continue', enabled: true, activate: onContinue }
+      : { label: 'Continue', enabled: false, soon: 'no save yet' },
     { label: 'New Game', enabled: true, activate: onNewGame },
     { label: 'Load Game', enabled: false, soon: 'save system forthcoming' },
     { label: 'Options', enabled: false, soon: 'settings forthcoming' },

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { extractWorldRoster } from '../../engine/world-extract.ts';
 import { applyRosterLevelUps } from '../../engine/world-levelup.ts';
@@ -15,6 +15,7 @@ import type { LiveOutcome } from './live/liveScenario.ts';
 import { scenarioReward } from './live/reward.ts';
 import { OrganizeArmy } from './organize/OrganizeArmy.tsx';
 import { Recruit } from './recruit/Recruit.tsx';
+import { clearStorage, hasSavedState, loadFromStorage, saveToStorage } from './save.ts';
 import { Scenario } from './scenario/Scenario.tsx';
 import { Shop } from './shop/Shop.tsx';
 import { StartScreen } from './start/StartScreen.tsx';
@@ -24,10 +25,34 @@ import { antCount, noticeOf, type Apply, type Notice, type SubView } from './sha
 type View = 'start' | 'hill' | SubView | 'briefing' | 'scenario' | 'live' | 'end';
 
 export function App(): JSX.Element {
-  const [state, setState] = useState<WorldState>(INITIAL_STATE);
+  // Chunk B5 — boot from localStorage if a save exists, else dev seed.
+  // Both states have campaignId 'l1-dev' today; future multi-campaign
+  // support would key load on the player's chosen campaign id.
+  const [state, setState] = useState<WorldState>(
+    () => loadFromStorage(INITIAL_STATE.campaignId) ?? INITIAL_STATE,
+  );
   const [notice, setNotice] = useState<Notice | null>(null);
   const [view, setView] = useState<View>('start');
   const [outcome, setOutcome] = useState<LiveOutcome | null>(null);
+  // Snapshot at boot — was a save already present in storage? Drives
+  // whether StartScreen's "Continue" item activates. Captured once,
+  // not reactive: a save written this session shouldn't retroactively
+  // enable Continue mid-flight (the player would just be in the Hill).
+  const bootHadSave = useRef(hasSavedState(INITIAL_STATE.campaignId));
+
+  // Persist on every state change after mount. Skipping mount avoids
+  // writing the dev seed on first-ever boot — only real progress (a
+  // post-victory advance, an organize/recruit/shop change) triggers a
+  // save, so `hasSavedState` reflects actual played-through state, not
+  // "the app loaded once."
+  const didMount = useRef(false);
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+    saveToStorage(state);
+  }, [state]);
 
   const apply: Apply = (next, result, okText) => {
     setState(next);
@@ -64,6 +89,10 @@ export function App(): JSX.Element {
       setOutcome(null);
       setView('hill');
     } else {
+      // Defeat reset — clear the save so the next boot's Continue
+      // doesn't resurrect the just-lost campaign.
+      clearStorage(state.campaignId);
+      bootHadSave.current = false;
       setState(INITIAL_STATE);
       setOutcome(null);
       setView('start');
@@ -75,11 +104,23 @@ export function App(): JSX.Element {
       <StartScreen
         onNewGame={() => {
           // Route A (Exchange #13 §7.17): fresh campaign → Briefing →
-          // scenario, skipping the Hill.
+          // scenario, skipping the Hill. Chunk B5 — clear any prior
+          // save so the next boot doesn't resurrect the abandoned run.
+          clearStorage(INITIAL_STATE.campaignId);
+          bootHadSave.current = false;
           setState(INITIAL_STATE);
           setOutcome(null);
           setView('briefing');
         }}
+        onContinue={
+          bootHadSave.current
+            ? () => {
+                // State is already the loaded save (useState initializer);
+                // just route into the Hill.
+                setView('hill');
+              }
+            : undefined
+        }
       />
     );
   }
