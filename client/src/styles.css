@@ -1132,6 +1132,26 @@ button:disabled {
   font-weight: 600;
 }
 
+/* Chunk 29 — recruit-attempt outcome tints. The player just clicked
+ * an explicit action button; without these the result line read just
+ * like every other event in the feed and got missed. Green = the 25%
+ * win landed, muted red = it didn't. Auto-pause on
+ * `recruit-attempted-neutral` (clock.ts) freezes the clock so the
+ * line is visible long enough to read. */
+.info-feed li.feed-recruit-success {
+  background: #ecf5e2;
+  border-color: #9ab97f;
+  color: #2f5320;
+  font-weight: 700;
+}
+
+.info-feed li.feed-recruit-failure {
+  background: #f6e8e3;
+  border-color: #c39a90;
+  color: #6e3b1a;
+  font-style: italic;
+}
+
 /* Battle play-by-play in the rolling feed. `expandEventsForFeed` fans
  * `battle-resolved` events into header + per-action + tally lines.
  * Visual hierarchy lets the player scroll back through past battles

@@ -72,6 +72,11 @@ export const pauseReasonLabel = (ev: ReplayEvent): string => {
       return ev.title;
     case 'unit-promoted':
       return 'Promotion';
+    case 'recruit-attempted-neutral':
+      // Chunk 29 — auto-pause on a recruit attempt so the player sees
+      // whether their explicit click landed. Distinct text per outcome
+      // so the pause-reason banner reads success or failure at a glance.
+      return ev.success ? 'Neutral recruited' : 'Recruit failed';
     default:
       return ev.kind.replace(/-/g, ' ');
   }
