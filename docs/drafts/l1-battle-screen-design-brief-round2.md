@@ -1,7 +1,7 @@
 # Design session — battle in-zoom composition (round 2)
 
-**From / To / Status:** Design (UX) → Dev (Gameplay/UX) / **Template-A
-proposals + refined rubric.** Round-2 of the battle-screen conversation;
+**From / To / Status:** Design (UX) → Dev (Gameplay/UX) / **PM-approved —
+A-1 picked, ready for dev pickup.** Round-2 of the battle-screen conversation;
 narrows `l1-battle-screen-design-brief.md` (round-1 / Chunk 17 / PR #76)
 to the *in-zoom phase only*. Filed for dev pickup after Phase B's L2 lap
 and the reassess gate (`phase-b-through-l2-plan.md`).
@@ -169,13 +169,12 @@ This re-frames A-1 below: read "left gutter / right gutter" as **the
 overlay's left and right regions over the dimmed scene**, not docks inside
 the cube's 3D slots.
 
-**Side assignment (open sub-call):** today the panel keys off engine
-*attacker/defender*, so the player's ants flip sides per battle (in the
-screenshot the spider is top because it's the attacker). **Recommend ants
-always left, spiders always right** — player faction is constant (Ogre
-Battle keeps your army bottom-left). Faction is read from the A/S glyph
-the client already renders; it's a tiny client-side mapping, not engine
-data. Pending PM confirm; alternative is attacker-always-left.
+**Side assignment — RESOLVED: ants always left, spiders always right**
+(confirmed via wireframe approval). The player's faction is constant
+rather than flipping with engine attacker/defender (Ogre Battle keeps
+your army bottom-left). Faction is read from the A/S glyph the client
+already renders — a tiny client-side mapping, not engine data
+(forward-dep §7.3).
 
 ## 5. Proposals
 
@@ -272,8 +271,13 @@ moves into the dimmed peripheral gutters so the fight *frames* the tile.
                        banner over stage
 ```
 
-Flash `-3` lands on the struck side (here the ant mage took a hit, left);
-next beat it pops on the spider side — the volley ping-pong.
+Flash `-3` lands on the struck side; next beat it pops on the other side
+— the volley ping-pong.
+
+**Canonical wireframe (PM-approved):**
+`docs/test-feedback/battle-screen/round2-wireframe-a1.png` renders this
+composition at wireframe fidelity (faction colors + tokens come from
+`styles.css` at build). It is the reference sketch for A-1.
 
 **Why recommended:** maximal legibility for the least new surface — it
 reuses every existing piece (`CombatPanel` columns, `summarizeBattle`
@@ -459,10 +463,10 @@ All are dev-side build calls, not design forward-deps on the engine.
   flanking rosters, not stacked (refs, §6b); live play-by-play centered,
   not railed (C3/C4, PM-directed); per-action flash on the struck side
   for the volley back-and-forth (C3, PM-directed).
-- **Deliverable status:** Template-A ×3 + refined C1–C9 rubric +
-  reference annotations, filed for dev ratify after the reassess gate.
-- **Open for PM:** side assignment — ants-always-left (recommended) vs
-  attacker-always-left (§4b).
+- **Deliverable status:** PM-approved. Template-A ×3 + refined C1–C9
+  rubric + reference annotations + canonical wireframe. Side assignment
+  resolved (ants-left). No open PM questions; ready for dev pickup after
+  the reassess gate.
 - **Dev action when picked up:** ratify / push-back / request-revision per
   the change-request protocol; engine-truth confirmation on C6's
   tile-coord prop, the leader-death pacing delta, and the action-stream
