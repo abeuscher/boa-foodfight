@@ -17,7 +17,7 @@
  * Imports allowed: `engine/coord`, `engine/schemas`, `engine/types`.
  */
 
-import { coordKey } from './coord.ts';
+import { coordKey, distance } from './coord.ts';
 import { assignFormation } from './formation.ts';
 import { canCastTier, spendSlot, tierForAbility } from './mp-tiers.ts';
 import { healUnits } from './parties.ts';
@@ -603,9 +603,30 @@ const handleRecruit = (args: NeutralRngArgs): HandlerResult => {
     target?.location.plane === party.location.plane &&
     target.location.x === party.location.x &&
     target.location.y === party.location.y;
-  // Round 8: neutral target — convert entire party at the same 25%
-  // rate. Multi-unit targets allowed.
-  if (target && sameTile && target.faction === 'neutral' && targetLiving.length > 0) {
+  // Chunk 25 (PM-directed) — for the **neutral** recruit branch only,
+  // accept Chebyshev ≤ 1 (same tile OR any of the 8 adjacent tiles
+  // on the same plane). Pre-Chunk-25 the engine required strict
+  // same-tile co-location; that worked for the AI variants (they
+  // plan a chase using `findRecruitableNeutralNear` and only issue
+  // the order once co-located) but was effectively unreachable for
+  // human click-play, since neutrals move every turn — the player
+  // sees the post-move state, clicks "Try recruit," and by the time
+  // the next turn resolves the neutral has stepped off. Range-1 is
+  // the smallest fix that makes click-play possible. AI behavior is
+  // unchanged: the helpers still only issue recruit when same-tile,
+  // so AI-vs-AI determinism (gate-29) holds — verified by leaving
+  // the existing same-tile tests intact and adding new range-1
+  // coverage. The legacy single-unit enemy-spider recruit branch
+  // below is **untouched** — that's a different mechanic and PM's
+  // ask was scoped to neutrals.
+  const inRecruitRangeOfNeutral =
+    target !== undefined && distance(party.location, target.location) <= 1;
+  if (
+    target &&
+    inRecruitRangeOfNeutral &&
+    target.faction === 'neutral' &&
+    targetLiving.length > 0
+  ) {
     const status = neutralStatus.get(target.id);
     if (status) {
       return recruitNeutral({

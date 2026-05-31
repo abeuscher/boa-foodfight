@@ -24,8 +24,11 @@ import type { WorldRoster } from '../../../engine/world-state.ts';
 
 const RECRUIT_ABILITY: AbilityId = 'recruit' as AbilityId;
 
-const sameTile = (a: TileCoord, b: TileCoord): boolean =>
-  a.plane === b.plane && a.x === b.x && a.y === b.y;
+/** Chunk 25 — recruit gating accepts Chebyshev ≤ 1 (same tile OR
+ * any of the 8 adjacent tiles on the same plane). Mirrors the
+ * relaxed engine check in `engine/abilities.ts:recruitNeutral`. */
+const inRecruitRange = (a: TileCoord, b: TileCoord): boolean =>
+  a.plane === b.plane && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
 
 interface Props {
   /** 0-based campaign position — routes the live engine to
@@ -160,17 +163,23 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
   const selected = selectedId !== null ? (state.parties.get(selectedId) ?? null) : null;
   const canMove = selected !== null && selected.id !== QUEEN_GUARD && partyAlive(selected);
   // Chunk 24 — surface a "Try to recruit" action when the selected
-  // ant party carries the `recruit` ability AND shares a tile with a
-  // neutral party. Engine handles the 25%-per-attempt roll
+  // ant party carries the `recruit` ability AND has a neutral within
+  // recruit range. Chunk 25 expanded "range" from same-tile to
+  // Chebyshev ≤ 1 (any of the 8 adjacent tiles on the same plane)
+  // because human play couldn't catch a moving neutral at exact
+  // co-location. Engine handles the 25%-per-attempt roll
   // (`recruitNeutral` in `engine/abilities.ts`); the UI just exposes
-  // the trigger.
+  // the trigger. If multiple neutrals are in range, the first found
+  // wins — the player can step away to bias toward a different one.
   const recruitTarget: Party | null =
     selected !== null &&
     partyAlive(selected) &&
     partyHasAbility(selected, RECRUIT_ABILITY, state.unitTemplates)
       ? ([...state.parties.values()].find(
           (p) =>
-            p.faction === 'neutral' && partyAlive(p) && sameTile(p.location, selected.location),
+            p.faction === 'neutral' &&
+            partyAlive(p) &&
+            inRecruitRange(p.location, selected.location),
         ) ?? null)
       : null;
   // The inspected party fell out of state (shouldn't happen on L1) — close.
