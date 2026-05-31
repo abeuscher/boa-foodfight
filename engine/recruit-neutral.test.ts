@@ -10,7 +10,16 @@ import { resolveAbilityOrders } from './abilities.ts';
 import { partyIdForKind } from './neutrals.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
-import type { AbilityId, GameState, NeutralKind, Order, Party, PartyId, Rng } from './types.ts';
+import type {
+  AbilityId,
+  GameState,
+  NeutralKind,
+  Order,
+  Party,
+  PartyId,
+  Rng,
+  TileCoord,
+} from './types.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -157,5 +166,62 @@ describe('round 8 — recruit extension to neutrals', () => {
   it('finds a success seed for the deterministic RNG path', () => {
     const { setupSeed } = findSuccessSeed('mice');
     expect(setupSeed).toBeGreaterThanOrEqual(0);
+  });
+
+  // Chunk 25 — neutral recruit accepts Chebyshev ≤ 1 (same tile OR
+  // any of the 8 adjacent same-plane tiles). PM-directed relaxation
+  // so human play can actually catch a moving neutral.
+  it('Chunk 25 — succeeds at Chebyshev distance 1 (adjacent, not same tile)', () => {
+    const { state: base, data } = loadScenario(DATA_DIR, 1);
+    const setup = setupRecruitTargeting(base, 'mice');
+    // Move the mage one tile diagonally off the neutral's tile.
+    const mage = setup.state.parties.get(setup.mageId);
+    if (!mage) throw new Error('no mage');
+    const adjacent: TileCoord = {
+      plane: mage.location.plane,
+      x: mage.location.x + 1,
+      y: mage.location.y + 1,
+    };
+    const parties = new Map(setup.state.parties);
+    parties.set(setup.mageId, { ...mage, location: adjacent });
+    const stateAtRange1 = { ...setup.state, parties };
+    const stubRng: Rng = {
+      next: () => 0.0,
+      int: () => 0,
+      pick: <T>(items: readonly T[]): T => items[0]!,
+      fork: () => stubRng,
+    };
+    const out = resolveAbilityOrders(stateAtRange1, data.jelly, stubRng, tickClock());
+    const targetParty = out.state.parties.get(setup.targetId);
+    expect(targetParty?.faction).toBe('ant');
+    const events = out.events.filter((e) => e.kind === 'recruit-attempted-neutral');
+    expect(events).toHaveLength(1);
+  });
+
+  it('Chunk 25 — still fails at Chebyshev distance 2 (out of range)', () => {
+    const { state: base, data } = loadScenario(DATA_DIR, 1);
+    const setup = setupRecruitTargeting(base, 'mice');
+    const mage = setup.state.parties.get(setup.mageId);
+    if (!mage) throw new Error('no mage');
+    const farAway: TileCoord = {
+      plane: mage.location.plane,
+      x: mage.location.x + 2,
+      y: mage.location.y,
+    };
+    const parties = new Map(setup.state.parties);
+    parties.set(setup.mageId, { ...mage, location: farAway });
+    const stateAtRange2 = { ...setup.state, parties };
+    const stubRng: Rng = {
+      next: () => 0.0,
+      int: () => 0,
+      pick: <T>(items: readonly T[]): T => items[0]!,
+      fork: () => stubRng,
+    };
+    const out = resolveAbilityOrders(stateAtRange2, data.jelly, stubRng, tickClock());
+    const targetParty = out.state.parties.get(setup.targetId);
+    // Still neutral — no conversion at range 2.
+    expect(targetParty?.faction).toBe('neutral');
+    const events = out.events.filter((e) => e.kind === 'recruit-attempted-neutral');
+    expect(events).toHaveLength(0);
   });
 });
