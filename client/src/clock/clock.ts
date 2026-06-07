@@ -54,7 +54,10 @@ export const MS_PER_EVENT = DEFAULT_MS_PER_EVENT;
  * (PM playtest: "the button doesn't feel like it is getting clicked");
  * `jelly-applied` joins (Chunk 31) for the same reason — the human
  * now explicitly casts Royal Jelly and needs the same click-confirms
- * read. */
+ * read; `battle-flee-attempted` joins (Chunk 32) — flee is a high-
+ * stakes click (failure costs an unopposed round), so the player
+ * needs to land on the outcome to read success/failure before
+ * playback resumes. */
 export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Set<
   ReplayEvent['kind']
 >([
@@ -65,6 +68,7 @@ export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Se
   'unit-promoted',
   'recruit-attempted-neutral',
   'jelly-applied',
+  'battle-flee-attempted',
 ]);
 
 export interface ClockState {

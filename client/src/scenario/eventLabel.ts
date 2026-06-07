@@ -39,6 +39,17 @@ export const eventLabel = (ev: ReplayEvent): string => {
       return 'Ability used';
     case 'jelly-applied':
       return `Royal jelly applied to ${String(ev.partyId)} (${String(ev.doses)} doses)`;
+    case 'battle-flee-attempted':
+      // Chunk 32 — surface success + roll for the player who clicked
+      // Flee. Probability is engine-derived (agility-weighted); we
+      // show it so the player can read the trade clearly.
+      return ev.success
+        ? `${String(ev.partyId)} fled successfully (${String(Math.round(ev.successProbability * 100))}% chance)`
+        : `${String(ev.partyId)} failed to flee (${String(Math.round(ev.successProbability * 100))}% chance, rolled ${ev.roll.toFixed(2)})`;
+    case 'battle-fled':
+      return `${String(ev.partyId)} knocked back to (${String(ev.knockbackTo.x)}, ${String(ev.knockbackTo.y)})`;
+    case 'flee-queued':
+      return `${String(ev.partyId)} preparing to flee`;
     case 'recruit-attempted':
       return ev.success ? 'Recruited a neutral' : 'Recruit attempt failed';
     case 'recruit-attempted-neutral':
@@ -80,6 +91,10 @@ export const pauseReasonLabel = (ev: ReplayEvent): string => {
     case 'jelly-applied':
       // Chunk 31 — same click-confirms idea for explicit jelly casts.
       return `Royal Jelly · ${String(ev.doses)}/3`;
+    case 'battle-flee-attempted':
+      // Chunk 32 — banner names the outcome at a glance; the
+      // probability is below in the feed line.
+      return ev.success ? 'Fled the fight' : 'Flee failed';
     default:
       return ev.kind.replace(/-/g, ' ');
   }
