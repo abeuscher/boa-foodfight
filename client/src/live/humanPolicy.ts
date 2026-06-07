@@ -42,7 +42,16 @@ export type PartyIntent =
    * configured duration (2 turns on L1, per `jelly.json`).
    * One-shot like recruit — pruned after the turn resolves so the
    * mage doesn't auto-recast every turn until doses are full. */
-  | { readonly kind: 'jelly-apply'; readonly target: PartyId };
+  | { readonly kind: 'jelly-apply'; readonly target: PartyId }
+  /** Chunk 32 — Queue a flee for any combat this party finds itself
+   * in next turn. The engine's Round-15 flee resolution runs an
+   * agility-weighted success roll; success ends the battle as a
+   * `'draw'` and knocks the fleer one tile back; failure costs the
+   * action that round and gives the opponent a bonus unopposed
+   * round. No target (self-only intent). One-shot — the engine
+   * consumes the order on either outcome, and the client mirrors
+   * by pruning the intent after the turn resolves. */
+  | { readonly kind: 'flee' };
 
 export type PlayerIntents = ReadonlyMap<PartyId, PartyIntent>;
 
@@ -66,6 +75,12 @@ export const buildHumanPolicy = (intents: PlayerIntents): AIPolicy =>
         target: intent.target,
       };
       return { orders: [order], posture: 'fight' };
+    }
+    if (intent.kind === 'flee') {
+      // Posture stays 'fight' — flee is a per-battle intent, not a
+      // retreat from the campaign. If the flee roll fails the party
+      // still wants to land damage in the bonus unopposed round.
+      return { orders: [{ kind: 'flee' }], posture: 'fight' };
     }
     return { orders: moveToOrHold(party, intent.dest), posture: 'fight' };
   });

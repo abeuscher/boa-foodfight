@@ -232,12 +232,20 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     // banks one dose per turn and a queued cast would re-fire every
     // tick until the target hit cap. One-shot prune keeps the
     // player in control of when each dose lands.
+    //
+    // Chunk 32 — flee follows the same model. The engine consumes a
+    // flee order on EITHER outcome (success → battle ends draw;
+    // failure → action lost + bonus round for opponent). Leaving the
+    // intent would re-queue every turn, which is dangerous: the
+    // failure path is expensive and the player should opt in each
+    // time, not auto-retry.
     setIntents((prev) => {
       let pruned = prev;
       for (const [id, intent] of prev) {
         const party = result.state.parties.get(id);
         const alive = party !== undefined && party.units.some((u) => u.currentHp > 0);
-        const oneShot = intent.kind === 'recruit' || intent.kind === 'jelly-apply';
+        const oneShot =
+          intent.kind === 'recruit' || intent.kind === 'jelly-apply' || intent.kind === 'flee';
         if (alive && !oneShot) continue;
         if (pruned === prev) pruned = new Map(prev);
         pruned.delete(id);

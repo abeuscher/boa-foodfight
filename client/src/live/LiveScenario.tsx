@@ -213,6 +213,18 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     partyAlive(selected) &&
     partyHasAbility(selected, JELLY_APPLY_ABILITY, state.unitTemplates) &&
     selected.jellyDoses < JELLY_CAPACITY;
+  // Chunk 32 — surface a Flee button for any controllable ant party.
+  // Engine's Round-15 flee path runs an agility-weighted success
+  // roll when battle fires with a `flee` order in the queue; success
+  // ends combat as a draw + knockback, failure costs the action and
+  // gives the opponent a bonus unopposed round. Queen-guard is
+  // immobile and not allowed to flee; leaderless parties already
+  // auto-retreat engine-side. Gating mirrors `canMove`.
+  const canFlee: boolean =
+    selected !== null &&
+    selected.id !== QUEEN_GUARD &&
+    partyAlive(selected) &&
+    !selected.leaderless;
   // The inspected party fell out of state (shouldn't happen on L1) — close.
   const inspectingOpen = inspecting && selected !== null;
 
@@ -446,6 +458,31 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                               : `Cast Royal Jelly (${String(selected.jellyDoses)}/${String(
                                   JELLY_CAPACITY,
                                 )})`}
+                          </button>
+                        );
+                      })()}
+                    {canFlee &&
+                      (() => {
+                        // Chunk 32 — Flee from next combat. Same
+                        // pending-intent feedback pattern as recruit
+                        // and jelly. Tooltip names the trade so the
+                        // player understands the cost-on-fail.
+                        const pendingIntent = live.intents.get(selected.id);
+                        const pending = pendingIntent?.kind === 'flee';
+                        return (
+                          <button
+                            className={pending ? 'active' : ''}
+                            disabled={pending}
+                            title={
+                              pending
+                                ? 'Flee queued — advance the turn; the roll fires when battle starts'
+                                : "Queue a flee for next combat. On success: battle ends as a draw and you're knocked back one tile. On failure: lose this round's actions and your opponent gets a bonus unopposed round."
+                            }
+                            onClick={() => {
+                              live.setOrder(selected.id, { kind: 'flee' });
+                            }}
+                          >
+                            {pending ? '✓ Flee queued… (advance turn)' : 'Flee next combat'}
                           </button>
                         );
                       })()}

@@ -62,7 +62,16 @@ export interface FeedLine {
      *  recruit-success: the player explicitly clicked, the engine
      *  fired, the feed line should pop so the player can verify the
      *  +25%/+15% buff is in flight. */
-    | 'jelly-applied';
+    | 'jelly-applied'
+    /** Chunk 32 — flee succeeded. Battle ended as a draw, party
+     *  knocked back one tile. Green-friendly tint like
+     *  recruit-success because the player got the outcome they
+     *  clicked for. */
+    | 'flee-success'
+    /** Chunk 32 — flee failed. Party lost their action this round
+     *  and the opponent got a bonus unopposed round. Muted-red tint
+     *  like recruit-failure: the click registered, the roll didn't. */
+    | 'flee-failure';
 }
 
 /**
@@ -152,6 +161,10 @@ export const expandEventsForFeed = (events: readonly ReplayEvent[]): readonly Fe
       // recruit-success so the player learns "this color = my
       // ability landed."
       kind = 'jelly-applied';
+    } else if (e.kind === 'battle-flee-attempted') {
+      // Chunk 32 — explicit flee outcome. Success/failure split
+      // mirrors recruit so the color carries consistent meaning.
+      kind = e.success ? 'flee-success' : 'flee-failure';
     } else {
       kind = 'event';
     }

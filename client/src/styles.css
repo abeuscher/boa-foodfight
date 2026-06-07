@@ -1164,6 +1164,26 @@ button:disabled {
   font-weight: 700;
 }
 
+/* Chunk 32 — explicit flee outcome.
+ *   feed-flee-success: muted teal — battle ended, party survived.
+ *     Lighter weight than recruit-success because flee is a "saved
+ *     bacon" outcome, not a triumph.
+ *   feed-flee-failure: same muted red as recruit-failure so the
+ *     player learns one color = my ability didn't work. */
+.info-feed li.feed-flee-success {
+  background: #e3f1ee;
+  border-color: #88b3aa;
+  color: #2c5851;
+  font-weight: 600;
+}
+
+.info-feed li.feed-flee-failure {
+  background: #f6e8e3;
+  border-color: #c39a90;
+  color: #6e3b1a;
+  font-style: italic;
+}
+
 /* Battle play-by-play in the rolling feed. `expandEventsForFeed` fans
  * `battle-resolved` events into header + per-action + tally lines.
  * Visual hierarchy lets the player scroll back through past battles
