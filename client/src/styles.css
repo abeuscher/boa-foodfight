@@ -1152,6 +1152,18 @@ button:disabled {
   font-style: italic;
 }
 
+/* Chunk 31 — Royal Jelly cast confirmation. Warm honey tint reads as
+ * "your support ability landed." Bold so it pops alongside the
+ * recruit-success green and the cross-plane blue; the three color
+ * families together cover the three classes of explicit ant ability:
+ * convert (green), traverse (blue), buff (honey). */
+.info-feed li.feed-jelly-applied {
+  background: #fbf3d6;
+  border-color: #d3b86b;
+  color: #5a4416;
+  font-weight: 700;
+}
+
 /* Battle play-by-play in the rolling feed. `expandEventsForFeed` fans
  * `battle-resolved` events into header + per-action + tally lines.
  * Visual hierarchy lets the player scroll back through past battles

@@ -227,12 +227,18 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     // Chunk 24 — recruit intents are one-shot. The engine fired the
     // ability this turn (success or fail); leaving the intent would
     // re-fire it next turn, polluting the event stream.
+    //
+    // Chunk 31 — same shape applies to jelly-apply: the engine
+    // banks one dose per turn and a queued cast would re-fire every
+    // tick until the target hit cap. One-shot prune keeps the
+    // player in control of when each dose lands.
     setIntents((prev) => {
       let pruned = prev;
       for (const [id, intent] of prev) {
         const party = result.state.parties.get(id);
         const alive = party !== undefined && party.units.some((u) => u.currentHp > 0);
-        if (alive && intent.kind !== 'recruit') continue;
+        const oneShot = intent.kind === 'recruit' || intent.kind === 'jelly-apply';
+        if (alive && !oneShot) continue;
         if (pruned === prev) pruned = new Map(prev);
         pruned.delete(id);
       }
