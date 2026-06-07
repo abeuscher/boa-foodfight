@@ -31,6 +31,12 @@ const JELLY_APPLY_ABILITY: AbilityId = 'jelly-apply' as AbilityId;
 const inRecruitRange = (a: TileCoord, b: TileCoord): boolean =>
   a.plane === b.plane && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
 
+/** Chunk 34 — strict same-tile check (plane + x + y). Used by the
+ * cross-party jelly target picker: the AI casts at distance 0, so
+ * we mirror that rather than the recruit Chebyshev-1 relaxation. */
+const sameTile = (a: TileCoord, b: TileCoord): boolean =>
+  a.plane === b.plane && a.x === b.x && a.y === b.y;
+
 /** Chunk 31 — jelly per-party dose cap. L1's `data/level-1/jelly.json`
  * sets `capacityPerParty: 3`; the cap could come from `ScenarioData`
  * for a future scenario that varies it. Hardcoded here for UI gating
@@ -203,16 +209,31 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
         ) ?? null)
       : null;
   // Chunk 31 — surface "Cast Royal Jelly" when the selected ant-mage
-  // party has the `jelly-apply` ability AND has room for more doses
-  // (`jellyDoses < JELLY_CAPACITY`). First-cut: self-buff only — the
-  // target is always the casting party itself. Cross-party targeting
-  // (cast on a co-located ally) is the obvious follow-up but requires
-  // a small target picker; punted to keep this chunk tight.
-  const canCastJelly: boolean =
+  // party has the `jelly-apply` ability. Chunk 34 (gap 5.B) — the
+  // mage can now buff itself OR any co-located ally party with room
+  // for doses. This matches the AI's "buff the assault force before
+  // engaging" pattern: a mage standing on the assault tile casts on
+  // the whole stack, not just itself. The boss-fight math swing
+  // (multi-buffing ~20 assault units vs only the mage's ~6) depends
+  // on this.
+  //
+  // jellyTargets = self (if room) + every same-tile ant ally (if
+  // room). Same-tile only — the engine accepts any target id with no
+  // range check, but matching the AI's distance-0 convention keeps
+  // the UI honest about where the buff actually lands.
+  const mageCanCast =
     selected !== null &&
     partyAlive(selected) &&
-    partyHasAbility(selected, JELLY_APPLY_ABILITY, state.unitTemplates) &&
-    selected.jellyDoses < JELLY_CAPACITY;
+    partyHasAbility(selected, JELLY_APPLY_ABILITY, state.unitTemplates);
+  const jellyTargets: readonly Party[] = mageCanCast
+    ? [...state.parties.values()].filter(
+        (p) =>
+          p.faction === 'ant' &&
+          partyAlive(p) &&
+          p.jellyDoses < JELLY_CAPACITY &&
+          (p.id === selected.id || sameTile(p.location, selected.location)),
+      )
+    : [];
   // Chunk 32 — surface a Flee button for any controllable ant party.
   // Engine's Round-15 flee path runs an agility-weighted success
   // roll when battle fires with a `flee` order in the queue; success
@@ -420,47 +441,48 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                           </button>
                         );
                       })()}
-                    {canCastJelly &&
-                      (() => {
-                        // Chunk 31 — Royal Jelly self-buff. Mirrors
-                        // the recruit-button pattern: same pending-
-                        // intent feedback, same one-shot model. The
-                        // dose count shows in the label so the player
-                        // can see headroom toward the 3-cap. Each cast
-                        // adds 1 dose; the engine's combat math layers
-                        // +25% attack / +15% resilience for the
-                        // configured duration (`jelly.json` →
-                        // `durationTurns: 2` on L1).
-                        const pendingIntent = live.intents.get(selected.id);
-                        const pending =
-                          pendingIntent?.kind === 'jelly-apply' &&
-                          pendingIntent.target === selected.id;
-                        return (
-                          <button
-                            className={pending ? 'active' : ''}
-                            disabled={pending}
-                            title={
-                              pending
-                                ? 'Jelly cast queued — advance the turn to apply'
-                                : `Cast Royal Jelly on this party (+25% attack, +15% resilience, 2 turns). Doses ${String(
-                                    selected.jellyDoses,
-                                  )}/${String(JELLY_CAPACITY)}.`
-                            }
-                            onClick={() => {
-                              live.setOrder(selected.id, {
-                                kind: 'jelly-apply',
-                                target: selected.id,
-                              });
-                            }}
-                          >
-                            {pending
-                              ? '✓ Casting Royal Jelly… (advance turn)'
-                              : `Cast Royal Jelly (${String(selected.jellyDoses)}/${String(
-                                  JELLY_CAPACITY,
-                                )})`}
-                          </button>
-                        );
-                      })()}
+                    {jellyTargets.map((target) => {
+                      // Chunk 31 + 34 — Royal Jelly cast. One button per
+                      // eligible target: the caster itself plus any
+                      // same-tile ant ally with dose headroom. The
+                      // caster's intent carries `target`, so the
+                      // pending highlight tracks which target is
+                      // queued. Each cast adds 1 dose; the engine layers
+                      // +25% attack / +15% resilience for the
+                      // configured duration (`jelly.json` →
+                      // `durationTurns: 2` on L1).
+                      const isSelf = target.id === selected.id;
+                      const pendingIntent = live.intents.get(selected.id);
+                      const pending =
+                        pendingIntent?.kind === 'jelly-apply' && pendingIntent.target === target.id;
+                      const label = isSelf ? 'this party' : String(target.id);
+                      return (
+                        <button
+                          key={`jelly-${String(target.id)}`}
+                          className={pending ? 'active' : ''}
+                          disabled={pending}
+                          title={
+                            pending
+                              ? 'Jelly cast queued — advance the turn to apply'
+                              : `Cast Royal Jelly on ${label} (+25% attack, +15% resilience, 2 turns). Doses ${String(
+                                  target.jellyDoses,
+                                )}/${String(JELLY_CAPACITY)}.`
+                          }
+                          onClick={() => {
+                            live.setOrder(selected.id, {
+                              kind: 'jelly-apply',
+                              target: target.id,
+                            });
+                          }}
+                        >
+                          {pending
+                            ? `✓ Casting on ${label}… (advance turn)`
+                            : `Royal Jelly → ${label} (${String(target.jellyDoses)}/${String(
+                                JELLY_CAPACITY,
+                              )})`}
+                        </button>
+                      );
+                    })}
                     {canFlee &&
                       (() => {
                         // Chunk 32 — Flee from next combat. Same
