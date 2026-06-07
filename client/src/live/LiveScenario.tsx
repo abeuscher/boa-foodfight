@@ -23,12 +23,21 @@ import type {
 import type { WorldRoster } from '../../../engine/world-state.ts';
 
 const RECRUIT_ABILITY: AbilityId = 'recruit' as AbilityId;
+const JELLY_APPLY_ABILITY: AbilityId = 'jelly-apply' as AbilityId;
 
 /** Chunk 25 — recruit gating accepts Chebyshev ≤ 1 (same tile OR
  * any of the 8 adjacent tiles on the same plane). Mirrors the
  * relaxed engine check in `engine/abilities.ts:recruitNeutral`. */
 const inRecruitRange = (a: TileCoord, b: TileCoord): boolean =>
   a.plane === b.plane && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
+
+/** Chunk 31 — jelly per-party dose cap. L1's `data/level-1/jelly.json`
+ * sets `capacityPerParty: 3`; the cap could come from `ScenarioData`
+ * for a future scenario that varies it. Hardcoded here for UI gating
+ * only — the engine clamps to the real value at cast time, so a
+ * runtime drift would just mean the button shows when the cast would
+ * be a no-op (the engine accepts but doesn't increment past cap). */
+const JELLY_CAPACITY = 3;
 
 interface Props {
   /** 0-based campaign position — routes the live engine to
@@ -193,6 +202,17 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
             inRecruitRange(p.location, selected.location),
         ) ?? null)
       : null;
+  // Chunk 31 — surface "Cast Royal Jelly" when the selected ant-mage
+  // party has the `jelly-apply` ability AND has room for more doses
+  // (`jellyDoses < JELLY_CAPACITY`). First-cut: self-buff only — the
+  // target is always the casting party itself. Cross-party targeting
+  // (cast on a co-located ally) is the obvious follow-up but requires
+  // a small target picker; punted to keep this chunk tight.
+  const canCastJelly: boolean =
+    selected !== null &&
+    partyAlive(selected) &&
+    partyHasAbility(selected, JELLY_APPLY_ABILITY, state.unitTemplates) &&
+    selected.jellyDoses < JELLY_CAPACITY;
   // The inspected party fell out of state (shouldn't happen on L1) — close.
   const inspectingOpen = inspecting && selected !== null;
 
@@ -385,6 +405,47 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                             {pending
                               ? `✓ Recruiting ${recruitTarget.id}… (advance turn)`
                               : `Try to recruit ${recruitTarget.id}`}
+                          </button>
+                        );
+                      })()}
+                    {canCastJelly &&
+                      (() => {
+                        // Chunk 31 — Royal Jelly self-buff. Mirrors
+                        // the recruit-button pattern: same pending-
+                        // intent feedback, same one-shot model. The
+                        // dose count shows in the label so the player
+                        // can see headroom toward the 3-cap. Each cast
+                        // adds 1 dose; the engine's combat math layers
+                        // +25% attack / +15% resilience for the
+                        // configured duration (`jelly.json` →
+                        // `durationTurns: 2` on L1).
+                        const pendingIntent = live.intents.get(selected.id);
+                        const pending =
+                          pendingIntent?.kind === 'jelly-apply' &&
+                          pendingIntent.target === selected.id;
+                        return (
+                          <button
+                            className={pending ? 'active' : ''}
+                            disabled={pending}
+                            title={
+                              pending
+                                ? 'Jelly cast queued — advance the turn to apply'
+                                : `Cast Royal Jelly on this party (+25% attack, +15% resilience, 2 turns). Doses ${String(
+                                    selected.jellyDoses,
+                                  )}/${String(JELLY_CAPACITY)}.`
+                            }
+                            onClick={() => {
+                              live.setOrder(selected.id, {
+                                kind: 'jelly-apply',
+                                target: selected.id,
+                              });
+                            }}
+                          >
+                            {pending
+                              ? '✓ Casting Royal Jelly… (advance turn)'
+                              : `Cast Royal Jelly (${String(selected.jellyDoses)}/${String(
+                                  JELLY_CAPACITY,
+                                )})`}
                           </button>
                         );
                       })()}

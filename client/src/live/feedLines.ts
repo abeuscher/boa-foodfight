@@ -57,7 +57,12 @@ export interface FeedLine {
     | 'battle-action'
     | 'battle-tally'
     | 'recruit-success'
-    | 'recruit-failure';
+    | 'recruit-failure'
+    /** Chunk 31 — Royal Jelly cast landed. Same logic as
+     *  recruit-success: the player explicitly clicked, the engine
+     *  fired, the feed line should pop so the player can verify the
+     *  +25%/+15% buff is in flight. */
+    | 'jelly-applied';
 }
 
 /**
@@ -142,6 +147,11 @@ export const expandEventsForFeed = (events: readonly ReplayEvent[]): readonly Fe
       kind = 'cross-plane';
     } else if (e.kind === 'recruit-attempted-neutral') {
       kind = e.success ? 'recruit-success' : 'recruit-failure';
+    } else if (e.kind === 'jelly-applied') {
+      // Chunk 31 — explicit cast confirmed; same tint family as
+      // recruit-success so the player learns "this color = my
+      // ability landed."
+      kind = 'jelly-applied';
     } else {
       kind = 'event';
     }

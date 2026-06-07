@@ -38,7 +38,7 @@ export const eventLabel = (ev: ReplayEvent): string => {
     case 'ability-used':
       return 'Ability used';
     case 'jelly-applied':
-      return 'Royal jelly applied';
+      return `Royal jelly applied to ${String(ev.partyId)} (${String(ev.doses)} doses)`;
     case 'recruit-attempted':
       return ev.success ? 'Recruited a neutral' : 'Recruit attempt failed';
     case 'recruit-attempted-neutral':
@@ -77,6 +77,9 @@ export const pauseReasonLabel = (ev: ReplayEvent): string => {
       // whether their explicit click landed. Distinct text per outcome
       // so the pause-reason banner reads success or failure at a glance.
       return ev.success ? 'Neutral recruited' : 'Recruit failed';
+    case 'jelly-applied':
+      // Chunk 31 — same click-confirms idea for explicit jelly casts.
+      return `Royal Jelly · ${String(ev.doses)}/3`;
     default:
       return ev.kind.replace(/-/g, ' ');
   }

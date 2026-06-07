@@ -51,7 +51,10 @@ export const MS_PER_EVENT = DEFAULT_MS_PER_EVENT;
  * joins so the player sees the item-gated terminal-class swap (#7);
  * `recruit-attempted-neutral` joins (Chunk 29) so the player can't miss
  * the success/failure read after explicitly clicking Try to Recruit
- * (PM playtest: "the button doesn't feel like it is getting clicked"). */
+ * (PM playtest: "the button doesn't feel like it is getting clicked");
+ * `jelly-applied` joins (Chunk 31) for the same reason — the human
+ * now explicitly casts Royal Jelly and needs the same click-confirms
+ * read. */
 export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Set<
   ReplayEvent['kind']
 >([
@@ -61,6 +64,7 @@ export const DEFAULT_AUTO_PAUSE_KINDS: ReadonlySet<ReplayEvent['kind']> = new Se
   'scripted-beat',
   'unit-promoted',
   'recruit-attempted-neutral',
+  'jelly-applied',
 ]);
 
 export interface ClockState {

@@ -17,6 +17,7 @@ import type { AIPolicy } from '../../../ai/types.ts';
 import type { AbilityId, AbilityOrder, PartyId, TileCoord } from '../../../engine/types.ts';
 
 const RECRUIT: AbilityId = 'recruit' as AbilityId;
+const JELLY_APPLY: AbilityId = 'jelly-apply' as AbilityId;
 
 /** Per-party player intent. Tagged union so the policy can branch on
  * `kind` and emit the matching engine `Order`. */
@@ -33,7 +34,15 @@ export type PartyIntent =
    * `recruitNeutral`; the intent is one-shot — `useLiveScenario`
    * prunes it after the turn resolves so we don't fire the ability
    * every turn until it lands. */
-  | { readonly kind: 'recruit'; readonly target: PartyId };
+  | { readonly kind: 'recruit'; readonly target: PartyId }
+  /** Chunk 31 — Cast Royal Jelly on `target` (current cut: always
+   * `party.id`, i.e. self-buff). Engine increments target's
+   * `jellyDoses` by 1 (capped at `jelly.capacityPerParty`), which
+   * grants the +25% attack / +15% resilience buff for the
+   * configured duration (2 turns on L1, per `jelly.json`).
+   * One-shot like recruit — pruned after the turn resolves so the
+   * mage doesn't auto-recast every turn until doses are full. */
+  | { readonly kind: 'jelly-apply'; readonly target: PartyId };
 
 export type PlayerIntents = ReadonlyMap<PartyId, PartyIntent>;
 
@@ -46,6 +55,14 @@ export const buildHumanPolicy = (intents: PlayerIntents): AIPolicy =>
       const order: AbilityOrder = {
         kind: 'use-ability',
         abilityId: RECRUIT,
+        target: intent.target,
+      };
+      return { orders: [order], posture: 'fight' };
+    }
+    if (intent.kind === 'jelly-apply') {
+      const order: AbilityOrder = {
+        kind: 'use-ability',
+        abilityId: JELLY_APPLY,
         target: intent.target,
       };
       return { orders: [order], posture: 'fight' };
