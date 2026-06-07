@@ -77,10 +77,16 @@ export const buildHumanPolicy = (intents: PlayerIntents): AIPolicy =>
       return { orders: [order], posture: 'fight' };
     }
     if (intent.kind === 'flee') {
-      // Posture stays 'fight' — flee is a per-battle intent, not a
-      // retreat from the campaign. If the flee roll fails the party
-      // still wants to land damage in the bonus unopposed round.
-      return { orders: [{ kind: 'flee' }], posture: 'fight' };
+      // Chunk 34 (gap 5.A) — posture 'run' matches what every AI
+      // variant pairs with a flee order. The engine's posture
+      // multipliers give 'run' `canRetreat: true` (combat.ts), so a
+      // fleeing party gets TWO escape paths: succeed the flee roll,
+      // OR lose the whole battle and auto-retreat instead of being
+      // wiped. The cost is lower combat stats that turn (attack 0.5,
+      // defense 0.7) — the correct trade when the player has already
+      // decided to bail. Pre-Chunk-34 this was 'fight', which left
+      // the failed-flee party committed to a fight it didn't want.
+      return { orders: [{ kind: 'flee' }], posture: 'run' };
     }
     return { orders: moveToOrHold(party, intent.dest), posture: 'fight' };
   });
