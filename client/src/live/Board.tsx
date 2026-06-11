@@ -36,6 +36,29 @@ const HOLD_PEEK_THRESHOLD_MS = 150;
 
 const factionGlyph: Record<string, string> = { ant: 'A', spider: 'S', neutral: 'N' };
 
+/**
+ * Chunk 36 (audit M-2 fix) — POSTs render as `◆` only; the name lives
+ * in a `title` tooltip. A player scanning the cube cannot tell the
+ * win-condition (`spider-web`) from any other ◆ without hovering each
+ * one. This maps each POST id to a 3-5 char on-board label that sits
+ * next to the glyph on the active face (hidden on peripherals where
+ * the cells are too small to read).
+ *
+ * The two named anchors (storm-drain, spider-web) keep their unique
+ * labels; mid-POSTs share a label per type since their `-N` suffix is
+ * already implicit in count, not identity.
+ */
+const postLabel = (id: string): string => {
+  if (id === 'spider-web') return 'WEB';
+  if (id === 'storm-drain') return 'DRAIN';
+  if (id.startsWith('soap-dish')) return 'SOAP';
+  if (id.startsWith('towel-rack')) return 'RACK';
+  if (id.startsWith('wall-crack')) return 'CRACK';
+  if (id.startsWith('sanctum')) return 'SANC';
+  if (id.startsWith('gold-mine')) return 'GOLD';
+  return '';
+};
+
 const cellKey = (x: number, y: number): string => `${String(x)},${String(y)}`;
 
 /** Top-down dimensions of the active plane, read off the built tiles. */
@@ -216,8 +239,10 @@ export function Board({
           }}
         >
           {post && (
-            <span className={`post own-${post.owner}`}>
-              ◆
+            <span
+              className={`post own-${post.owner} ${post.id === 'spider-web' ? 'objective' : ''}`}
+            >
+              ◆<span className="post-label">{postLabel(post.id)}</span>
               {post.capturingFaction ? (
                 <em className="pip">{`${String(2 - (post.captureTurnsRemaining ?? 0))}/2`}</em>
               ) : null}
