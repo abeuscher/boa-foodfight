@@ -123,6 +123,18 @@ body {
   min-height: 90vh;
 }
 
+/* Chunk 35 (audit H-2) — the live scenario carries a wider three-column
+ * layout (220px left rail + center cube ~762px + 300px right info-rail
+ * + gaps). At the inherited 1100px max the right rail was pushed off
+ * the viewport (audit measured scrollWidth: 1528 vs 1440 viewport,
+ * clipping the rail by ~88px). Bumped to 1500px so all three columns
+ * fit cleanly at a 1440 viewport with ~30px gutters on each side.
+ * The hub / briefing / start screens stay at 1100px because they're
+ * single-column and look weird stretched out. */
+.scenario.live {
+  max-width: 1500px;
+}
+
 .scn-top {
   display: flex;
   align-items: center;
@@ -982,6 +994,19 @@ button:disabled {
 .empty {
   font-size: 0.8rem;
   color: #6b6258;
+}
+
+/* Chunk 35 (audit H-1) — warning variant of `.hint` for transient
+ * rejection messages (e.g. cross-plane move with no one-step route).
+ * Sharp-but-not-shouty: warm amber background + border so it reads
+ * as "we caught your input but couldn't act on it." */
+.hint.hint-warning {
+  background: #fdf2d8;
+  border: 1px solid #d3b86b;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  color: #5a4416;
+  font-weight: 600;
 }
 
 .form-squad input {
