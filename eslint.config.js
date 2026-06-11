@@ -29,6 +29,10 @@ export default tseslint.config(
       // viewer's spec/config (out of the typed TS project).
       'client/playwright.config.ts',
       'client/client.spec.ts',
+      // Local-agent UI-audit findings: deliverable artifacts under
+      // docs/test-feedback, not typed source. The Playwright spec/config
+      // there use @playwright/test, same handling as the specs above.
+      'docs/test-feedback/**',
     ],
   },
   ...tseslint.configs.recommendedTypeChecked,
