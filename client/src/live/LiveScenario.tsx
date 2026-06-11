@@ -6,6 +6,7 @@ import { eventLabel } from '../scenario/eventLabel.ts';
 import { CombatPanel } from './CombatPanel.tsx';
 import { CubeBoard } from './CubeBoard.tsx';
 import { expandEventsForFeed } from './feedLines.ts';
+import { canReachPlaneInOneStep } from './reachability.ts';
 import type { LiveOutcome } from './liveScenario.ts';
 import { PartyDetail } from './PartyDetail.tsx';
 import { useLiveScenario } from './useLiveScenario.ts';
@@ -142,6 +143,20 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
   const [recentBattles, setRecentBattles] = useState<
     readonly { readonly key: string; readonly coord: TileCoord; readonly until: number }[]
   >([]);
+  // Chunk 35 (audit H-1 fix) — transient hint shown when the player
+  // clicks a cross-plane destination they have no one-step route to.
+  // Auto-clears after ~4s so the action area returns to its normal
+  // verb set.
+  const [unreachableHint, setUnreachableHint] = useState<string | null>(null);
+  useEffect(() => {
+    if (unreachableHint === null) return undefined;
+    const id = setTimeout(() => {
+      setUnreachableHint(null);
+    }, 4000);
+    return () => {
+      clearTimeout(id);
+    };
+  }, [unreachableHint]);
 
   // Open the combat panel when a resolved turn produced battles. The turn
   // already auto-paused on `battle-resolved`, so playback is halted while
@@ -291,6 +306,24 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     // clicking any tile with no friendly party, commits the order.
     if (ordering && selectedId !== null && canMove) {
       if (!hit || hit.id === selectedId) {
+        // Chunk 35 (audit H-1) — refuse cross-plane orders the engine
+        // can't fulfill. Pre-fix behavior was to accept the click,
+        // paint a destination marker, and silently stall every turn;
+        // S1/S2 audit found this made L1's win-condition + all combat
+        // unreachable. We now mirror `engine/movement.ts:tryPlaneTransition`'s
+        // first-step check (ant-plane-switch + edge adjacency + paired
+        // POST) and surface a transient hint when none of the three
+        // applies. Multi-turn routes via intermediate planes still need
+        // an explicit intermediate move from the player; the alternative
+        // (multi-turn pathfinding in the UI) is deferred per playthrough
+        // notes §4.
+        if (selected && !canReachPlaneInOneStep(selected, coord.plane, state)) {
+          setUnreachableHint(
+            `${String(selected.id)} can't reach ${coord.plane} in one step. ` +
+              `Try a mage party (ant-plane-switch) or walk via an adjacent face.`,
+          );
+          return;
+        }
         live.setOrder(selectedId, { kind: 'move', dest: coord });
         setOrdering(false);
         return;
@@ -500,6 +533,12 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
               <>
                 <div className="rail-head">{selected?.id ?? 'Move'} — pick destination</div>
                 <p className="hint">Click a tile on the board (or another squad to switch).</p>
+                {unreachableHint !== null && (
+                  // Chunk 35 (audit H-1) — surface the no-path rejection
+                  // inline so the player sees why their click didn't take.
+                  // Auto-clears after 4s via the effect upstream.
+                  <p className="hint hint-warning">{unreachableHint}</p>
+                )}
                 <button onClick={() => setOrdering(false)}>Cancel</button>
                 {selected !== null && (
                   <>

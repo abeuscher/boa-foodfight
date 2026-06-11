@@ -117,7 +117,7 @@ const partyHasNoFly = (
   return false;
 };
 
-const partyHasPlaneSwitch = (
+export const partyHasPlaneSwitch = (
   party: Party,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
 ): boolean => {
