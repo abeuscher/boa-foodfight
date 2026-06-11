@@ -63,8 +63,11 @@ describe.skipIf(!distBuilt)('viewer replay map snapshot', () => {
     const r1 = readScenarioStart('replay-1.jsonl');
     expect(havePostsArray(r1)).toBe(true);
     if (!havePostsArray(r1)) return;
-    expect(r1.posts.length).toBeGreaterThanOrEqual(5);
-    expect(r1.posts.length).toBeLessThanOrEqual(7);
+    // 2 fixed (storm-drain, spider-web) + 6 mandatory (one per non-fixed
+    // plane) + 3-5 extras = 11-13. See engine/map-gen.ts MANDATORY_PLACEMENTS
+    // and the Phase-2 `extras` band (Chunks 1 + 7a).
+    expect(r1.posts.length).toBeGreaterThanOrEqual(11);
+    expect(r1.posts.length).toBeLessThanOrEqual(13);
     // storm-drain @ floor (0,0) and spider-web @ ceiling (9,9) stay fixed.
     const fixed = r1.posts.filter((p) => p.id === 'storm-drain' || p.id === 'spider-web');
     expect(fixed).toHaveLength(2);
