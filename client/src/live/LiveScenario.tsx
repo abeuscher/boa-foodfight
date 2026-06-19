@@ -127,6 +127,12 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
     return out;
   })();
   const visiblePlanes = PLANES.filter((p) => existingPlanes.has(p));
+  // Chunk 37 — surface face-fold reachability up front. When the player
+  // has a movable party selected and is in ordering mode, the face-
+  // selector pills dim any face the party can't reach in one step
+  // (engine `tryPlaneTransition` semantics, mirrored in `reachability.ts`).
+  // This way the constraint is visible BEFORE the click rather than only
+  // after the gate refuses, which the H-1 follow-up flagged as confusing.
 
   const [selectedId, setSelectedId] = useState<PartyId | null>(null);
   const [ordering, setOrdering] = useState(false);
@@ -318,9 +324,15 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
         // (multi-turn pathfinding in the UI) is deferred per playthrough
         // notes §4.
         if (selected && !canReachPlaneInOneStep(selected, coord.plane, state)) {
+          // Chunk 37 — name the source face + target face explicitly so
+          // the player reads it as a face-fold constraint, not a tile-
+          // distance one. The audit follow-up surfaced that the prior
+          // "in one step" phrasing read like a movement-range limit.
           setUnreachableHint(
-            `${String(selected.id)} can't reach ${coord.plane} in one step. ` +
-              `Try a mage party (ant-plane-switch) or walk via an adjacent face.`,
+            `${String(selected.id)} is on the ${selected.location.plane} and ` +
+              `can't fold to the ${coord.plane} from here. ` +
+              `Either pick a mage party (carries plane-switch) or move to a face ` +
+              `that shares an edge with the ${coord.plane} first.`,
           );
           return;
         }
@@ -349,17 +361,29 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
         </button>
         <span className="scn-title">L1 — live (engine in browser): issue orders, then Play</span>
         <span className="planes">
-          {visiblePlanes.map((pl) => (
-            <button
-              key={pl}
-              className={plane === pl ? 'active' : ''}
-              onClick={() => {
-                setPlane(pl);
-              }}
-            >
-              {pl}
-            </button>
-          ))}
+          {visiblePlanes.map((pl) => {
+            const unreachable =
+              ordering && selected !== null && !canReachPlaneInOneStep(selected, pl, state);
+            const cls = [plane === pl ? 'active' : '', unreachable ? 'face-unreachable' : '']
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <button
+                key={pl}
+                className={cls}
+                onClick={() => {
+                  setPlane(pl);
+                }}
+                title={
+                  unreachable
+                    ? `${String(selected?.id ?? '')} can't fold to ${pl} from the ${selected?.location.plane ?? ''} face — rotating to view only.`
+                    : undefined
+                }
+              >
+                {pl}
+              </button>
+            );
+          })}
           <button className={live.fogEnabled ? 'active' : ''} onClick={live.toggleFog}>
             Fog {live.fogEnabled ? 'on' : 'off'}
           </button>

@@ -1060,6 +1060,21 @@ button:disabled {
   font-weight: 700;
 }
 
+/* Chunk 37 — face-fold reachability cue. When a movable party is selected
+ * in ordering mode, faces it can't fold to in one step render dimmed so
+ * the player sees the constraint before they click. The button stays
+ * clickable (rotate-to-view is unrelated to fold-to-move) — the cue is
+ * informational, not blocking. Strike-through reinforces "this face is
+ * not a valid move target right now". */
+.scn-top .planes .face-unreachable {
+  opacity: 0.45;
+  text-decoration: line-through;
+  color: #6b6258;
+}
+.scn-top .planes .face-unreachable.active {
+  opacity: 0.7;
+}
+
 .live-mid {
   flex: 1;
   display: grid;
