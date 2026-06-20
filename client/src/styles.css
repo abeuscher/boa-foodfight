@@ -1048,16 +1048,68 @@ button:disabled {
 
 /* --- Live engine-in-browser scenario --- */
 
-.scn-top .planes {
+/* Chunk 38 — face-picker pills moved from the scn-top header to
+ * .scn-bottom, the strip beneath the cube. The selectors below now key
+ * off `.planes` directly (scoped via `.scn-bottom` where alignment
+ * matters) so the Chunk 37 reachability cue continues to apply. */
+.scn-bottom .planes {
   display: flex;
   gap: 0.2rem;
-  margin-left: auto;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
-.scn-top .planes .active {
+.planes .active {
   background: #d8cdb5;
   font-weight: 700;
+}
+
+/* Chunk 37 — face-fold reachability cue. When a movable party is selected
+ * in ordering mode, faces it can't fold to in one step render dimmed so
+ * the player sees the constraint before they click. The button stays
+ * clickable (rotate-to-view is unrelated to fold-to-move) — the cue is
+ * informational, not blocking. Strike-through reinforces "this face is
+ * not a valid move target right now". */
+.planes .face-unreachable {
+  opacity: 0.45;
+  text-decoration: line-through;
+  color: #6b6258;
+}
+.planes .face-unreachable.active {
+  opacity: 0.7;
+}
+
+/* Chunk 38 — center column stack: cube on top, face-picker strip below. */
+.scn-center {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.scn-bottom {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0;
+}
+
+/* Chunk 38 — playback controls moved into the scn-top header right slot
+ * (the spot the face-picker pills vacated). The hud-pod / .speeds inner
+ * styles ride on existing rules; the wrapper just pushes the cluster to
+ * the right and keeps the children inline. */
+.scn-playback {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.scn-playback .hud-pod {
+  display: flex;
+  gap: 0.2rem;
+}
+.scn-playback .speeds {
+  display: flex;
+  gap: 0.15rem;
 }
 
 .live-mid {
@@ -1098,14 +1150,9 @@ button:disabled {
   border-top: 1px dashed #cdd6cd;
 }
 
-.control-playback {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding-top: 0.4rem;
-  margin-top: auto;
-  border-top: 1px dashed #cdd6cd;
-}
+/* Chunk 38 — `.control-playback` removed from the left rail; the Play /
+ * Step / Speed cluster now lives in the .scn-top header right
+ * (`.scn-playback`). Wrapper rules deleted with the element. */
 
 /* --- UI-03: information rail (right) --- */
 
@@ -1298,12 +1345,6 @@ button:disabled {
 .rail-head {
   font-weight: 700;
   font-size: 0.9rem;
-}
-
-/* `.control-actions .hud-pod` wraps when the speed row needs more
- * width than the rail provides. */
-.control-playback .hud-pod {
-  flex-wrap: wrap;
 }
 
 .board {
@@ -1573,6 +1614,13 @@ button:disabled {
    * overlay (`.scn-end`). Scoped to `.live` so the briefing screen's
    * `.scn-world` (which doesn't render an end overlay) is untouched. */
   position: relative;
+  /* Chunk 38 — flipped to white per PM playthrough so the cube blends
+   * with the page paper-tone instead of sitting in a dark theatre.
+   * Scoped to `.live` so the legacy replay scenario screen
+   * (`client/src/scenario/Scenario.tsx`), which uses .scn-world WITHOUT
+   * the .live ancestor and renders dark-themed text inside, stays dark. */
+  background: #ffffff;
+  color: #1a1a1a;
 }
 
 .cube-top {
@@ -1690,13 +1738,15 @@ button:disabled {
   position: absolute;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #fff;
+  /* Chunk 38 — labels flipped from white to black to match the white
+   * scn-world background. Light text-shadow keeps them legible where
+   * they overlap a dark wall surface. */
+  color: #1a1a1a;
   text-transform: capitalize;
   white-space: nowrap;
-  /* legible over either the dark wall or the gutter */
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95),
-    0 0 2px rgba(0, 0, 0, 0.95);
+    0 1px 2px rgba(255, 255, 255, 0.9),
+    0 0 1px rgba(255, 255, 255, 0.9);
 }
 
 .cube-edge-top {
@@ -1815,12 +1865,13 @@ button:disabled {
 
 .cube-label {
   font-size: 0.7rem;
-  color: #9a958a;
+  /* Chunk 38 — black labels on the now-white world background. */
+  color: #1a1a1a;
   text-transform: capitalize;
 }
 
 .cube-label.active {
-  color: #e7c97a;
+  color: #1a1a1a;
   font-weight: 700;
 }
 
