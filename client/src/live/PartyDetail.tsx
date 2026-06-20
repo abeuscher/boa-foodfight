@@ -21,6 +21,14 @@ const tmplOf = (state: GameState, u: Unit): UnitTemplate | undefined =>
 
 const roleName = (state: GameState, u: Unit): string => tmplOf(state, u)?.name ?? u.templateId;
 
+/** Chunk 39 — how many units can fit legibly in a single .pd-row before
+ * the role-name text starts ellipsis-truncating. Derived from the 300px
+ * right rail: ~280px usable - 3.5rem (~56px) row label - 0.5rem gap
+ * ≈ 216px for unit cards; at ~68px per readable unit (4rem min-width +
+ * 0.3rem gap) that's ≈ 3 units. The front formation cap is 3 and back
+ * cap is 2 — both naturally fit; reserve is the row that overruns. */
+const PD_UNITS_PER_ROW_BUDGET = 3;
+
 /** Read-only party-detail panel (ui-party-detail-spec): banner, formation
  * preview (front/back/reserve), party-level stats + active modifiers,
  * current order, and unit drill-down. Binds only to engine-surfaced
@@ -105,46 +113,69 @@ export function PartyDetail({
       </div>
 
       <div className="pd-formation">
-        {rows.map((row) => (
-          <div className="pd-row" key={row.label}>
-            <span className="pd-row-label">{row.label}</span>
-            <div className="pd-units">
-              {row.ids.length === 0 && <span className="hint">—</span>}
-              {row.ids.map((id) => {
-                const u = unitById.get(id);
-                if (!u) return null;
-                const tmpl = tmplOf(state, u);
-                const maxHp = tmpl ? tmpl.baseStats.hp : u.currentHp;
-                const pct = maxHp > 0 ? Math.max(0, Math.round((u.currentHp / maxHp) * 100)) : 0;
-                const classes = ['pd-unit'];
-                if (!alive(u)) classes.push('down');
-                if (u.id === selectedUnitId) classes.push('sel');
-                if (u.id === party.leaderId) classes.push('leader');
-                return (
-                  <button
-                    key={id}
-                    className={classes.join(' ')}
-                    onClick={() => {
-                      onSelectUnit(u.id === selectedUnitId ? null : u.id);
-                    }}
-                    title={roleName(state, u)}
-                  >
-                    <span className="pd-u-role">
-                      {u.id === party.leaderId ? '★ ' : ''}
-                      {roleName(state, u)}
-                    </span>
-                    <span className="pd-hpbar">
-                      <span className="pd-hpfill" style={{ width: `${String(pct)}%` }} />
-                    </span>
-                    <span className="pd-u-hp">
-                      {String(u.currentHp)}/{String(maxHp)}
-                    </span>
-                  </button>
-                );
-              })}
+        {rows.map((row) => {
+          // Chunk 39 — single-row layout per PM playthrough. The .pd-units
+          // strip is now `flex-wrap: nowrap` with equal-width children
+          // (`flex: 1 1 0` + `min-width: 0`), so units shrink to fit
+          // whatever width the right rail has. Role names truncate via
+          // ellipsis. When more units share a row than the rail can
+          // legibly display (rail ≈ 216px usable / ~70px per readable
+          // unit ≈ 3 units), we flag the row so the player knows the
+          // names are being clipped — the fix the PM noted is "remove
+          // or change the location of the names" (planned for Chunk 40
+          // when SVG icons replace the in-card labels).
+          const cramped = row.ids.length > PD_UNITS_PER_ROW_BUDGET;
+          const rowClass = ['pd-row', cramped ? 'pd-row-cramped' : ''].filter(Boolean).join(' ');
+          return (
+            <div className={rowClass} key={row.label}>
+              <span className="pd-row-label">{row.label}</span>
+              <div className="pd-units">
+                {row.ids.length === 0 && <span className="hint">—</span>}
+                {row.ids.map((id) => {
+                  const u = unitById.get(id);
+                  if (!u) return null;
+                  const tmpl = tmplOf(state, u);
+                  const maxHp = tmpl ? tmpl.baseStats.hp : u.currentHp;
+                  const pct = maxHp > 0 ? Math.max(0, Math.round((u.currentHp / maxHp) * 100)) : 0;
+                  const classes = ['pd-unit'];
+                  if (!alive(u)) classes.push('down');
+                  if (u.id === selectedUnitId) classes.push('sel');
+                  if (u.id === party.leaderId) classes.push('leader');
+                  return (
+                    <button
+                      key={id}
+                      className={classes.join(' ')}
+                      onClick={() => {
+                        onSelectUnit(u.id === selectedUnitId ? null : u.id);
+                      }}
+                      title={roleName(state, u)}
+                    >
+                      <span className="pd-u-role">
+                        {u.id === party.leaderId ? '★ ' : ''}
+                        {roleName(state, u)}
+                      </span>
+                      <span className="pd-hpbar">
+                        <span className="pd-hpfill" style={{ width: `${String(pct)}%` }} />
+                      </span>
+                      <span className="pd-u-hp">
+                        {String(u.currentHp)}/{String(maxHp)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {cramped && (
+                <span
+                  className="pd-row-flag"
+                  title={`${String(row.ids.length)} units in this row — names are truncated. Remove a unit or wait for icon mode (Chunk 40).`}
+                  aria-label="Row is cramped; unit names truncated"
+                >
+                  ⚠
+                </span>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="pd-cols">
