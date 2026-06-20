@@ -14,14 +14,17 @@ import {
 } from './liveScenario.ts';
 import { computeVisibleTiles, visibleNonAntPartyIds } from './visibility.ts';
 
+import { reassignUnit, validateLeaderChange } from '../../../engine/formation.ts';
 import { createRng } from '../../../engine/rng.ts';
 import type {
   BattleResult,
   Faction,
   GameState,
+  Party,
   PartyId,
   ReplayEvent,
   TileCoord,
+  UnitId,
 } from '../../../engine/types.ts';
 import type { WorldRoster } from '../../../engine/world-state.ts';
 
@@ -130,6 +133,19 @@ export interface LiveScenarioClock {
   /** Set a party's intent (move/hold/recruit) or pass `null` to clear
    * (revert to "no opinion"). */
   readonly setOrder: (id: PartyId, intent: PartyIntent | null) => void;
+  /** Chunk 41 — move `unitId` to `targetSlot` on the party's formation,
+   * applied immediately (no turn-advance required). Returns true on
+   * success; false if the engine refused (row at cap, leader → reserve,
+   * etc.) so the UI can show a hint without a state update. */
+  readonly reassignUnit: (
+    partyId: PartyId,
+    unitId: UnitId,
+    targetSlot: 'front' | 'back' | 'reserve',
+  ) => boolean;
+  /** Chunk 41 — promote a different unit to leader. Returns true on
+   * success; false if the candidate is in reserve, dead, or already
+   * the leader. */
+  readonly changeLeader: (partyId: PartyId, newLeaderId: UnitId) => boolean;
 }
 
 /**
@@ -299,6 +315,72 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     });
   }, []);
 
+  // Chunk 41 — formation reassign + leader change applied directly to
+  // the live snapshot (not via the intent → engine pipeline). The
+  // engine helpers in `engine/formation.ts` are pure and return either
+  // the new shape or a refusal; we apply on success and no-op on
+  // refusal so the UI can show a hint. These are visual-only edits in
+  // the live session — they're not part of the input-stream replay
+  // (§7.13 mid-scenario save), so a re-loaded scenario will revert to
+  // the engine-assigned starting formation. Replay capture for these
+  // edits is filed as a follow-up.
+  //
+  // Both edit paths share the "lookup party → mutate → publish new
+  // snap" plumbing; the closure below isolates it so the helpers
+  // below collapse to "do the engine work, then return true/false."
+  const updateParty = useCallback(
+    (partyId: PartyId, mutate: (p: Party) => Party | null): boolean => {
+      const cur = snapRef.current;
+      const party = cur.state.parties.get(partyId);
+      if (!party) return false;
+      const newParty = mutate(party);
+      if (newParty === null) return false;
+      const newParties = new Map(cur.state.parties);
+      newParties.set(partyId, newParty);
+      const newState: GameState = { ...cur.state, parties: newParties };
+      const nextSnap: Snapshot = { ...cur, state: newState };
+      snapRef.current = nextSnap;
+      setSnap(nextSnap);
+      return true;
+    },
+    [],
+  );
+
+  const reassignUnitFn = useCallback(
+    (partyId: PartyId, unitId: UnitId, targetSlot: 'front' | 'back' | 'reserve'): boolean =>
+      updateParty(partyId, (party) => {
+        if (!party.formation) return null;
+        // Leader can't move to reserve — the spec says "Leader cannot
+        // leave the active formation." The engine helper is leader-
+        // aware via this caller-side check (kept here so the helper
+        // stays unit-test-friendly for fixtures without a leader
+        // concept).
+        if (party.leaderId === unitId && targetSlot === 'reserve') return null;
+        const result = reassignUnit(party.formation, unitId, targetSlot);
+        if (result.kind !== 'ok') return null;
+        return { ...party, formation: result.formation };
+      }),
+    [updateParty],
+  );
+
+  const changeLeaderFn = useCallback(
+    (partyId: PartyId, newLeaderId: UnitId): boolean =>
+      updateParty(partyId, (party) => {
+        if (!party.formation) return null;
+        const liveByUnit = new Map<UnitId, boolean>();
+        for (const u of party.units) liveByUnit.set(u.id, u.currentHp > 0);
+        const result = validateLeaderChange(
+          party.formation,
+          party.leaderId,
+          newLeaderId,
+          liveByUnit,
+        );
+        if (result.kind !== 'ok') return null;
+        return { ...party, leaderId: result.leaderId };
+      }),
+    [updateParty],
+  );
+
   // Move-destination view derived from `intents` — Board paints
   // destination markers only for parties whose intent is `move`.
   const orders = new Map<PartyId, TileCoord>();
@@ -329,5 +411,7 @@ export function useLiveScenario(scenarioIndex: number, roster?: WorldRoster): Li
     step,
     toggleFog,
     setOrder,
+    reassignUnit: reassignUnitFn,
+    changeLeader: changeLeaderFn,
   };
 }

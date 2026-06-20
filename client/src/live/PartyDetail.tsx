@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { AGGRESSION_PROMOTION_THRESHOLD } from '../../../engine/behavior-promotion.ts';
 import { PROMOTION_TREE } from '../../../engine/charisma.ts';
 import { postAt } from '../../../engine/posts.ts';
@@ -12,6 +14,18 @@ interface Props {
   readonly selectedUnitId: UnitId | null;
   readonly onSelectUnit: (id: UnitId | null) => void;
   readonly onClose: () => void;
+  /** Chunk 41 — when true, the formation rows accept drag-drop reassign
+   * + the leader chip is clickable to swap. False during the combat
+   * modal (which is the only UI state where "active engagement" is
+   * unambiguous). When false, all edit affordances render but are
+   * disabled / styled inert. */
+  readonly canEdit?: boolean;
+  /** Chunk 41 — move `unitId` to `targetSlot` on this party. The hook
+   * (`useLiveScenario.reassignUnit`) returns true on success; the UI
+   * uses the return to clear the drag-overlay state. */
+  readonly onReassignUnit?: (unitId: UnitId, targetSlot: 'front' | 'back' | 'reserve') => boolean;
+  /** Chunk 41 — make `unitId` the new party leader. */
+  readonly onChangeLeader?: (unitId: UnitId) => boolean;
 }
 
 const alive = (u: Unit): boolean => u.currentHp > 0;
@@ -41,7 +55,16 @@ export function PartyDetail({
   selectedUnitId,
   onSelectUnit,
   onClose,
+  canEdit = false,
+  onReassignUnit,
+  onChangeLeader,
 }: Props): JSX.Element {
+  // Chunk 41 — drag-drop bookkeeping. We only need transient client-side
+  // state (no re-render across drop), but `.pd-row.dragover` needs to
+  // know which row the cursor is over so we can paint the drop-zone
+  // affordance. The dragged unit id rides on the DataTransfer.
+  const editable = canEdit && onReassignUnit !== undefined;
+  const [dragOverRow, setDragOverRow] = useState<'front' | 'back' | 'reserve' | null>(null);
   const unitById = new Map<UnitId, Unit>(party.units.map((u) => [u.id, u]));
   const leader = unitById.get(party.leaderId);
 
@@ -52,13 +75,21 @@ export function PartyDetail({
       : 'idle';
 
   // Formation rows; legacy parties without a formation render as one row.
-  const rows: { label: string; ids: readonly UnitId[] }[] = party.formation
+  // Chunk 41 — each row carries its slot identifier so drag-drop can
+  // dispatch `onReassignUnit(unit, slot)` directly. Legacy parties use
+  // `'front'` for the single rendered row; reassign refuses gracefully
+  // when there's no formation.
+  const rows: {
+    label: string;
+    ids: readonly UnitId[];
+    slot: 'front' | 'back' | 'reserve';
+  }[] = party.formation
     ? [
-        { label: 'Front', ids: party.formation.front },
-        { label: 'Back', ids: party.formation.back },
-        { label: 'Reserve', ids: party.formation.reserve },
+        { label: 'Front', ids: party.formation.front, slot: 'front' },
+        { label: 'Back', ids: party.formation.back, slot: 'back' },
+        { label: 'Reserve', ids: party.formation.reserve, slot: 'reserve' },
       ]
-    : [{ label: 'Units', ids: party.units.map((u) => u.id) }];
+    : [{ label: 'Units', ids: party.units.map((u) => u.id), slot: 'front' }];
 
   // Composition summary (counts by role).
   const counts = new Map<string, number>();
@@ -126,9 +157,43 @@ export function PartyDetail({
           // or change the location of the names" (planned for Chunk 40
           // when SVG icons replace the in-card labels).
           const cramped = row.ids.length > PD_UNITS_PER_ROW_BUDGET;
-          const rowClass = ['pd-row', cramped ? 'pd-row-cramped' : ''].filter(Boolean).join(' ');
+          const slot = row.slot;
+          const isDragTarget = dragOverRow === slot;
+          const rowClass = [
+            'pd-row',
+            cramped ? 'pd-row-cramped' : '',
+            editable ? 'pd-row-editable' : '',
+            isDragTarget ? 'pd-row-dragover' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
           return (
-            <div className={rowClass} key={row.label}>
+            <div
+              className={rowClass}
+              key={row.label}
+              onDragOver={
+                editable
+                  ? (e) => {
+                      // Chunk 41 — preventDefault enables the drop target.
+                      // Without it the browser blocks `drop` from firing.
+                      e.preventDefault();
+                      if (dragOverRow !== slot) setDragOverRow(slot);
+                    }
+                  : undefined
+              }
+              onDragLeave={editable ? () => setDragOverRow(null) : undefined}
+              onDrop={
+                editable && onReassignUnit
+                  ? (e) => {
+                      e.preventDefault();
+                      const unitId = e.dataTransfer.getData('text/plain') as UnitId;
+                      setDragOverRow(null);
+                      if (!unitId) return;
+                      onReassignUnit(unitId, slot);
+                    }
+                  : undefined
+              }
+            >
               <span className="pd-row-label">{row.label}</span>
               <div className="pd-units">
                 {row.ids.length === 0 && <span className="hint">—</span>}
@@ -138,14 +203,29 @@ export function PartyDetail({
                   const tmpl = tmplOf(state, u);
                   const maxHp = tmpl ? tmpl.baseStats.hp : u.currentHp;
                   const pct = maxHp > 0 ? Math.max(0, Math.round((u.currentHp / maxHp) * 100)) : 0;
+                  const isLeader = u.id === party.leaderId;
+                  // Chunk 41 — leader can't leave the active formation,
+                  // so disable drag on the leader card when the only valid
+                  // re-drop is reserve. Other moves (front ↔ back) stay
+                  // allowed for the leader.
+                  const draggable = editable && alive(u);
                   const classes = ['pd-unit'];
                   if (!alive(u)) classes.push('down');
                   if (u.id === selectedUnitId) classes.push('sel');
-                  if (u.id === party.leaderId) classes.push('leader');
+                  if (isLeader) classes.push('leader');
                   return (
                     <button
                       key={id}
                       className={classes.join(' ')}
+                      draggable={draggable}
+                      onDragStart={
+                        draggable
+                          ? (e) => {
+                              e.dataTransfer.setData('text/plain', String(u.id));
+                              e.dataTransfer.effectAllowed = 'move';
+                            }
+                          : undefined
+                      }
                       onClick={() => {
                         onSelectUnit(u.id === selectedUnitId ? null : u.id);
                       }}
@@ -158,7 +238,7 @@ export function PartyDetail({
                          * faction-tinted (ant amber / spider red). */}
                         <UnitRoleIcon unit={u} template={tmpl} />
                         <span className="pd-u-name">
-                          {u.id === party.leaderId ? '★ ' : ''}
+                          {isLeader ? '★ ' : ''}
                           {roleName(state, u)}
                         </span>
                       </span>
@@ -261,9 +341,34 @@ export function PartyDetail({
 
       <div className="pd-drill">
         {sel === undefined ? (
-          <p className="hint">Select a unit to inspect.</p>
+          <p className="hint">
+            Select a unit to inspect.
+            {editable && ' Drag a unit between Front / Back / Reserve to reassign.'}
+          </p>
         ) : (
-          <UnitDrill state={state} unit={sel} party={party} />
+          <>
+            <UnitDrill state={state} unit={sel} party={party} />
+            {/* Chunk 41 — leader-swap affordance. Renders when:
+             *   - canEdit is true (PartyDetail open, combat modal not up),
+             *   - the inspected unit isn't already the leader,
+             *   - the unit is alive AND in front/back row (reserve
+             *     can't lead per `validateLeaderChange`).
+             * The button calls `onChangeLeader`; the hook returns true
+             * on success (the panel re-renders with the new ★ marker)
+             * or false on refusal. */}
+            {editable && onChangeLeader && sel.id !== party.leaderId && alive(sel) && (
+              <button
+                className="pd-make-leader"
+                onClick={() => {
+                  onChangeLeader(sel.id);
+                }}
+                title="Promote this unit to party leader. Front/back row only; reserve units must move up first."
+                disabled={party.formation?.reserve.includes(sel.id) ?? false}
+              >
+                ★ Make leader
+              </button>
+            )}
+          </>
         )}
       </div>
 
