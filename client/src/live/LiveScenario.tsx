@@ -360,33 +360,33 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
           ← End scenario
         </button>
         <span className="scn-title">L1 — live (engine in browser): issue orders, then Play</span>
-        <span className="planes">
-          {visiblePlanes.map((pl) => {
-            const unreachable =
-              ordering && selected !== null && !canReachPlaneInOneStep(selected, pl, state);
-            const cls = [plane === pl ? 'active' : '', unreachable ? 'face-unreachable' : '']
-              .filter(Boolean)
-              .join(' ');
-            return (
-              <button
-                key={pl}
-                className={cls}
-                onClick={() => {
-                  setPlane(pl);
-                }}
-                title={
-                  unreachable
-                    ? `${String(selected?.id ?? '')} can't fold to ${pl} from the ${selected?.location.plane ?? ''} face — rotating to view only.`
-                    : undefined
-                }
-              >
-                {pl}
-              </button>
-            );
-          })}
-          <button className={live.fogEnabled ? 'active' : ''} onClick={live.toggleFog}>
-            Fog {live.fogEnabled ? 'on' : 'off'}
-          </button>
+        {/* Chunk 38 — playback controls moved up here per PM playthrough.
+         * The face-selector pills moved out of this slot down to the
+         * .scn-bottom strip beneath the cube. */}
+        <span className="scn-playback">
+          <div className="hud-pod">
+            <button onClick={live.toggle} disabled={live.atEnd}>
+              {live.playing ? '⏸ Pause' : '⏵ Play'}
+            </button>
+            <button onClick={live.step} disabled={live.playing || live.atEnd}>
+              Step
+            </button>
+          </div>
+          <div className="hud-pod">
+            <span className="speeds">
+              {SPEEDS.map((sp) => (
+                <button
+                  key={sp}
+                  className={live.speed === sp ? 'active' : ''}
+                  onClick={() => {
+                    live.setSpeed(sp);
+                  }}
+                >
+                  {sp}×
+                </button>
+              ))}
+            </span>
+          </div>
         </span>
       </header>
 
@@ -587,72 +587,82 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
             )}
           </div>
 
-          <div className="control-playback">
-            <div className="hud-pod">
-              <button onClick={live.toggle} disabled={live.atEnd}>
-                {live.playing ? '⏸ Pause' : '⏵ Play'}
-              </button>
-              <button onClick={live.step} disabled={live.playing || live.atEnd}>
-                Step
-              </button>
-            </div>
-            <div className="hud-pod">
-              <span className="speeds">
-                {SPEEDS.map((sp) => (
-                  <button
-                    key={sp}
-                    className={live.speed === sp ? 'active' : ''}
-                    onClick={() => {
-                      live.setSpeed(sp);
-                    }}
-                  >
-                    {sp}×
-                  </button>
-                ))}
-              </span>
-            </div>
-          </div>
+          {/* Chunk 38 — control-playback moved to .scn-top header right. */}
         </aside>
 
-        {/* CENTER — the world. Cube board. Bottom band reclaimed for
-            extra height. */}
-        <div className="scn-world">
-          <CubeBoard
-            state={state}
-            plane={plane}
-            selectedPartyId={selectedId}
-            ordering={ordering}
-            destinations={live.orders}
-            onClickTile={handleTile}
-            fogEnabled={live.fogEnabled}
-            visible={live.visible}
-            seen={live.seen}
-            onSelectFace={setPlane}
-            marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
-            cameraTarget={cameraTarget}
-            existingPlanes={existingPlanes}
-          />
-          {live.atEnd && live.terminal && (
-            <div className="scn-end">
-              <span>
-                {live.terminal.winner === 'ant'
-                  ? 'Victory — the ants take the web.'
-                  : 'Defeat — the spiders hold.'}
-              </span>
-              <button
-                className="scn-end-go"
-                onClick={() => {
-                  onEnd({
-                    finalState: state,
-                    terminal: live.terminal!,
-                    turnsPlayed: live.turnsPlayed,
-                  });
-                }}
-              >
-                Continue →
+        {/* CENTER — the world. Cube board on top, face-picker strip
+            beneath. Chunk 38 — face pills moved here from the header so
+            they read as a view-control tray for the cube above, and the
+            header slot they vacated now carries playback. */}
+        <div className="scn-center">
+          <div className="scn-world">
+            <CubeBoard
+              state={state}
+              plane={plane}
+              selectedPartyId={selectedId}
+              ordering={ordering}
+              destinations={live.orders}
+              onClickTile={handleTile}
+              fogEnabled={live.fogEnabled}
+              visible={live.visible}
+              seen={live.seen}
+              onSelectFace={setPlane}
+              marks={recentBattles.map((b) => ({ coord: b.coord, kind: 'battle' as const }))}
+              cameraTarget={cameraTarget}
+              existingPlanes={existingPlanes}
+            />
+            {live.atEnd && live.terminal && (
+              <div className="scn-end">
+                <span>
+                  {live.terminal.winner === 'ant'
+                    ? 'Victory — the ants take the web.'
+                    : 'Defeat — the spiders hold.'}
+                </span>
+                <button
+                  className="scn-end-go"
+                  onClick={() => {
+                    onEnd({
+                      finalState: state,
+                      terminal: live.terminal!,
+                      turnsPlayed: live.turnsPlayed,
+                    });
+                  }}
+                >
+                  Continue →
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="scn-bottom">
+            <span className="planes">
+              {visiblePlanes.map((pl) => {
+                const unreachable =
+                  ordering && selected !== null && !canReachPlaneInOneStep(selected, pl, state);
+                const cls = [plane === pl ? 'active' : '', unreachable ? 'face-unreachable' : '']
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <button
+                    key={pl}
+                    className={cls}
+                    onClick={() => {
+                      setPlane(pl);
+                    }}
+                    title={
+                      unreachable
+                        ? `${String(selected?.id ?? '')} can't fold to ${pl} from the ${selected?.location.plane ?? ''} face — rotating to view only.`
+                        : undefined
+                    }
+                  >
+                    {pl}
+                  </button>
+                );
+              })}
+              <button className={live.fogEnabled ? 'active' : ''} onClick={live.toggleFog}>
+                Fog {live.fogEnabled ? 'on' : 'off'}
               </button>
-            </div>
-          )}
+            </span>
+          </div>
         </div>
 
         {/* RIGHT RAIL — information. Status pinned at top. The body
