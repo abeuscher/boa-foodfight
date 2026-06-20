@@ -77,5 +77,8 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "lucide-react": "^1.21.0"
   }
 }

@@ -4,6 +4,7 @@ import { postAt } from '../../../engine/posts.ts';
 import type { GameState, Party, Post, Unit, UnitId, UnitTemplate } from '../../../engine/types.ts';
 
 import { abilityCategory, abilityLabel } from './abilityLabels.ts';
+import { UnitRoleIcon } from './unitIcons.tsx';
 
 interface Props {
   readonly state: GameState;
@@ -151,8 +152,15 @@ export function PartyDetail({
                       title={roleName(state, u)}
                     >
                       <span className="pd-u-role">
-                        {u.id === party.leaderId ? '★ ' : ''}
-                        {roleName(state, u)}
+                        {/* Chunk 40 — Lucide role icon stands in for the
+                         * role name in cramped rows (CSS hides .pd-u-name
+                         * when .pd-row-cramped is set). The icon is
+                         * faction-tinted (ant amber / spider red). */}
+                        <UnitRoleIcon unit={u} template={tmpl} />
+                        <span className="pd-u-name">
+                          {u.id === party.leaderId ? '★ ' : ''}
+                          {roleName(state, u)}
+                        </span>
                       </span>
                       <span className="pd-hpbar">
                         <span className="pd-hpfill" style={{ width: `${String(pct)}%` }} />
