@@ -1931,19 +1931,30 @@ button:disabled {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.3rem;
+  /* Chunk 39 — let .pd-units take the remaining row width without
+   * overflowing. nowrap on the inner row + min-width:0 here keeps the
+   * label fixed and cards shrinking together. */
+  min-width: 0;
 }
 
 .pd-row-label {
   width: 3.5rem;
+  flex: 0 0 3.5rem;
   font-size: 0.7rem;
   color: #8a8170;
   text-transform: uppercase;
 }
 
 .pd-units {
+  /* Chunk 39 — single-row layout per PM playthrough. Children share the
+   * row width equally and never wrap; if they can't fit the budget the
+   * row carries a `.pd-row-cramped` flag (rendered next to the row in
+   * the JSX) so the player knows the names are being clipped. */
+  flex: 1 1 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.3rem;
+  min-width: 0;
 }
 
 .pd-unit {
@@ -1952,9 +1963,28 @@ button:disabled {
   align-items: flex-start;
   gap: 0.1rem;
   padding: 0.2rem 0.35rem;
-  min-width: 4.25rem;
-  flex: 1 1 4.25rem;
+  /* Chunk 39 — equal-width children. `flex: 1 1 0` distributes available
+   * width evenly; `min-width: 0` lets them shrink below their content's
+   * intrinsic size so .pd-u-role can truncate via ellipsis. */
+  flex: 1 1 0;
+  min-width: 0;
   text-align: left;
+  overflow: hidden;
+}
+
+/* Chunk 39 — cramped row indicator. The `⚠` badge sits at the end of the
+ * row; the row also gets a subtle warning tint so the layout pressure
+ * registers without being noisy. */
+.pd-row-cramped > .pd-units {
+  outline: 1px dashed #c9a23a;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+.pd-row-flag {
+  font-size: 0.85rem;
+  color: #c9a23a;
+  flex: 0 0 auto;
+  cursor: help;
 }
 
 .pd-unit.sel {
@@ -1973,6 +2003,14 @@ button:disabled {
 .pd-u-role {
   font-size: 0.75rem;
   font-weight: 600;
+  /* Chunk 39 — truncate role name so the equal-width pd-unit cards stay
+   * single-row without breaking the flex layout when the rail is tight.
+   * The full role name is still available via the parent `.pd-unit`
+   * button's `title` attribute. */
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pd-hpbar {
