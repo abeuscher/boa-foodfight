@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { EndStats } from './endStats.ts';
 import type { ScenarioReward } from './reward.ts';
+import { FactionEmblem } from './unitIcons.tsx';
 
 interface Props {
   readonly stats: EndStats;
@@ -57,7 +58,11 @@ export function EndScreen({ stats, reward, continueLabel, onContinue }: Props): 
   return (
     <div className="endscreen">
       <div className={`end-graphic ${win ? 'win' : 'loss'}`} aria-hidden>
-        <span className="end-emblem">{win ? '🐜' : '🕷️'}</span>
+        {/* Chunk 40 — Lucide Bug stands in for the deferred scene art.
+         * Tint comes from `.end-emblem-${winner}` (amber for ant,
+         * dark-red for spider). The "Scene art deferred" caption stays
+         * — the emblem is illustrative, not the final hero graphic. */}
+        <FactionEmblem winner={win ? 'ant' : 'spider'} />
         <span className="end-note">Scene art deferred (cube memo §D)</span>
       </div>
       <div

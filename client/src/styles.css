@@ -516,6 +516,21 @@ body {
   font-size: 5rem;
 }
 
+/* Chunk 40 — Lucide Bug emblem replaces the 🐜 / 🕷️ emoji placeholder.
+ * Faction-tinted so the win / loss state reads at a glance. The end-
+ * graphic container's win / loss backgrounds (dark olive vs dark plum)
+ * still carry the macro signal; the bug just picks up the accent. */
+.end-emblem-icon {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+.end-emblem-ant {
+  color: #e7c97a;
+}
+.end-emblem-spider {
+  color: #d27575;
+}
+
 .end-graphic .end-note {
   font-size: 0.75rem;
   color: #9a958a;
@@ -1960,6 +1975,40 @@ button:disabled {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Chunk 40 — icon + name on one line, small gap. */
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Chunk 40 — role-icon faction tints. Ant: warm amber; spider: dark
+ * red; neutral (mouse / cockroach / etc.): muted gray. The icon flexes
+ * to a fixed slot so the name (which truncates) doesn't push it out. */
+.pd-u-icon {
+  flex: 0 0 auto;
+}
+.pd-unit-icon-ant {
+  color: #b5651d;
+}
+.pd-unit-icon-spider {
+  color: #8b3a3a;
+}
+.pd-unit-icon-neutral {
+  color: #6b6258;
+}
+
+/* Chunk 40 — in cramped rows (Chunk 39's flag), hide the role-name text
+ * and let the icon stand in. The dashed amber outline + loud ⚠ come
+ * off — the row reads cleanly via icons; the flag stays only to
+ * surface the unit count via its title tooltip. */
+.pd-row-cramped .pd-u-name {
+  display: none;
+}
+.pd-row-cramped > .pd-units {
+  outline: none;
+}
+.pd-row-cramped > .pd-row-flag {
+  opacity: 0.5;
 }
 
 .pd-hpbar {
