@@ -16,7 +16,9 @@ import {
   formationOrAllFront,
   preferredRow,
   promoteReserve,
+  reassignUnit,
   slotForUnit,
+  validateLeaderChange,
 } from './formation.ts';
 import { createRng } from './rng.ts';
 import { loadScenario } from './state.ts';
@@ -514,5 +516,119 @@ describe('formationOrAllFront / slotForUnit', () => {
     expect(f.back).toEqual([]);
     expect(f.reserve).toEqual([]);
     expect(slotForUnit(f, u2.id)).toBe('front');
+  });
+});
+
+describe('Chunk 41 — manual formation reassignment', () => {
+  const A = 'u-a' as UnitId;
+  const B = 'u-b' as UnitId;
+  const C = 'u-c' as UnitId;
+  const D = 'u-d' as UnitId;
+  const E = 'u-e' as UnitId;
+  const F = 'u-f' as UnitId;
+
+  it('moves a unit from front to back', () => {
+    const f = { front: [A, B, C], back: [D], reserve: [] };
+    const result = reassignUnit(f, A, 'back');
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+    expect(result.formation.front).toEqual([B, C]);
+    expect(result.formation.back).toEqual([D, A]);
+  });
+
+  it('moves a unit from reserve to front', () => {
+    const f = { front: [A, B], back: [C], reserve: [D, E] };
+    const result = reassignUnit(f, D, 'front');
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+    expect(result.formation.front).toEqual([A, B, D]);
+    expect(result.formation.reserve).toEqual([E]);
+  });
+
+  it('refuses when the destination row is at cap', () => {
+    const f = { front: [A, B, C], back: [D, E], reserve: [F] };
+    const result = reassignUnit(f, F, 'front');
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('front-row-full');
+  });
+
+  it('refuses when target slot equals current', () => {
+    const f = { front: [A], back: [], reserve: [] };
+    const result = reassignUnit(f, A, 'front');
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('same-slot');
+  });
+
+  it('refuses for a unit not in the formation', () => {
+    const f = { front: [A], back: [], reserve: [] };
+    const result = reassignUnit(f, B, 'front');
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('unit-not-in-formation');
+  });
+});
+
+describe('Chunk 41 — leader change validation', () => {
+  const A = 'u-a' as UnitId;
+  const B = 'u-b' as UnitId;
+  const C = 'u-c' as UnitId;
+
+  it('accepts a swap to a live front-row unit', () => {
+    const f = { front: [A, B], back: [C], reserve: [] };
+    const live = new Map([
+      [A, true],
+      [B, true],
+      [C, true],
+    ]);
+    const result = validateLeaderChange(f, A, B, live);
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') expect(result.leaderId).toBe(B);
+  });
+
+  it('accepts a swap to a live back-row unit', () => {
+    const f = { front: [A], back: [B], reserve: [] };
+    const live = new Map([
+      [A, true],
+      [B, true],
+    ]);
+    const result = validateLeaderChange(f, A, B, live);
+    expect(result.kind).toBe('ok');
+  });
+
+  it('refuses a swap to a reserve unit', () => {
+    const f = { front: [A], back: [], reserve: [B] };
+    const live = new Map([
+      [A, true],
+      [B, true],
+    ]);
+    const result = validateLeaderChange(f, A, B, live);
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('in-reserve');
+  });
+
+  it('refuses a swap to a dead unit', () => {
+    const f = { front: [A, B], back: [], reserve: [] };
+    const live = new Map([
+      [A, true],
+      [B, false],
+    ]);
+    const result = validateLeaderChange(f, A, B, live);
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('unit-dead');
+  });
+
+  it('refuses when the candidate is already leader', () => {
+    const f = { front: [A], back: [], reserve: [] };
+    const live = new Map([[A, true]]);
+    const result = validateLeaderChange(f, A, A, live);
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('same-leader');
+  });
+
+  it('refuses when the candidate is not on the party', () => {
+    const f = { front: [A], back: [], reserve: [] };
+    const live = new Map([[A, true]]);
+    const result = validateLeaderChange(f, A, C, live);
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') expect(result.reason).toBe('unit-not-in-party');
   });
 });

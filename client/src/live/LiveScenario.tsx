@@ -687,6 +687,16 @@ export function LiveScenario({ scenarioIndex, roster, onExit, onEnd }: Props): J
                 setInspecting(false);
                 setUnitId(null);
               }}
+              // Chunk 41 — formation editing is allowed whenever the
+              // PartyDetail panel is open AND the combat modal isn't
+              // up. The combat panel is the one UI state where "active
+              // engagement" is unambiguous; everywhere else the player
+              // already has agency to issue orders, so reorganizing is
+              // a peer of those orders. Per PM: "I would like to be
+              // able to change formation on battlefield."
+              canEdit={battleQueue === null}
+              onReassignUnit={(unitId, slot) => live.reassignUnit(selected.id, unitId, slot)}
+              onChangeLeader={(newLeader) => live.changeLeader(selected.id, newLeader)}
             />
           )}
           <div className="info-body">

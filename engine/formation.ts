@@ -227,3 +227,106 @@ export const backRowMeleeAttackPenalty = (
   if (template.tags.includes('ranged')) return 0;
   return -1;
 };
+
+/**
+ * Chunk 41 — manual formation reassignment (PM playthrough request).
+ *
+ * Move `unitId` to `targetSlot` ('front' | 'back' | 'reserve') and
+ * return the resulting `Formation`. Caller is responsible for the
+ * gating rules below; this helper just shuffles the lists and reports
+ * why it refused via the `reason` field on the failure variant.
+ *
+ * Hard constraints (the helper enforces):
+ *   - `unitId` must currently be in one of the three lists.
+ *   - The unit can't move INTO a row that's already at cap (front: 3,
+ *     back: 2). Reserve is uncapped.
+ *   - A unit already in `targetSlot` is a no-op success — the move
+ *     is idempotent.
+ *
+ * Soft constraints (caller's job, NOT enforced here):
+ *   - The leader can't leave the active formation (front + back).
+ *     The caller checks `leaderId` against `targetSlot === 'reserve'`
+ *     and refuses there — so we can keep this helper unaware of
+ *     leadership and reuse it on test fixtures.
+ *   - The party shouldn't be edited mid-combat. The caller gates on
+ *     UI state (PartyDetail open + combat modal closed).
+ */
+export type ReassignResult =
+  | { readonly kind: 'ok'; readonly formation: Formation }
+  | { readonly kind: 'refused'; readonly reason: ReassignRefusal };
+
+export type ReassignRefusal =
+  | 'unit-not-in-formation'
+  | 'front-row-full'
+  | 'back-row-full'
+  | 'same-slot';
+
+export const reassignUnit = (
+  formation: Formation,
+  unitId: UnitId,
+  targetSlot: 'front' | 'back' | 'reserve',
+): ReassignResult => {
+  const currentSlot = slotForUnit(formation, unitId);
+  const inFormation =
+    formation.front.includes(unitId) ||
+    formation.back.includes(unitId) ||
+    formation.reserve.includes(unitId);
+  if (!inFormation) return { kind: 'refused', reason: 'unit-not-in-formation' };
+  if (currentSlot === targetSlot) return { kind: 'refused', reason: 'same-slot' };
+  // Capacity check on the destination row.
+  if (targetSlot === 'front' && formation.front.length >= FRONT_CAP) {
+    return { kind: 'refused', reason: 'front-row-full' };
+  }
+  if (targetSlot === 'back' && formation.back.length >= BACK_CAP) {
+    return { kind: 'refused', reason: 'back-row-full' };
+  }
+  const without = (xs: readonly UnitId[]): UnitId[] => xs.filter((id) => id !== unitId);
+  const cleared: Formation = {
+    front: without(formation.front),
+    back: without(formation.back),
+    reserve: without(formation.reserve),
+  };
+  const appendTo = (slot: 'front' | 'back' | 'reserve'): Formation => ({
+    front: slot === 'front' ? [...cleared.front, unitId] : cleared.front,
+    back: slot === 'back' ? [...cleared.back, unitId] : cleared.back,
+    reserve: slot === 'reserve' ? [...cleared.reserve, unitId] : cleared.reserve,
+  });
+  return { kind: 'ok', formation: appendTo(targetSlot) };
+};
+
+/**
+ * Chunk 41 — manual leader swap (PM playthrough request).
+ *
+ * Eligibility: the new leader must be (1) currently in `front` or
+ * `back` row (not reserve — reserve units can't lead until promoted),
+ * and (2) marked alive on `liveByUnitId` (defaults to alive when the
+ * map has no entry, matching `promoteReserve`'s convention).
+ *
+ * Returns the new leader id or a refusal reason. The caller is
+ * responsible for applying the result to the party (engine state
+ * doesn't directly mutate here so the helper stays pure + testable).
+ */
+export type LeaderChangeResult =
+  | { readonly kind: 'ok'; readonly leaderId: UnitId }
+  | { readonly kind: 'refused'; readonly reason: LeaderChangeRefusal };
+
+export type LeaderChangeRefusal = 'in-reserve' | 'unit-not-in-party' | 'unit-dead' | 'same-leader';
+
+export const validateLeaderChange = (
+  formation: Formation,
+  currentLeaderId: UnitId,
+  newLeaderId: UnitId,
+  liveByUnitId: ReadonlyMap<UnitId, boolean>,
+): LeaderChangeResult => {
+  if (newLeaderId === currentLeaderId) return { kind: 'refused', reason: 'same-leader' };
+  const inFront = formation.front.includes(newLeaderId);
+  const inBack = formation.back.includes(newLeaderId);
+  const inReserve = formation.reserve.includes(newLeaderId);
+  if (!inFront && !inBack && !inReserve) {
+    return { kind: 'refused', reason: 'unit-not-in-party' };
+  }
+  if (inReserve) return { kind: 'refused', reason: 'in-reserve' };
+  const alive = liveByUnitId.get(newLeaderId);
+  if (alive === false) return { kind: 'refused', reason: 'unit-dead' };
+  return { kind: 'ok', leaderId: newLeaderId };
+};

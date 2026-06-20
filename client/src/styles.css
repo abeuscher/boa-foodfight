@@ -2011,6 +2011,44 @@ button:disabled {
   opacity: 0.5;
 }
 
+/* Chunk 41 — drag-drop affordances. The editable row carries a subtle
+ * grab cursor on unit cards (they're draggable); the drop target gets
+ * a stronger amber outline while a unit hovers over it. */
+.pd-row-editable .pd-unit[draggable='true'] {
+  cursor: grab;
+}
+.pd-row-editable .pd-unit[draggable='true']:active {
+  cursor: grabbing;
+}
+.pd-row-dragover > .pd-units {
+  outline: 2px dashed #c9a23a;
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: rgba(231, 217, 184, 0.25);
+}
+
+/* Chunk 41 — "Make leader" button rendered in the .pd-drill panel when
+ * the inspected unit is eligible. Subtle accent so it doesn't compete
+ * with the unit-detail content above it. */
+.pd-make-leader {
+  margin-top: 0.5rem;
+  width: 100%;
+  background: #efe7d6;
+  border: 1px solid #b9a06a;
+  color: #1a1a1a;
+  padding: 0.35rem 0.5rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.pd-make-leader:hover {
+  background: #e7d9b8;
+}
+.pd-make-leader:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .pd-hpbar {
   width: 100%;
   height: 4px;
