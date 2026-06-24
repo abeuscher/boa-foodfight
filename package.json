@@ -30,6 +30,7 @@
     "diversity": "tsx harness/diversity.ts",
     "coevo": "tsx harness/coevo.ts",
     "world-loop": "tsx harness/world-loop.ts",
+    "measure:combat-phase1": "tsx harness/combat-phase1-measure.ts",
     "viewer": "tsx viewer/serve.ts",
     "build:viewer": "tsx viewer/build-manifest.ts",
     "test:viewer": "playwright test --config viewer/playwright.config.ts",

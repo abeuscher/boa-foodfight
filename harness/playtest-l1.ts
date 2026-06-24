@@ -23,14 +23,9 @@
 
 import path from 'node:path';
 
-import { baselineV2 } from '../ai/baseline-v2.ts';
-import { neutralPlayer } from '../ai/neutral.ts';
-import { spiderL1V2 } from '../ai/spider-l1-v2.ts';
-import { createTickClock } from '../engine/replay.ts';
-import { createRng } from '../engine/rng.ts';
-import { loadScenario } from '../engine/state.ts';
-import { runScenario } from '../engine/turn.ts';
 import type { BattleResult, GameState, Plane, ReplayEvent } from '../engine/types.ts';
+
+import { L1_SWEEP_AIS, runL1Seed } from './l1-sweep.ts';
 
 const DATA_DIR = path.resolve(import.meta.dirname, '..', 'data', 'level-1');
 
@@ -322,36 +317,13 @@ const computeMetrics = (
 };
 
 const runSeed = (seed: number): RunMetrics => {
-  const loaded = loadScenario(DATA_DIR, seed);
-  const tickClock = createTickClock();
-  const outcome = runScenario(loaded.state, loaded.data, createRng(seed), tickClock.next, {
-    maxTurns: 100,
-    policies: [
-      {
-        name: baselineV2.name,
-        faction: baselineV2.faction,
-        decide: (state, scenario, rng) => baselineV2.decide(state, scenario, rng),
-      },
-      {
-        name: spiderL1V2.name,
-        faction: spiderL1V2.faction,
-        decide: (state, scenario, rng) => spiderL1V2.decide(state, scenario, rng),
-      },
-      {
-        name: neutralPlayer.name,
-        faction: neutralPlayer.faction,
-        decide: (state, scenario, rng) => neutralPlayer.decide(state, scenario, rng),
-      },
-    ],
-    neutralSpawnEvents: loaded.neutralSpawnEvents,
-    itemSpawnEvents: loaded.itemSpawnEvents,
-  });
+  const sweep = runL1Seed(seed, DATA_DIR);
   return computeMetrics(
     seed,
-    loaded.state,
-    outcome.events,
-    outcome.turnsPlayed,
-    outcome.finalState,
+    sweep.initialState,
+    sweep.events,
+    sweep.turnsPlayed,
+    sweep.finalState,
   );
 };
 
@@ -371,7 +343,7 @@ const main = (): void => {
   );
   out.push('');
   out.push(
-    `**Run config:** ${String(seeds.length)} seeds (${seeds.join(', ')}), ant policy \`${baselineV2.name}\` vs spider policy \`${spiderL1V2.name}\`, neutral AI for non-aligned parties. Each scenario capped at 100 turns.`,
+    `**Run config:** ${String(seeds.length)} seeds (${seeds.join(', ')}), ant policy \`${L1_SWEEP_AIS.player.name}\` vs spider policy \`${L1_SWEEP_AIS.enemy.name}\`, neutral AI for non-aligned parties. Each scenario capped at 100 turns.`,
   );
   out.push('');
   out.push(
