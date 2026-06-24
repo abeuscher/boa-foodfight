@@ -276,7 +276,13 @@ export const generateRandomMap = (opts: GenerateOptions): MapFile => {
       location: cloneCoord(STORM_DRAIN_LOC),
       owner: 'ant',
       defensiveBonus: 4,
-      healingRate: 3,
+      // Chunk C-1 (combat-rework Phase 1) — home POST per-tile heal
+      // dropped from 3 to 0 so the new home-anthill heal in
+      // `engine/end-of-turn.ts` (HOME_HEAL_RATE = 3) is the SINGLE
+      // source of recovery at home. Net heal/turn unchanged; the
+      // change just makes the heal visible via `home-heal-applied`
+      // events for harness aggregation.
+      healingRate: 0,
       tags: ['home-base'],
     },
     {
@@ -285,7 +291,9 @@ export const generateRandomMap = (opts: GenerateOptions): MapFile => {
       location: cloneCoord(SPIDER_WEB_LOC),
       owner: 'spider',
       defensiveBonus: 2,
-      healingRate: 3,
+      // Same rationale as storm-drain above — home heal lives in
+      // end-of-turn now.
+      healingRate: 0,
       tags: ['web'],
     },
   ];

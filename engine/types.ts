@@ -545,6 +545,32 @@ export interface Party {
     readonly forcedMarch: boolean;
     readonly bonusTurnsRemaining: number;
   };
+  /**
+   * Chunk C-1 (combat-rework Phase 1) — transient record of this
+   * party's most recent collision so the AI can decide whether to
+   * disengage rather than re-attack into a losing matchup.
+   *
+   * Written by `engine/battle.ts` at the moment casualties are
+   * applied; decayed by end-of-turn cleanup after
+   * `RECENT_BATTLE_DECAY_TURNS` (currently 2 — R-1 ruling).
+   *
+   * Optional for backwards compatibility — missing field reads as
+   * "no recent battle" and the AI's break-off branch does nothing.
+   *
+   * - `turn` — engine turn at which the battle resolved.
+   * - `hpLossFraction` — fraction of pre-battle living HP this party
+   *   lost in the engagement. 0 = took no damage; 1 = wiped.
+   * - `winner` — outcome from the engine's perspective (matches the
+   *   `battle-resolved` event's `winner` field).
+   * - `opponentId` — the other party in the collision, so AI can
+   *   avoid chasing the exact party that just bloodied it.
+   */
+  readonly recentBattleOutcome?: {
+    readonly turn: number;
+    readonly hpLossFraction: number;
+    readonly winner: Faction | 'draw';
+    readonly opponentId: PartyId;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1121,6 +1147,37 @@ export type ReplayEvent =
         readonly hpBefore: number;
         readonly hpAfter: number;
       }[];
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Chunk C-1 (combat-rework Phase 1) — emitted when a party
+       * occupying its faction's home POST (storm-drain / spider-web)
+       * receives the home-anthill heal. `amount` is the total HP
+       * restored to the party that turn (sum across units, capped
+       * at each unit's max).
+       *
+       * Distinct from POST-occupation healing (which is silent) so
+       * harness aggregation can measure recovery utilization without
+       * having to derive it from HP deltas. Phase 2 will add
+       * `mend-applied` and `unit-resurrected` in the same shape.
+       */
+      readonly kind: 'home-heal-applied';
+      readonly partyId: PartyId;
+      readonly amount: number;
+    })
+  | (ReplayEventCommon & {
+      /**
+       * Chunk C-1 (combat-rework Phase 1) — emitted when the spider
+       * AI's strategic break-off branch overrides a party's move
+       * orders with a retreat toward the spider home POST. Surfaces
+       * the trigger (last turn's HP-loss fraction) and the opponent
+       * the party is disengaging from so harness aggregation can
+       * measure re-attack cadence.
+       */
+      readonly kind: 'spider-break-off';
+      readonly partyId: PartyId;
+      readonly hpLossFraction: number;
+      readonly opponentId: PartyId;
     })
   | (ReplayEventCommon & {
       readonly kind: 'corner-crossed';

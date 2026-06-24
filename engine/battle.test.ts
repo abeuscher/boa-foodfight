@@ -685,3 +685,74 @@ describe('resolveBattle: jelly and queen modifiers wired through', () => {
     expect(buffedWins).toBeGreaterThan(neutralWins);
   });
 });
+
+describe('Chunk C-1 — recentBattleOutcome written after each battle', () => {
+  it('writes hpLossFraction and opponentId on both parties', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const f1 = mkUnit(base, 'ant-footman', 'rbo-f1');
+    const s1 = mkUnit(base, 'spider-soldier', 'rbo-s1');
+    const atk = baseAntParty('rbo-atk', [f1], f1.id);
+    const def = baseSpiderParty('rbo-def', [s1], s1.id);
+    const state = installParties(base, [atk, def]);
+    const out = resolveBattle(state, neutralInput(atk, def), createRng(7), makeTickClock());
+
+    const newAtk = out.state.parties.get(atk.id);
+    const newDef = out.state.parties.get(def.id);
+    expect(newAtk?.recentBattleOutcome).toBeDefined();
+    expect(newDef?.recentBattleOutcome).toBeDefined();
+    expect(newAtk?.recentBattleOutcome?.opponentId).toBe(def.id);
+    expect(newDef?.recentBattleOutcome?.opponentId).toBe(atk.id);
+    // Both parties took damage in any decisive engagement.
+    expect(newAtk?.recentBattleOutcome?.hpLossFraction).toBeGreaterThan(0);
+    expect(newDef?.recentBattleOutcome?.hpLossFraction).toBeGreaterThan(0);
+    // hpLossFraction is bounded to [0, 1].
+    expect(newAtk?.recentBattleOutcome?.hpLossFraction).toBeLessThanOrEqual(1);
+    expect(newDef?.recentBattleOutcome?.hpLossFraction).toBeLessThanOrEqual(1);
+  });
+
+  it('records the winning faction (not the PartyId)', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    // Overwhelming attacker so the outcome is deterministic — 4 footmen
+    // versus 1 fragile spider-scout. Seed sweep with one seed is enough.
+    const atkUnits = [
+      mkUnit(base, 'ant-footman', 'rbo2-f1'),
+      mkUnit(base, 'ant-footman', 'rbo2-f2'),
+      mkUnit(base, 'ant-footman', 'rbo2-f3'),
+      mkUnit(base, 'ant-footman', 'rbo2-f4'),
+    ];
+    const defUnit = mkUnit(base, 'spider-scout', 'rbo2-s1');
+    const atk = baseAntParty('rbo2-atk', atkUnits, atkUnits[0]!.id);
+    const def = baseSpiderParty('rbo2-def', [defUnit], defUnit.id);
+    const state = installParties(base, [atk, def]);
+    const out = resolveBattle(state, neutralInput(atk, def), createRng(101), makeTickClock());
+
+    expect(out.result.winner).toBe(atk.id);
+    const newAtk = out.state.parties.get(atk.id);
+    const newDef = out.state.parties.get(def.id);
+    // Winner field is the FACTION of the winner so AI policies don't
+    // have to re-resolve PartyId → Faction.
+    expect(newAtk?.recentBattleOutcome?.winner).toBe('ant');
+    expect(newDef?.recentBattleOutcome?.winner).toBe('ant');
+  });
+
+  it('records hpLossFraction = 1 for a wiped party', () => {
+    const { state: base } = loadScenario(DATA_DIR, 1);
+    const atkUnits = [
+      mkUnit(base, 'ant-footman', 'rbo3-f1'),
+      mkUnit(base, 'ant-footman', 'rbo3-f2'),
+      mkUnit(base, 'ant-footman', 'rbo3-f3'),
+      mkUnit(base, 'ant-footman', 'rbo3-f4'),
+    ];
+    const defUnit = mkUnit(base, 'spider-scout', 'rbo3-s1');
+    const atk = baseAntParty('rbo3-atk', atkUnits, atkUnits[0]!.id);
+    const def = baseSpiderParty('rbo3-def', [defUnit], defUnit.id);
+    const state = installParties(base, [atk, def]);
+    const out = resolveBattle(state, neutralInput(atk, def), createRng(101), makeTickClock());
+
+    const newDef = out.state.parties.get(def.id);
+    // The defender was wiped by the overwhelming attacker.
+    const liveDefHp = newDef?.units.reduce((s, u) => s + Math.max(0, u.currentHp), 0) ?? 0;
+    expect(liveDefHp).toBe(0);
+    expect(newDef?.recentBattleOutcome?.hpLossFraction).toBe(1);
+  });
+});

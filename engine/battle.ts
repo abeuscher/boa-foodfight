@@ -1482,6 +1482,40 @@ export const resolveBattle = (
     discipline: defAfterDisc,
   };
 
+  // Chunk C-1 (combat-rework Phase 1) — write `recentBattleOutcome` on
+  // both combatants so the next turn's AI can decide whether to
+  // disengage rather than re-attack. HP-loss fraction is computed off
+  // pre-battle vs post-battle LIVING HP (dead units count as zero
+  // post-battle); a wiped party therefore reads hpLossFraction = 1.
+  // The winner field maps the BattleResult's PartyId winner to the
+  // owning faction so a wounded party reads "my side lost" without
+  // re-resolving identities.
+  const livingHpSum = (units: readonly Unit[]): number =>
+    units.reduce((s, u) => s + Math.max(0, u.currentHp), 0);
+  const preAtkHp = livingHpSum(attacker.units);
+  const preDefHp = livingHpSum(defender.units);
+  const postAtkHp = livingHpSum(newAttacker.units);
+  const postDefHp = livingHpSum(newDefender.units);
+  const lossFraction = (pre: number, post: number): number =>
+    pre <= 0 ? 0 : Math.max(0, Math.min(1, (pre - post) / pre));
+  const winnerFaction: Faction | 'draw' =
+    winner === 'draw' ? 'draw' : winner === attacker.id ? attacker.faction : defender.faction;
+  const turnNow = state.turn;
+  const attackerRecent: Party['recentBattleOutcome'] = {
+    turn: turnNow,
+    hpLossFraction: lossFraction(preAtkHp, postAtkHp),
+    winner: winnerFaction,
+    opponentId: defender.id,
+  };
+  const defenderRecent: Party['recentBattleOutcome'] = {
+    turn: turnNow,
+    hpLossFraction: lossFraction(preDefHp, postDefHp),
+    winner: winnerFaction,
+    opponentId: attacker.id,
+  };
+  const newAttackerWithOutcome: Party = { ...newAttacker, recentBattleOutcome: attackerRecent };
+  const newDefenderWithOutcome: Party = { ...newDefender, recentBattleOutcome: defenderRecent };
+
   const newParties = new Map(state.parties);
   // Round 24 — apply partner-party updates from combo abilities (mp
   // decrements + usedAbilities flags) BEFORE writing the two combatants,
@@ -1494,8 +1528,8 @@ export const resolveBattle = (
     if (upd.partyId === attacker.id || upd.partyId === defender.id) continue;
     newParties.set(upd.partyId, upd.party);
   }
-  newParties.set(attacker.id, newAttacker);
-  newParties.set(defender.id, newDefender);
+  newParties.set(attacker.id, newAttackerWithOutcome);
+  newParties.set(defender.id, newDefenderWithOutcome);
 
   return {
     state: { ...postBattleState, parties: newParties },
