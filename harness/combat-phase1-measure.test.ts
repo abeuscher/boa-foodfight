@@ -331,6 +331,21 @@ describe('computeRecoveryUtilization', () => {
     expect(r.homeHealHpTotal).toBe(9);
     expect(r.breakOffEvents).toBe(2);
     expect(r.meanBreakOffLossFraction).toBeCloseTo(0.5);
+    expect(r.spiderMendEvents).toBe(0);
+    expect(r.spiderMendHpTotal).toBe(0);
+  });
+
+  it('counts spider-mend-applied events and sums their amount (Chunk C-4)', () => {
+    const events: ReplayEvent[] = [
+      { kind: 'spider-mend-applied', turn: 2, tick: 2, partyId: pid(1), amount: 4 },
+      { kind: 'spider-mend-applied', turn: 7, tick: 7, partyId: pid(2), amount: 3 },
+      { kind: 'turn-start', turn: 9, tick: 9 },
+    ];
+    const r = computeRecoveryUtilization(events);
+    expect(r.spiderMendEvents).toBe(2);
+    expect(r.spiderMendHpTotal).toBe(7);
+    expect(r.homeHealEvents).toBe(0);
+    expect(r.breakOffEvents).toBe(0);
   });
 
   it('returns 0 means when no break-offs fired', () => {
@@ -338,5 +353,6 @@ describe('computeRecoveryUtilization', () => {
     expect(r.homeHealEvents).toBe(0);
     expect(r.breakOffEvents).toBe(0);
     expect(r.meanBreakOffLossFraction).toBe(0);
+    expect(r.spiderMendEvents).toBe(0);
   });
 });

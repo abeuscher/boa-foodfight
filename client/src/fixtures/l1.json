@@ -732,6 +732,42 @@
       }
     },
     {
+      "id": "spider-mender",
+      "name": "Spider Mender",
+      "faction": "spider",
+      "size": "small",
+      "slotCost": 1,
+      "movement": "climbing",
+      "baseStats": {
+        "hp": 10,
+        "attack": 2,
+        "agility": 3,
+        "armor": 1,
+        "intelligence": 3,
+        "constitution": 4
+      },
+      "abilities": [
+        "spider-mend"
+      ],
+      "tags": [
+        "support"
+      ],
+      "planeAffinity": {
+        "floor": {
+          "attack": -1,
+          "armor": 0
+        },
+        "ceiling": {
+          "attack": 1,
+          "armor": 1
+        },
+        "wall": {
+          "attack": 0,
+          "armor": 0
+        }
+      }
+    },
+    {
       "id": "spider-soldier",
       "name": "Spider Soldier",
       "faction": "spider",

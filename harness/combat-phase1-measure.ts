@@ -222,6 +222,12 @@ export interface RecoveryUtilization {
    * Useful as a sanity check against the threshold (BREAKOFF_HP_FRACTION
    * = 0.25 in C-1) — every observed break-off MUST be above it. */
   readonly meanBreakOffLossFraction: number;
+  /** Chunk C-4 — Phase-2 spider-mend usage. Counts `spider-mend-applied`
+   * events (one per cast that healed at least one ally) and sums the
+   * HP healed across all casts. Establishes the Phase-2 recovery
+   * footprint alongside C-1's home-heal counters. */
+  readonly spiderMendEvents: number;
+  readonly spiderMendHpTotal: number;
 }
 
 export const computeRecoveryUtilization = (events: readonly ReplayEvent[]): RecoveryUtilization => {
@@ -229,6 +235,8 @@ export const computeRecoveryUtilization = (events: readonly ReplayEvent[]): Reco
   let homeHealHpTotal = 0;
   let breakOffEvents = 0;
   let breakOffLossSum = 0;
+  let spiderMendEvents = 0;
+  let spiderMendHpTotal = 0;
   for (const ev of events) {
     if (ev.kind === 'home-heal-applied') {
       homeHealEvents += 1;
@@ -236,6 +244,9 @@ export const computeRecoveryUtilization = (events: readonly ReplayEvent[]): Reco
     } else if (ev.kind === 'spider-break-off') {
       breakOffEvents += 1;
       breakOffLossSum += ev.hpLossFraction;
+    } else if (ev.kind === 'spider-mend-applied') {
+      spiderMendEvents += 1;
+      spiderMendHpTotal += ev.amount;
     }
   }
   return {
@@ -243,6 +254,8 @@ export const computeRecoveryUtilization = (events: readonly ReplayEvent[]): Reco
     homeHealHpTotal,
     breakOffEvents,
     meanBreakOffLossFraction: breakOffEvents === 0 ? 0 : breakOffLossSum / breakOffEvents,
+    spiderMendEvents,
+    spiderMendHpTotal,
   };
 };
 
@@ -400,7 +413,7 @@ const main = (): void => {
   out.push('## 4. Recovery utilization');
   out.push('');
   out.push(
-    'C-1 added two recovery primitives: home-anthill heal (`home-heal-applied`, +3 HP/unit/turn when a party occupies its faction home POST) and the spider break-off branch (`spider-break-off`, retreat order when a non-exempt party took >25% HP loss in a battle it lost or drew).',
+    'C-1 added two recovery primitives: home-anthill heal (`home-heal-applied`, +3 HP/unit/turn when a party occupies its faction home POST) and the spider break-off branch (`spider-break-off`, retreat order when a non-exempt party took >25% HP loss in a battle it lost or drew). C-4 adds the Phase-2 spider-mend cast (`spider-mend-applied`, heal 4 HP to allies at battle opening from a spider-mender unit).',
   );
   out.push('');
   out.push('| Metric | Value (total / mean) |');
@@ -410,6 +423,8 @@ const main = (): void => {
   const breakOffEvents = sum(runs.map((r) => r.recovery.breakOffEvents));
   const breakOffRuns = runs.filter((r) => r.recovery.breakOffEvents > 0);
   const breakOffMeanFrac = avg(breakOffRuns.map((r) => r.recovery.meanBreakOffLossFraction));
+  const spiderMendEvents = sum(runs.map((r) => r.recovery.spiderMendEvents));
+  const spiderMendHp = sum(runs.map((r) => r.recovery.spiderMendHpTotal));
   out.push(
     `| home-heal-applied events | ${String(homeHealEvents)} (${fmt(homeHealEvents / runs.length)}/seed) |`,
   );
@@ -421,6 +436,12 @@ const main = (): void => {
   );
   out.push(
     `| Mean break-off trigger fraction | ${breakOffRuns.length === 0 ? 'n/a (no break-offs)' : fmt(breakOffMeanFrac)} |`,
+  );
+  out.push(
+    `| spider-mend-applied events | ${String(spiderMendEvents)} (${fmt(spiderMendEvents / runs.length)}/seed) |`,
+  );
+  out.push(
+    `| Total HP healed via spider-mend | ${String(spiderMendHp)} (${fmt(spiderMendHp / runs.length)}/seed) |`,
   );
   out.push('');
   out.push(

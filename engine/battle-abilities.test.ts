@@ -180,6 +180,95 @@ describe('applyOpeningAbilities — mend', () => {
   });
 });
 
+describe('applyOpeningAbilities — spider-mend (Chunk C-4)', () => {
+  it('a spider-mender heals wounded allies and emits spider-mend-applied with the heal amount', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const mender = mkUnit('spider-mender', 's-mend-1', 5);
+    const wounded = mkUnit('spider-soldier', 's-sold-1', 1);
+    const SOLDIER_MAX_HP = 13;
+    const fullHealth = mkUnit('spider-soldier', 's-sold-2', SOLDIER_MAX_HP);
+    const atk = mkParty('atk', [mkUnit('ant-footman', 'a-foot-1', 6)], 'ant');
+    const def = mkParty('def', [mender, wounded, fullHealth], 'spider');
+
+    const out = applyOpeningAbilities(
+      atk,
+      def,
+      state.unitTemplates,
+      data.abilities,
+      1,
+      makeTickClock(),
+    );
+
+    const healRaw = data.abilities.abilities.find((a) => a.id === 'spider-mend')?.params.heal;
+    const heal = typeof healRaw === 'number' ? healRaw : 0;
+    expect(heal).toBeGreaterThan(0);
+    const healedWounded = out.defender.units.find((u) => u.id === wounded.id);
+    const healedFull = out.defender.units.find((u) => u.id === fullHealth.id);
+    expect(healedWounded?.currentHp).toBe(Math.min(SOLDIER_MAX_HP, 1 + heal));
+    expect(healedFull?.currentHp).toBe(SOLDIER_MAX_HP); // already at template cap
+    expect(out.defender.units.find((u) => u.id === mender.id)?.usedAbilities).toContain(
+      'spider-mend' as AbilityId,
+    );
+    const mendApplied = out.events.filter((e) => e.kind === 'spider-mend-applied');
+    expect(mendApplied).toHaveLength(1);
+    const evt = mendApplied[0];
+    if (evt?.kind === 'spider-mend-applied') {
+      expect(evt.partyId).toBe(def.id);
+      // Only the wounded soldier could be healed (capped at +heal),
+      // so amount = heal.
+      expect(evt.amount).toBe(heal);
+    }
+  });
+
+  it('spider-mend skips the cast when no ally needs healing (preserves usedAbilities for later)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const mender = mkUnit('spider-mender', 's-mend-1', 10);
+    const ally = mkUnit('spider-soldier', 's-sold-1', 13); // already at template HP cap
+    const atk = mkParty('atk', [mkUnit('ant-footman', 'a-foot-1', 6)], 'ant');
+    const def = mkParty('def', [mender, ally], 'spider');
+
+    const out = applyOpeningAbilities(
+      atk,
+      def,
+      state.unitTemplates,
+      data.abilities,
+      1,
+      makeTickClock(),
+    );
+    expect(
+      out.events.filter((e) => e.kind === 'ability-used' && e.abilityId === 'spider-mend'),
+    ).toHaveLength(0);
+    expect(out.events.filter((e) => e.kind === 'spider-mend-applied')).toHaveLength(0);
+    // Critically, the mender's usedAbilities remains EMPTY — the cast is saved
+    // for a future battle where an ally actually needs the heal.
+    expect(out.defender.units.find((u) => u.id === mender.id)?.usedAbilities ?? []).not.toContain(
+      'spider-mend' as AbilityId,
+    );
+  });
+
+  it('spider-mend does not heal the enemy party and does not fire from a party with no mender', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const atk = mkParty(
+      'atk',
+      [mkUnit('ant-footman', 'a-foot-1', 6), mkUnit('ant-archer', 'a-arc-1', 1)],
+      'ant',
+    );
+    const def = mkParty('def', [mkUnit('spider-soldier', 'd-sold-1', 1)], 'spider');
+
+    const out = applyOpeningAbilities(
+      atk,
+      def,
+      state.unitTemplates,
+      data.abilities,
+      1,
+      makeTickClock(),
+    );
+    // The attacker's wounded archer stayed wounded (not healed by spider-mend).
+    expect(out.attacker.units.find((u) => u.id === ('a-arc-1' as UnitId))?.currentHp).toBe(1);
+    expect(out.events.filter((e) => e.kind === 'spider-mend-applied')).toHaveLength(0);
+  });
+});
+
 describe('applyOpeningAbilities — both sides fire in deterministic order', () => {
   it('attacker volley resolves before defender volley — the killed defender cannot retaliate', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);

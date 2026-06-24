@@ -37,6 +37,7 @@ import type {
 
 const VOLLEY: AbilityId = 'volley' as AbilityId;
 const MEND: AbilityId = 'mend' as AbilityId;
+const SPIDER_MEND: AbilityId = 'spider-mend' as AbilityId;
 const MAGIC_ARROW: AbilityId = 'magic-arrow' as AbilityId;
 const PHALANX_CHARGE: AbilityId = 'phalanx-charge' as AbilityId;
 const VENOM_BLAST: AbilityId = 'venom-blast' as AbilityId;
@@ -247,36 +248,69 @@ const fireVolleys = (
   };
 };
 
-const fireMends = (
+/**
+ * Round 21 — opening-phase party-heal. Iterates living units that
+ * carry `abilityId`; for each, checks per-battle has-used + MP-tier
+ * eligibility, then heals every other living unit in the party by
+ * `params.heal` (capped at template HP). Used by both the ant `mend`
+ * (Round 21) and the Chunk-C-4 `spider-mend` (Phase 2 spider mender).
+ *
+ * The optional `appliedEvent` factory lets a caller emit a
+ * heal-amount-bearing replay event alongside the standard
+ * `ability-used` event — used by `spider-mend` to surface a
+ * `spider-mend-applied` accumulator for the harness, mirroring the
+ * `home-heal-applied` event shape from C-1.
+ */
+const firePartyHeal = (
   party: Party,
+  abilityId: AbilityId,
   templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
   abilities: AbilitiesFile,
   turn: number,
   tick: () => number,
+  appliedEvent?: (partyId: PartyId, amount: number, tick: number) => ReplayEvent,
 ): { party: Party; events: readonly ReplayEvent[] } => {
-  const def = findAbility(abilities, MEND);
+  const def = findAbility(abilities, abilityId);
   if (!def) return { party, events: [] };
   const heal = numericParam(def.params, 'heal', 0);
   if (heal <= 0) return { party, events: [] };
-  // Round 21 — Mend is tier 2; ant-mage is a caster (int 8) so the
-  // cast drains a tier-2 slot from the firing mage's pool.
-  const tier = tierForAbility(abilities, MEND);
+  const tier = tierForAbility(abilities, abilityId);
 
   const events: ReplayEvent[] = [];
   let workingUnits = [...party.units];
 
   for (const unit of party.units) {
     if (!isLiving(unit)) continue;
-    if (hasUsed(unit, MEND)) continue;
-    if (!unitHasAbility(unit, MEND, templates)) continue;
-    // Round 21 — MP gate: out-of-MP casters skip silently.
+    if (hasUsed(unit, abilityId)) continue;
+    if (!unitHasAbility(unit, abilityId, templates)) continue;
     if (!canCastTier(unit, tier)) continue;
 
-    // Round 21 — apply the MP decrement to the casting unit before
-    // healing so the per-unit heal pass uses the post-cast unit. The
-    // mp-spent event fires alongside the ability-used event.
-    const mpResult = consumeMpForCast(markUsed(unit, MEND), MEND, tier, party.id, turn, tick);
+    // Chunk C-4 — skip the cast entirely when no allied unit (excluding
+    // the caster) needs healing. Pre-C-4, the cast burned its
+    // `usedAbilities` flag + MP slot even when every target was already
+    // at full HP — a waste that effectively locked the mender out of
+    // later battles where its heal would have mattered. Behavior change
+    // affects ant `mend` too (strict improvement: same heal output, but
+    // the cast is preserved for a battle where it matters).
+    const anyAllyWounded = workingUnits.some((u) => {
+      if (u.id === unit.id) return false;
+      if (!isLiving(u)) return false;
+      const tmpl = templates.get(u.templateId);
+      if (!tmpl) return false;
+      return u.currentHp < tmpl.baseStats.hp;
+    });
+    if (!anyAllyWounded) continue;
 
+    const mpResult = consumeMpForCast(
+      markUsed(unit, abilityId),
+      abilityId,
+      tier,
+      party.id,
+      turn,
+      tick,
+    );
+
+    let healed = 0;
     workingUnits = workingUnits.map((u) => {
       if (u.id === unit.id) return mpResult.unit;
       if (!isLiving(u)) return u;
@@ -284,7 +318,9 @@ const fireMends = (
       if (!tmpl) return u;
       const cap = tmpl.baseStats.hp;
       if (u.currentHp >= cap) return u;
-      return { ...u, currentHp: Math.min(cap, u.currentHp + heal) };
+      const next = Math.min(cap, u.currentHp + heal);
+      healed += next - u.currentHp;
+      return { ...u, currentHp: next };
     });
 
     events.push({
@@ -292,13 +328,40 @@ const fireMends = (
       turn,
       tick: tick(),
       partyId: party.id,
-      abilityId: MEND,
+      abilityId,
     });
+    if (appliedEvent && healed > 0) {
+      events.push(appliedEvent(party.id, healed, tick()));
+    }
     if (mpResult.event) events.push(mpResult.event);
   }
 
   return { party: { ...party, units: workingUnits }, events };
 };
+
+const fireMends = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  abilities: AbilitiesFile,
+  turn: number,
+  tick: () => number,
+): { party: Party; events: readonly ReplayEvent[] } =>
+  firePartyHeal(party, MEND, templates, abilities, turn, tick);
+
+const fireSpiderMends = (
+  party: Party,
+  templates: ReadonlyMap<UnitTemplateId, UnitTemplate>,
+  abilities: AbilitiesFile,
+  turn: number,
+  tick: () => number,
+): { party: Party; events: readonly ReplayEvent[] } =>
+  firePartyHeal(party, SPIDER_MEND, templates, abilities, turn, tick, (partyId, amount, t) => ({
+    kind: 'spider-mend-applied',
+    turn,
+    tick: t,
+    partyId,
+    amount,
+  }));
 
 /** True iff at least one living unit's templateId === target. */
 const hasLivingTemplate = (party: Party, target: string): boolean =>
@@ -1127,9 +1190,22 @@ export const applyOpeningAbilities = (
   const defMend = fireMends(defVenom.shooter, templates, abilities, turn, tick);
   events.push(...defMend.events);
 
+  // Chunk C-4 — Phase 2 spider-mend. Same opening-phase party-heal
+  // shape as `mend`, fired off the spider-mender unit's `spider-mend`
+  // ability. Runs after `mend` so the two ability types never share
+  // a unit and order doesn't matter for HP capping. Emits a
+  // `spider-mend-applied { partyId, amount }` event alongside the
+  // standard `ability-used`, mirroring `home-heal-applied` from C-1
+  // so the harness can aggregate Phase-2 recovery without re-deriving
+  // it from HP deltas.
+  const atkSpiderMend = fireSpiderMends(atkMend.party, templates, abilities, turn, tick);
+  events.push(...atkSpiderMend.events);
+  const defSpiderMend = fireSpiderMends(defMend.party, templates, abilities, turn, tick);
+  events.push(...defSpiderMend.events);
+
   return {
-    attacker: atkMend.party,
-    defender: defMend.party,
+    attacker: atkSpiderMend.party,
+    defender: defSpiderMend.party,
     events,
     partnerUpdates,
   };

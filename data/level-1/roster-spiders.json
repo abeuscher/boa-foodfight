@@ -14,7 +14,11 @@
         },
         {
           "templateId": "spider-elite",
-          "count": 4
+          "count": 3
+        },
+        {
+          "templateId": "spider-mender",
+          "count": 1
         }
       ],
       "startingLocation": {

@@ -1180,6 +1180,23 @@ export type ReplayEvent =
       readonly opponentId: PartyId;
     })
   | (ReplayEventCommon & {
+      /**
+       * Chunk C-4 (combat-rework Phase 2) — emitted when a spider
+       * mender's `spider-mend` ability fires during battle opening
+       * and heals at least one allied unit. `amount` is the total HP
+       * restored to the party that cast (sum across recipient units,
+       * capped at each unit's max). Mirrors `home-heal-applied`'s
+       * shape so harness aggregation (combat-phase1-measure.ts) can
+       * track Phase-2 recovery utilization without re-deriving heal
+       * amounts from HP deltas. Future Phase-2 follow-ups
+       * (`web-mend-aura`, `unit-resurrected`) will adopt the same
+       * event surface.
+       */
+      readonly kind: 'spider-mend-applied';
+      readonly partyId: PartyId;
+      readonly amount: number;
+    })
+  | (ReplayEventCommon & {
       readonly kind: 'corner-crossed';
       readonly partyId: PartyId;
       readonly from: TileCoord;

@@ -121,6 +121,19 @@
       "description": "The medic patches up the squad with sap-salve and stern words. Walk it off, soldier."
     },
     {
+      "id": "spider-mend",
+      "name": "Spider Mend",
+      "category": "buff",
+      "target": "party",
+      "uses": 1,
+      "cooldown": 0,
+      "tier": 2,
+      "params": {
+        "heal": 4
+      },
+      "description": "The mender weaves silk-poultices into the wounds of nearby spiders. Smaller patch, steadier hand than the ant medic."
+    },
+    {
       "id": "scout-ping",
       "name": "Scout Ping",
       "category": "information",
