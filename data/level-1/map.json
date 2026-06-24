@@ -3196,7 +3196,7 @@
       },
       "owner": "ant",
       "defensiveBonus": 4,
-      "healingRate": 3,
+      "healingRate": 0,
       "tags": ["home-base"]
     },
     {
@@ -3250,7 +3250,7 @@
       },
       "owner": "spider",
       "defensiveBonus": 2,
-      "healingRate": 3,
+      "healingRate": 0,
       "tags": ["web"]
     }
   ]

@@ -188,17 +188,91 @@ const applyTangleDecay = (state: GameState): GameState => {
   return changedAny ? { ...state, parties: next } : state;
 };
 
-const applyHealing = (state: GameState): GameState => {
+/**
+ * Chunk C-1 (combat-rework Phase 1) — the home anthill heals
+ * occupying same-faction parties by `HOME_HEAL_RATE`. This is
+ * independent of the home POST's per-tile `healingRate` so the home
+ * node can be tuned without affecting the chain-march economy
+ * (Phase-1 ruling R-2). The id-by-faction mirrors `battle.ts`'s
+ * `HOME_POST_BY_FACTION`; not factored out into a shared helper
+ * because the engine's data isn't yet structured to expose
+ * scenario-level "home post" identity through `state` directly.
+ */
+const HOME_POST_ID_BY_FACTION: Readonly<Record<string, string | null>> = {
+  ant: 'storm-drain',
+  spider: 'spider-web',
+  neutral: null,
+};
+const HOME_HEAL_RATE = 3;
+
+const applyHealing = (
+  state: GameState,
+  tick: () => number,
+): { state: GameState; events: readonly ReplayEvent[] } => {
   const next = new Map<PartyId, Party>();
+  const events: ReplayEvent[] = [];
   for (const [id, party] of state.parties) {
+    let working = party;
     const post = friendlyPostUnder(party, state.posts);
     if (post && post.healingRate > 0) {
-      next.set(id, healParty(party, post.healingRate, state.unitTemplates));
+      working = healParty(working, post.healingRate, state.unitTemplates);
+    }
+    // Chunk C-1 — home-anthill heal. Fires only if the party is on
+    // its faction's home POST; stacks on top of the POST's per-tile
+    // healingRate if any. The home POST defaults to `healingRate: 0`
+    // for ant `storm-drain` in shipped maps so this branch is the
+    // only heal source there, and the magnitude (3) matches the
+    // Sanctum POST tier so it reads as a "real" recovery node.
+    const homeId = HOME_POST_ID_BY_FACTION[party.faction];
+    if (homeId && post?.id === homeId) {
+      const beforeHp = working.units.reduce((s, u) => s + Math.max(0, u.currentHp), 0);
+      working = healParty(working, HOME_HEAL_RATE, state.unitTemplates);
+      const afterHp = working.units.reduce((s, u) => s + Math.max(0, u.currentHp), 0);
+      if (afterHp > beforeHp) {
+        events.push({
+          kind: 'home-heal-applied',
+          turn: state.turn,
+          tick: tick(),
+          partyId: party.id,
+          amount: afterHp - beforeHp,
+        });
+      }
+    }
+    next.set(id, working);
+  }
+  return { state: { ...state, parties: next }, events };
+};
+
+/**
+ * Chunk C-1 (combat-rework Phase 1) — decay the transient
+ * `recentBattleOutcome` field after `RECENT_BATTLE_DECAY_TURNS`
+ * (currently 2 — R-1 ruling). Decay runs at end-of-turn AFTER the
+ * AI has had a chance to consume the field this turn, so the AI
+ * still sees the loss it took on turn N during turn N+1's decision.
+ *
+ * The field's `turn` records when the battle resolved. We drop it
+ * when `state.turn - record.turn >= RECENT_BATTLE_DECAY_TURNS`. Note
+ * that end-of-turn runs BEFORE `state.turn` increments (see step 13
+ * below), so an outcome written on turn T survives turn T+1's AI
+ * pass and gets cleared at end of turn T+1 — exactly 1 turn of
+ * memory for default `decay = 2`.
+ */
+const RECENT_BATTLE_DECAY_TURNS = 2;
+
+const decayRecentBattleOutcomes = (state: GameState): GameState => {
+  let changed = false;
+  const next = new Map<PartyId, Party>();
+  for (const [id, party] of state.parties) {
+    const recent = party.recentBattleOutcome;
+    if (recent && state.turn - recent.turn >= RECENT_BATTLE_DECAY_TURNS) {
+      const { recentBattleOutcome: _drop, ...rest } = party;
+      next.set(id, rest);
+      changed = true;
     } else {
       next.set(id, party);
     }
   }
-  return { ...state, parties: next };
+  return changed ? { ...state, parties: next } : state;
 };
 
 interface GoldSweepOutcome {
@@ -823,8 +897,18 @@ export const endOfTurn = (
   const events: ReplayEvent[] = [];
   const currentTurn = state.turn;
 
-  // 1. Healing.
-  let working = applyHealing(state);
+  // 1. Healing. Chunk C-1 — `applyHealing` now also fires the home-
+  // anthill heal (R-2) and emits `home-heal-applied` events for the
+  // harness.
+  const healOutcome = applyHealing(state, tick);
+  let working = healOutcome.state;
+  events.push(...healOutcome.events);
+
+  // 1b. Chunk C-1 — decay `recentBattleOutcome` after its 2-turn
+  // window. Runs early in end-of-turn so the field is cleared before
+  // the win-check / pheromone passes that emit final-state events;
+  // none of those care about it.
+  working = decayRecentBattleOutcomes(working);
 
   // 1a. Engine dependency #9 — opt-in per-POST in-sim gold income
   //     (roadmap §4a #3; closes the docs §4e "shop is not in-sim"

@@ -663,3 +663,121 @@ describe('spiderL1', () => {
     });
   });
 });
+
+describe('Chunk C-1 — spider break-off branch', () => {
+  it('overrides move orders with a retreat toward spider-web when wounded', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // Stamp a heavy-loss recentBattleOutcome on advance-scout (one of
+    // the parties not exempt from break-off) and verify the next decide
+    // pass replaces its computed orders with a move toward the home
+    // tile @ ceiling (9, 9).
+    const advanceScout = state.parties.get('advance-scout' as PartyId);
+    expect(advanceScout).toBeDefined();
+    if (!advanceScout) return;
+    const wounded: Party = {
+      ...advanceScout,
+      recentBattleOutcome: {
+        turn: state.turn,
+        hpLossFraction: 0.5, // well above 0.25 threshold
+        winner: 'ant',
+        opponentId: 'vanguard-alpha' as PartyId,
+      },
+    };
+    const stamped = replaceParty(state, wounded);
+    const next = spiderL1.decide(stamped, data, createRng(7));
+    const after = next.parties.get(advanceScout.id);
+    const moveOrder = after?.orders.find((o) => o.kind === 'move-to');
+    // The break-off branch issues a move toward the spider home tile
+    // (ceiling 9,9). If the party isn't yet there the order targets
+    // there directly; if it were already there, no move would issue.
+    if (
+      advanceScout.location.plane === 'ceiling' &&
+      advanceScout.location.x === 9 &&
+      advanceScout.location.y === 9
+    ) {
+      expect(moveOrder).toBeUndefined();
+    } else {
+      expect(moveOrder).toBeDefined();
+      if (moveOrder?.kind === 'move-to') {
+        expect(moveOrder.target).toEqual({ plane: 'ceiling', x: 9, y: 9 });
+      }
+    }
+  });
+
+  it('does not override when hpLossFraction is below threshold', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const advanceScout = state.parties.get('advance-scout' as PartyId);
+    expect(advanceScout).toBeDefined();
+    if (!advanceScout) return;
+    // 0.1 < 0.25 break-off threshold → no override.
+    const stamped: Party = {
+      ...advanceScout,
+      recentBattleOutcome: {
+        turn: state.turn,
+        hpLossFraction: 0.1,
+        winner: 'ant',
+        opponentId: 'vanguard-alpha' as PartyId,
+      },
+    };
+    const withStamp = replaceParty(state, stamped);
+    const nextStamped = spiderL1.decide(withStamp, data, createRng(7));
+    const nextBare = spiderL1.decide(state, data, createRng(7));
+    const movedStamp = nextStamped.parties
+      .get(advanceScout.id)
+      ?.orders.find((o) => o.kind === 'move-to');
+    const movedBare = nextBare.parties
+      .get(advanceScout.id)
+      ?.orders.find((o) => o.kind === 'move-to');
+    // Below threshold the policy's normal move-to should match the
+    // baseline run (no recentBattleOutcome).
+    expect(movedStamp).toEqual(movedBare);
+  });
+
+  it('web-guard is exempt from break-off (queen-bearer stays put)', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const webGuard = state.parties.get('web-guard' as PartyId);
+    expect(webGuard).toBeDefined();
+    if (!webGuard) return;
+    const stamped: Party = {
+      ...webGuard,
+      recentBattleOutcome: {
+        turn: state.turn,
+        hpLossFraction: 0.8, // very high
+        winner: 'ant',
+        opponentId: 'vanguard-alpha' as PartyId,
+      },
+    };
+    const withStamp = replaceParty(state, stamped);
+    const next = spiderL1.decide(withStamp, data, createRng(7));
+    const guardAfter = next.parties.get(webGuard.id);
+    // web-guard issues no move orders regardless of how wounded.
+    const moveOrders = (guardAfter?.orders ?? []).filter((o) => o.kind === 'move-to');
+    expect(moveOrders).toHaveLength(0);
+  });
+
+  it('emits a spider-break-off pending policy event', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const advanceScout = state.parties.get('advance-scout' as PartyId);
+    expect(advanceScout).toBeDefined();
+    if (!advanceScout) return;
+    const stamped: Party = {
+      ...advanceScout,
+      recentBattleOutcome: {
+        turn: state.turn,
+        hpLossFraction: 0.4,
+        winner: 'ant',
+        opponentId: 'vanguard-alpha' as PartyId,
+      },
+    };
+    const withStamp = replaceParty(state, stamped);
+    const next = spiderL1.decide(withStamp, data, createRng(7));
+    // pendingPolicyEvents is exposed on state for the turn driver to drain.
+    const pending = next.pendingPolicyEvents ?? [];
+    const breakOff = pending.find((e) => e.kind === 'spider-break-off');
+    expect(breakOff).toBeDefined();
+    if (breakOff?.kind === 'spider-break-off') {
+      expect(breakOff.partyId).toBe(advanceScout.id);
+      expect(breakOff.opponentId).toBe('vanguard-alpha');
+    }
+  });
+});

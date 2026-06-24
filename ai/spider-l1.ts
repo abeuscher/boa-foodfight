@@ -801,6 +801,52 @@ const spiderL1Placement = (state: GameState): GameState =>
  */
 const SPIDER_FLEE_EXEMPT: ReadonlySet<PartyId> = new Set<PartyId>([WEB_GUARD, DEEP_RAIDER]);
 
+/**
+ * Chunk C-1 (combat-rework Phase 1) — strategic break-off threshold
+ * for the spider AI. If `recentBattleOutcome.hpLossFraction` exceeds
+ * this fraction, the spider's policy override replaces its move
+ * orders with a retreat toward the home POST so the home-anthill
+ * heal can patch it up.
+ *
+ * Recommended starting value from the tailored brief (R-1): 0.25 —
+ * a quarter of pre-battle living HP. Tunable via the gate-29 coevo
+ * loop; if the spider win-rate falls outside [55%, 65%] we'll
+ * revisit.
+ */
+const BREAKOFF_HP_FRACTION = 0.25;
+const SPIDER_HOME_TILE: TileCoord = { plane: 'ceiling', x: 9, y: 9 };
+
+const buildBreakOffOrders = (state: GameState, party: Party): readonly Order[] => {
+  // If we're already on the home tile, hold; the end-of-turn heal
+  // does the work. Otherwise march toward home — the engine's BFS
+  // handles the per-turn step. Other queued orders (cards, abilities)
+  // are dropped: break-off is the strategic action this turn.
+  if (
+    party.location.plane === SPIDER_HOME_TILE.plane &&
+    party.location.x === SPIDER_HOME_TILE.x &&
+    party.location.y === SPIDER_HOME_TILE.y
+  ) {
+    return [];
+  }
+  // Suppress unused-parameter lint without exposing state to the helper.
+  void state;
+  return [{ kind: 'move-to', target: SPIDER_HOME_TILE }];
+};
+
+const breakOffEvent = (
+  state: GameState,
+  party: Party,
+  recent: NonNullable<Party['recentBattleOutcome']>,
+): ReplayEvent => ({
+  kind: 'spider-break-off',
+  turn: state.turn,
+  // Tick is assigned by the policy-event drain; record a placeholder.
+  tick: 0,
+  partyId: party.id,
+  hpLossFraction: recent.hpLossFraction,
+  opponentId: recent.opponentId,
+});
+
 export const spiderL1: AIPolicy = {
   name: 'spider-l1',
   faction: 'spider',
@@ -1115,16 +1161,59 @@ export const spiderL1: AIPolicy = {
         ? [FLEE_ORDER, ...ordersWithHypno]
         : ordersWithHypno;
       if (wantsFlee) pendingEvents.push(lowHpFleeEvent(state, party));
+
+      // Chunk C-1 (combat-rework Phase 1) — strategic break-off. If
+      // the party took heavy losses in last turn's collision
+      // (`recentBattleOutcome.hpLossFraction > BREAKOFF_HP_FRACTION`),
+      // override the policy's move-to with a retreat toward the
+      // home POST so end-of-turn home-heal can patch them up. This
+      // prevents the attrition spiral the PM flagged: a wounded
+      // party walking back into the same fight it just lost.
+      //
+      // Exemptions match the existing flee logic (queen-bearer +
+      // interceptor stay committed). The override replaces the
+      // computed orders entirely; threat-flee won't be re-evaluated
+      // because we route around it via `ordersAfterBreakOff`.
+      const recent = party.recentBattleOutcome;
+      const eligibleForBreakOff = id !== WEB_GUARD && id !== DEEP_RAIDER;
+      // Chunk C-1 — break off ONLY when the spider didn't win the
+      // last collision (lost or drew) AND took heavy losses.
+      // Initial coevo run with `winner`-agnostic trigger dropped the
+      // ant win-rate from 56% → 47% (out of gate-29 band) because
+      // wounded-but-victorious spiders were retreating from fights
+      // they'd already won. Restricting to "lost or drew" presses
+      // the advantage in wins and only disengages from losses.
+      const wantsBreakOff =
+        eligibleForBreakOff &&
+        recent !== undefined &&
+        recent.turn >= state.turn - 1 &&
+        recent.hpLossFraction > BREAKOFF_HP_FRACTION &&
+        recent.winner !== 'spider';
+      const ordersAfterBreakOff: readonly Order[] = wantsBreakOff
+        ? buildBreakOffOrders(state, party)
+        : ordersAfterLowHp;
+      if (wantsBreakOff) {
+        pendingEvents.push(breakOffEvent(state, party, recent));
+      }
       // Round 16 — pre-battle threat assessment. Predict an unwinnable
       // collision this turn and prepend a flee order with probability
       // scaled to the matchup. Skipped for SPIDER_FLEE_EXEMPT (web-
       // guard, deep-raider) and when a flee order is already in the
       // list (the round-15 trigger fired above, or some other path).
-      const threatFlee = computeThreatFlee(state, party, ordersAfterLowHp, threatRng, {
-        exempt: SPIDER_FLEE_EXEMPT,
-      });
-      if (threatFlee.event) pendingEvents.push(threatFlee.event);
-      nextParties.set(id, { ...party, orders: threatFlee.orders });
+      // When break-off fires, skip threat-flee — the orders already
+      // express "retreat home" and don't need a probabilistic flee
+      // overlay. Otherwise, run the existing pre-collision threat
+      // assessment.
+      const finalOrders: readonly Order[] = wantsBreakOff
+        ? ordersAfterBreakOff
+        : (() => {
+            const threatFlee = computeThreatFlee(state, party, ordersAfterLowHp, threatRng, {
+              exempt: SPIDER_FLEE_EXEMPT,
+            });
+            if (threatFlee.event) pendingEvents.push(threatFlee.event);
+            return threatFlee.orders;
+          })();
+      nextParties.set(id, { ...party, orders: finalOrders });
     }
 
     const next: GameState = { ...state, parties: nextParties };

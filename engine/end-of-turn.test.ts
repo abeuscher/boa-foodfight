@@ -83,9 +83,15 @@ describe('endOfTurn', () => {
     expect(turnStart).toBeDefined();
   });
 
-  it('heals a wounded unit on a friendly POST by exactly post.healingRate', () => {
+  it('heals a wounded unit on a friendly POST by post.healingRate + home-anthill rate', () => {
     const { state, data } = loadScenario(DATA_DIR, 1);
-    // queen-guard sits on the storm-drain (ant-owned, healingRate=3 in level-1 data).
+    // queen-guard sits on the storm-drain — the ant home POST. Chunk
+    // C-1 (combat-rework Phase 1) added a separate home-anthill heal
+    // (`HOME_HEAL_RATE = 3`) that stacks on top of the per-POST
+    // healingRate so the home node can be tuned independently of the
+    // chain-march POSTs. The expected heal at storm-drain is now
+    // `post.healingRate + HOME_HEAL_RATE`.
+    const HOME_HEAL_RATE = 3;
     const queenParty = findQueenParty(state);
     const stormDrain = state.posts.get('storm-drain' as PostId);
     expect(stormDrain).toBeDefined();
@@ -105,7 +111,7 @@ describe('endOfTurn', () => {
     const wounded: Unit = { ...target, currentHp: 1 };
     const s = replaceUnitInParty(state, queenParty.id, wounded);
 
-    const heal = stormDrain?.healingRate ?? 0;
+    const heal = (stormDrain?.healingRate ?? 0) + HOME_HEAL_RATE;
     const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
     const after = out.state.parties.get(queenParty.id);
     const healed = after?.units.find((u) => u.id === target.id);
@@ -116,6 +122,12 @@ describe('endOfTurn', () => {
     const out2 = endOfTurn(s2, { queen: data.queen, jelly: data.jelly }, makeTickClock());
     const healed2 = out2.state.parties.get(queenParty.id)?.units.find((u) => u.id === target.id);
     expect(healed2?.currentHp).toBe(max);
+
+    // Chunk C-1 — the home heal also emits a `home-heal-applied`
+    // event so the harness can measure recovery utilization.
+    const homeEvents = out.events.filter((e) => e.kind === 'home-heal-applied');
+    expect(homeEvents.length).toBe(1);
+    expect(homeEvents[0]?.kind).toBe('home-heal-applied');
   });
 
   it('does not heal units that are not on a friendly POST', () => {
@@ -515,5 +527,78 @@ describe('endOfTurn: neutralDecision tick (round 11)', () => {
     const out = endOfTurn(state, { queen: data.queen, jelly: data.jelly }, makeTickClock());
     const after = out.state.parties.get(partyId);
     expect(after?.neutralDecision).toBeUndefined();
+  });
+});
+
+describe('Chunk C-1 — recentBattleOutcome decay', () => {
+  it('survives one full end-of-turn after the battle, then clears', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // Stamp a fake recent battle on vanguard-alpha (anywhere that isn't
+    // the storm-drain so heal doesn't muddy the snapshot we're checking).
+    const partyId = 'vanguard-alpha' as PartyId;
+    const party = state.parties.get(partyId)!;
+    const baseParties = new Map(state.parties);
+    baseParties.set(partyId, {
+      ...party,
+      recentBattleOutcome: {
+        turn: state.turn,
+        hpLossFraction: 0.4,
+        winner: 'spider',
+        opponentId: 'web-guard' as PartyId,
+      },
+    });
+    const stamped: GameState = { ...state, parties: baseParties };
+
+    // End of turn N — outcome survives so turn N+1's AI can read it.
+    const out1 = endOfTurn(stamped, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const afterTurnN = out1.state.parties.get(partyId);
+    expect(afterTurnN?.recentBattleOutcome).toBeDefined();
+
+    // Bump the turn counter to simulate the next-turn driver, then end
+    // of turn N+1 — outcome decays.
+    const next1: GameState = { ...out1.state, turn: out1.state.turn + 1 };
+    const out2 = endOfTurn(next1, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const afterTurnN1 = out2.state.parties.get(partyId);
+    expect(afterTurnN1?.recentBattleOutcome).toBeUndefined();
+  });
+});
+
+describe('Chunk C-1 — home-heal-applied event', () => {
+  it('fires when the queen-guard occupies storm-drain and is wounded', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    const queenParty = findQueenParty(state);
+    // Wound the leader unit so the heal has somewhere to land.
+    const leader = queenParty.units.find((u) => u.id === queenParty.leaderId);
+    expect(leader).toBeDefined();
+    if (!leader) return;
+    const wounded: Unit = { ...leader, currentHp: 1 };
+    const s = replaceUnitInParty(state, queenParty.id, wounded);
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+
+    const homeEvents = out.events.filter((e) => e.kind === 'home-heal-applied');
+    expect(homeEvents.length).toBe(1);
+    const ev = homeEvents[0];
+    if (ev?.kind === 'home-heal-applied') {
+      expect(ev.partyId).toBe(queenParty.id);
+      expect(ev.amount).toBeGreaterThan(0);
+    }
+  });
+
+  it('does not fire when no party occupies a home POST', () => {
+    const { state, data } = loadScenario(DATA_DIR, 1);
+    // Move the queen-guard away from storm-drain by relocating to a
+    // floor tile that has no POST. (1,1) is open in the L1 fixture.
+    const queenParty = findQueenParty(state);
+    const moved: Party = {
+      ...queenParty,
+      location: { plane: 'floor', x: 1, y: 1 },
+    };
+    const baseParties = new Map(state.parties);
+    baseParties.set(queenParty.id, moved);
+    const s: GameState = { ...state, parties: baseParties };
+
+    const out = endOfTurn(s, { queen: data.queen, jelly: data.jelly }, makeTickClock());
+    const homeEvents = out.events.filter((e) => e.kind === 'home-heal-applied');
+    expect(homeEvents.length).toBe(0);
   });
 });
